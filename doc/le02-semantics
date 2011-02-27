@@ -19,13 +19,13 @@ product.
 ==Clarification/addition/assumptions==
 Please see the ‘Implementation Issues’ section for a discussion of for loops -
 in particular, we do not allow shadowing of the for loop index variable within
-the loop block since we treat it as part of the block.  We implemented an
-additional check to verify that all variable locations and variable expressions
-without indexes correspond to scalar variables. The inverse check is specified
-by the spec for verifying that indexed references are to array variables.  **
-what if you’re setting a = b where a and b are both arrays?] We assume that
-main can either be void or return a value since this was not specified in the
-spec one way or another.
+the loop block since we treat it as part of the block.
+
+We implemented an additional check to verify that all variable locations and
+variable expressions without indexes correspond to scalar variables.
+
+We assume that main can either be void or return a value since this was not
+specified in the spec one way or another.
 
 
 ==Overview of design, analysis of alternatives, and design decisions==
