@@ -13,3 +13,5 @@ find $base/src $base/tests/src -name "*.java" |
 echo 'Detecting tabs.'
 find $base/src $base/tests/src -name "*.java" |
     xargs grep -n -E '	';
+
+exit 0;
