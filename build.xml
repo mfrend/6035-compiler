@@ -128,7 +128,7 @@
   </target>
 
   <target name="lint">
-    <exec executable="${bin}/lint.sh" failonerror="true" />
+    <exec executable="${bin}/lint.sh" failonerror="false" />
   </target>
 
   <target name="presubmit" depends="integrationtests,lint">
