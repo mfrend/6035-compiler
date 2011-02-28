@@ -32,13 +32,14 @@ import edu.mit.compilers.tools.CLI;
 /**
  * Main class used to invoke subcomponents of the compiler.
  *
- * @author Liz Fong <lizfong@mit.edu>
+ * @author lizfong@mit.edu (Liz Fong)
+ * @author mfrend@mit.edu (Maria Frendberg)
  */
 public class Main {
   /** Enumerates all valid return codes. */
   public enum ReturnCode {
-    SUCCESS(0), SCAN_FAILED(1), PARSE_FAILED(2), SEMANTICS_FAILED(3), FILE_NOT_FOUND(
-        126), NO_SUCH_ACTION(127);
+    SUCCESS(0), SCAN_FAILED(1), PARSE_FAILED(2), SEMANTICS_FAILED(3),
+    FILE_NOT_FOUND(126), NO_SUCH_ACTION(127);
 
     private int numericCode;
 
@@ -47,7 +48,7 @@ public class Main {
     }
 
     public int numericCode() {
-          return numericCode;
+      return numericCode;
     }
   };
 
@@ -94,41 +95,39 @@ public class Main {
     }
 
     switch (CLI.target) {
-    case SCAN:
+     case SCAN:
       if (!runScanner(inputStream) || !ErrorReporting.noErrors()) {
         retCode = ReturnCode.SCAN_FAILED;
       }
       break;
-    case PARSE:
+     case PARSE:
       if (!runParser(inputStream) || !ErrorReporting.noErrors()) {
         retCode = ReturnCode.PARSE_FAILED;
       }
       break;
-    case INTER:
-    case DEFAULT:
+     case INTER:
+     case DEFAULT:
       if (!generateIR(inputStream) || !ErrorReporting.noErrors()) {
         retCode = ReturnCode.SEMANTICS_FAILED;
       }
       break;
-    default:
+     default:
       retCode = ReturnCode.NO_SUCH_ACTION;
       ErrorReporting.reportErrorCompat(new NoSuchMethodException(
-          "Action " + CLI.target + " not yet implemented."));
+        "Action " + CLI.target + " not yet implemented."));
     }
     ErrorReporting.printErrors(System.err);
     System.exit(retCode.numericCode());
   }
 
   /**
-   * Initalized a DecafScanner and set debug and infile parameters
+   * Initializes a DecafScanner and sets debug and infile parameters.
    *
-   * @param inputStream
-   *            The file to be scanned
+   * @param inputStream The file to be scanned
    * @return An initalized DecafScanner
    */
   protected static DecafScanner initializeScanner(InputStream inputStream) {
-    DecafScanner scanner = new DecafScanner(
-        new DataInputStream(inputStream));
+    DecafScanner scanner = new DecafScanner(new DataInputStream(inputStream));
 
     // If debug mode is set, enable tracing in the scanner.
     scanner.setTrace(CLI.debug);
@@ -143,8 +142,7 @@ public class Main {
    * Runs the scanner on an input and displays all tokens successfully parsed
    * from the input, along with any error messages.
    *
-   * @param inputStream
-   *            The stream to read input from.
+   * @param inputStream The stream to read input from.
    * @return true if scanner ran without errors, false if errors found.
    */
   protected static boolean runScanner(InputStream inputStream) {
@@ -155,26 +153,27 @@ public class Main {
     boolean done = false;
     while (!done) {
       try {
-        for (token = scanner.nextToken(); token.getType() != DecafParserTokenTypes.EOF; token = scanner
-            .nextToken()) {
+        for (token = scanner.nextToken();
+             token.getType() != DecafParserTokenTypes.EOF;
+             token = scanner.nextToken()) {
           String type = "";
           String text = token.getText();
 
           switch (token.getType()) {
-          case DecafScannerTokenTypes.ID:
+           case DecafScannerTokenTypes.ID:
             type = " IDENTIFIER";
             break;
-          case DecafScannerTokenTypes.CHAR:
+           case DecafScannerTokenTypes.CHAR:
             type = " CHARLITERAL";
             break;
-          case DecafScannerTokenTypes.STRING:
+           case DecafScannerTokenTypes.STRING:
             type = " STRINGLITERAL";
             break;
-          case DecafScannerTokenTypes.INT:
+           case DecafScannerTokenTypes.INT:
             type = " INTLITERAL";
             break;
-          case DecafScannerTokenTypes.TK_false:
-          case DecafScannerTokenTypes.TK_true:
+           case DecafScannerTokenTypes.TK_false:
+           case DecafScannerTokenTypes.TK_true:
             type = " BOOLEANLITERAL";
             break;
           }
@@ -190,10 +189,10 @@ public class Main {
           System.out.println(e);
           if (e instanceof TokenStreamRecognitionException) {
             ErrorReporting.reportError(new ScanException(
-                (TokenStreamRecognitionException) e));
+              (TokenStreamRecognitionException) e));
           } else {
-            ErrorReporting.reportError(new ScanException(e
-                .getMessage()));
+            ErrorReporting.reportError(
+              new ScanException(e.getMessage()));
           }
         }
         try {
@@ -216,8 +215,7 @@ public class Main {
    * Initialize a DecafParser and set ASTFactory, Debug, and inputStream
    * params
    *
-   * @param inputStream
-   *            The file to be parsed
+   * @param inputStream The file to be parsed
    * @return The initialized DecafParser
    */
   protected static DecafParser initializeParser(InputStream inputStream) {
@@ -244,8 +242,7 @@ public class Main {
    * Runs the parser on an input and displays any error messages found while
    * parsing.
    *
-   * @param inputStream
-   *            The stream to read input from.
+   * @param inputStream The stream to read input from.
    * @return true if parser ran without errors, false if errors found.
    */
   protected static boolean runParser(InputStream inputStream) {
@@ -264,8 +261,8 @@ public class Main {
           Thread thread = new Thread() {
             @Override
             public void run() {
-              ASTFrame frame = new ASTFrame(CLI
-                  .getInputFilename(), parser.getAST());
+              ASTFrame frame =
+                new ASTFrame(CLI.getInputFilename(), parser.getAST());
               frame.validate();
               frame.setVisible(true);
             }
@@ -297,8 +294,7 @@ public class Main {
    * Runs the parser on an input and displays any error messages found while
    * parsing.
    *
-   * @param inputStream
-   *            The stream to read input from.
+   * @param inputStream The stream to read input from.
    * @return true if parser ran without errors, false if errors found.
    */
   protected static boolean generateIR(InputStream inputStream) {
@@ -310,8 +306,7 @@ public class Main {
 
       if (ErrorReporting.noErrors()) {
         ASTNode parent = IrGenerator.generateIR(parser.getAST());
-        SymbolTable st = SymbolTableGenerator
-            .generateSymbolTable(parent);
+        SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
         MasterChecker.checkAll(parent);
 
         if (CLI.debug) {
