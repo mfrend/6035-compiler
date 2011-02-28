@@ -31,33 +31,35 @@ import edu.mit.compilers.tools.CLI;
 
 /**
  * Main class used to invoke subcomponents of the compiler.
- * @author Liz Fong <lizfong@mit.edu>
+ *
+ * @author lizfong@mit.edu (Liz Fong)
+ * @author mfrend@mit.edu (Maria Frendberg)
  */
 public class Main {
   /** Enumerates all valid return codes. */
   public enum ReturnCode {
-    SUCCESS (0),
-    SCAN_FAILED (1),
-    PARSE_FAILED (2),
-    SEMANTICS_FAILED (3),
-    FILE_NOT_FOUND (126),
-    NO_SUCH_ACTION (127);
+    SUCCESS(0), SCAN_FAILED(1), PARSE_FAILED(2), SEMANTICS_FAILED(3),
+    FILE_NOT_FOUND(126), NO_SUCH_ACTION(127);
 
     private int numericCode;
-    private ReturnCode (int code) {
+
+    private ReturnCode(int code) {
       numericCode = code;
     }
+
     public int numericCode() {
       return numericCode;
     }
   };
 
   public enum Optimization {
-    SAMPLE_OPT ("sample");
+    SAMPLE_OPT("sample");
     private String flagName;
+
     private Optimization(String flag) {
       flagName = flag;
     }
+
     public String flagName() {
       return flagName;
     }
@@ -66,7 +68,7 @@ public class Main {
   /**
    * Main entry point for compiler.
    */
-  public static void main (String[] args) {
+  public static void main(String[] args) {
     // We should exit successfully unless something goes awry.
     ReturnCode retCode = ReturnCode.SUCCESS;
     // Default to reading from stdin unless we get a valid file input.
@@ -119,14 +121,12 @@ public class Main {
   }
 
   /**
-   * Runs the scanner on an input and displays all tokens successfully
-   * parsed from the input, along with any error messages.
+   * Initializes a DecafScanner and sets debug and infile parameters.
    *
-   * @param inputStream The stream to read input from.
-   * @return true if scanner ran without errors, false if errors found.
+   * @param inputStream The file to be scanned
+   * @return An initalized DecafScanner
    */
-  protected static boolean runScanner (InputStream inputStream) {
-    boolean success = true;
+  protected static DecafScanner initializeScanner(InputStream inputStream) {
     DecafScanner scanner = new DecafScanner(new DataInputStream(inputStream));
 
     // If debug mode is set, enable tracing in the scanner.
@@ -134,6 +134,20 @@ public class Main {
     if (!CLI.compat) {
       scanner.setFilename(CLI.infile);
     }
+
+    return scanner;
+  }
+
+  /**
+   * Runs the scanner on an input and displays all tokens successfully parsed
+   * from the input, along with any error messages.
+   *
+   * @param inputStream The stream to read input from.
+   * @return true if scanner ran without errors, false if errors found.
+   */
+  protected static boolean runScanner(InputStream inputStream) {
+    DecafScanner scanner = initializeScanner(inputStream);
+    boolean success = true;
 
     Token token;
     boolean done = false;
@@ -151,7 +165,7 @@ public class Main {
             break;
            case DecafScannerTokenTypes.CHAR:
             type = " CHARLITERAL";
-           break;
+            break;
            case DecafScannerTokenTypes.STRING:
             type = " STRINGLITERAL";
             break;
@@ -174,10 +188,11 @@ public class Main {
         } else {
           System.out.println(e);
           if (e instanceof TokenStreamRecognitionException) {
-            ErrorReporting.reportError(
-              new ScanException((TokenStreamRecognitionException)e));
+            ErrorReporting.reportError(new ScanException(
+              (TokenStreamRecognitionException) e));
           } else {
-            ErrorReporting.reportError(new ScanException(e.getMessage()));
+            ErrorReporting.reportError(
+              new ScanException(e.getMessage()));
           }
         }
         try {
@@ -186,7 +201,8 @@ public class Main {
           if (CLI.compat) {
             ErrorReporting.reportErrorCompat(cse);
           } else {
-            ErrorReporting.reportError(new ScanException(cse.getMessage()));
+            ErrorReporting.reportError(new ScanException(cse
+                .getMessage()));
           }
         }
         success = false;
@@ -196,27 +212,43 @@ public class Main {
   }
 
   /**
+   * Initialize a DecafParser and set ASTFactory, Debug, and inputStream
+   * params
+   *
+   * @param inputStream The file to be parsed
+   * @return The initialized DecafParser
+   */
+  protected static DecafParser initializeParser(InputStream inputStream) {
+    DecafScanner scanner = initializeScanner(inputStream);
+    final DecafParser parser = new DecafParser(scanner);
+    // Save the line/column numbers so we get meaningful parse data.
+    ASTFactory factory = new ASTFactory();
+    factory.setASTNodeClass(LineNumberedAST.class);
+    parser.setASTFactory(factory);
+
+    // The default instantiation is unaware of underlying filenames when
+    // pretty-printing exceptions. Set the values appropriately.
+    if (inputStream instanceof FileInputStream) {
+      scanner.setFilename(CLI.infile);
+      parser.setFilename(CLI.infile);
+    }
+    // If debug mode is set, enable tracing in the parser.
+    parser.setTrace(CLI.debug);
+
+    return parser;
+  }
+
+  /**
    * Runs the parser on an input and displays any error messages found while
    * parsing.
    *
    * @param inputStream The stream to read input from.
    * @return true if parser ran without errors, false if errors found.
    */
-  protected static boolean runParser (InputStream inputStream) {
+  protected static boolean runParser(InputStream inputStream) {
     boolean success = true;
     try {
-      DecafScanner parse_lexer =
-        new DecafScanner(new DataInputStream(inputStream));
-      final DecafParser parser = new DecafParser(parse_lexer);
-
-      // The default instantiation is unaware of underlying filenames when
-      // pretty-printing exceptions. Set the values appropriately.
-      if (inputStream instanceof FileInputStream) {
-        parse_lexer.setFilename(CLI.infile);
-        parser.setFilename(CLI.infile);
-      }
-      // If debug mode is set, enable tracing in the parser.
-      parser.setTrace(CLI.debug);
+      final DecafParser parser = initializeParser(inputStream);
 
       // Invoke the parser.
       parser.program();
@@ -229,8 +261,8 @@ public class Main {
           Thread thread = new Thread() {
             @Override
             public void run() {
-              ASTFrame frame = new ASTFrame(CLI.getInputFilename(),
-                                            parser.getAST());
+              ASTFrame frame =
+                new ASTFrame(CLI.getInputFilename(), parser.getAST());
               frame.validate();
               frame.setVisible(true);
             }
@@ -246,7 +278,8 @@ public class Main {
         }
       }
 
-      // If any errors were printed by the parser, note unsuccessful parse.
+      // If any errors were printed by the parser, note unsuccessful
+      // parse.
       if (parser.getError()) {
         success = false;
       }
@@ -267,24 +300,10 @@ public class Main {
   protected static boolean generateIR(InputStream inputStream) {
     boolean success = true;
     try {
-      DecafScanner parse_lexer =
-        new DecafScanner(new DataInputStream(inputStream));
-      final DecafParser parser = new DecafParser(parse_lexer);
-
-      // The default instantiation is unaware of underlying filenames when
-      // pretty-printing exceptions. Set the values appropriately.
-      if (inputStream instanceof FileInputStream) {
-        parse_lexer.setFilename(CLI.infile);
-        parser.setFilename(CLI.infile);
-      }
-
-      // Save the line/column numbers so we get meaningful parse data.
-      ASTFactory factory = new ASTFactory();
-      factory.setASTNodeClass(LineNumberedAST.class);
-      parser.setASTFactory(factory);
-
-      // Invoke the parser.
+      // Initialize and invoke the parser.
+      DecafParser parser = initializeParser(inputStream);
       parser.program();
+
       if (ErrorReporting.noErrors()) {
         ASTNode parent = IrGenerator.generateIR(parser.getAST());
         SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
@@ -300,5 +319,4 @@ public class Main {
     }
     return success;
   }
-
 }
