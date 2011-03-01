@@ -44,6 +44,7 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(BoolOpNode node) {
     DecafType expected = DecafType.INT;
+    DecafType got;
 
     if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
       expected = DecafType.BOOLEAN;
@@ -51,13 +52,22 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
 
     if ((node.getOp() == BoolOp.EQ) || (node.getOp() == BoolOp.NEQ)) {
       expected = DecafType.simplify(node.getLeft().getType());
-    } else if (DecafType.simplify(node.getLeft().getType()) != expected) {
-      ErrorReporting.reportError(
-        new SemanticException(node.getLeft().getSourceLoc(),
-          "Type mismatch: " + node.getOp() + " requires " + expected +
-          " expression"));
+      if (expected == null) {
+        defaultBehavior(node);
+        return true;
+      }
+    } else {
+      got = DecafType.simplify(node.getLeft().getType());
+      if ((got != null) && (got != expected)) {
+        ErrorReporting.reportError(
+          new SemanticException(node.getLeft().getSourceLoc(),
+            "Type mismatch: " + node.getOp() + " requires " + expected +
+            " expression"));
+      }
     }
-    if (DecafType.simplify(node.getRight().getType()) != expected) {
+
+    got = DecafType.simplify(node.getRight().getType());
+    if ((got != null) && (got != expected)) {
       ErrorReporting.reportError(
         new SemanticException(node.getRight().getSourceLoc(),
           "Type mismatch: " + node.getOp() + " requires " + expected +
@@ -70,12 +80,16 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
 
   @Override
   public Boolean visit(MathOpNode node) {
-    if (DecafType.simplify(node.getLeft().getType()) != DecafType.INT) {
+    DecafType got = DecafType.simplify(node.getLeft().getType());
+
+    if ((got != null) && (got != DecafType.INT)) {
       ErrorReporting.reportError(
         new SemanticException(node.getLeft().getSourceLoc(),
           "Type mismatch: " + node.getOp() + " requires integer expression"));
     }
-    if (DecafType.simplify(node.getRight().getType()) != DecafType.INT) {
+
+    got = DecafType.simplify(node.getRight().getType());
+    if ((got != null) && (got != DecafType.INT)) {
       ErrorReporting.reportError(
         new SemanticException(node.getRight().getSourceLoc(),
           "Type mismatch: " + node.getOp() + " requires integer expression"));
@@ -87,7 +101,9 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
 
   @Override
   public Boolean visit(MinusNode node) {
-    if (DecafType.simplify(node.getExpr().getType()) != DecafType.INT) {
+    DecafType got = DecafType.simplify(node.getExpr().getType());
+
+    if ((got != null) && (got != DecafType.INT)) {
       ErrorReporting.reportError(
         new SemanticException(node.getExpr().getSourceLoc(),
           "Type mismatch: - operator requires integer expression"));
@@ -99,7 +115,9 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
 
   @Override
   public Boolean visit(NotNode node) {
-    if (DecafType.simplify(node.getExpr().getType()) != DecafType.BOOLEAN) {
+    DecafType got = DecafType.simplify(node.getExpr().getType());
+
+    if ((got != null) && (got != DecafType.BOOLEAN)) {
       ErrorReporting.reportError(
         new SemanticException(node.getExpr().getSourceLoc(),
           "Type mismatch: ! operator requires boolean expression"));
@@ -112,8 +130,9 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(AssignNode node) {
     DecafType expected = DecafType.simplify(node.getLoc().getType());
-    if (expected != null &&
-        expected != DecafType.simplify(node.getValue().getType())) {
+    DecafType got = DecafType.simplify(node.getValue().getType());
+
+    if ((expected != null) && (got != null) && (expected != got)) {
       ErrorReporting.reportError(
         new SemanticException(node.getValue().getSourceLoc(),
           "Type mismatch: assignment to " + node.getLoc().getName() +
@@ -127,13 +146,18 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(ForNode node) {
     AssignNode init = node.getInit();
-    if (DecafType.simplify(init.getValue().getType()) != DecafType.INT) {
+    DecafType got = DecafType.simplify(init.getValue().getType());
+
+    if ((got != null) && (got != DecafType.INT)) {
       ErrorReporting.reportError(
         new SemanticException(init.getValue().getSourceLoc(),
           "Type mismatch: for initializer for " + init.getLoc().getName() +
           " should be integer expression"));
     }
-    if (DecafType.simplify(node.getEnd().getType()) != DecafType.INT) {
+
+
+    got = DecafType.simplify(node.getEnd().getType());
+    if ((got != null) && (got != DecafType.INT)) {
       ErrorReporting.reportError(
         new SemanticException(node.getEnd().getSourceLoc(),
           "Type mismatch: for terminator for " + init.getLoc().getName() +
@@ -146,8 +170,9 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
 
   @Override
   public Boolean visit(IfNode node) {
-    if (DecafType.simplify(node.getCondition().getType()) !=
-          DecafType.BOOLEAN) {
+    DecafType got = DecafType.simplify(node.getCondition().getType());
+
+    if ((got != null) && (got != DecafType.BOOLEAN)) {
       ErrorReporting.reportError(
         new SemanticException(node.getCondition().getSourceLoc(),
           "Type mismatch: if condition should be boolean expression"));

@@ -46,6 +46,10 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(MethodCallNode node) {
     MethodDescriptor methodDesc = methodTable.getMethod(node.getName());
+    if (methodDesc == null) {
+      defaultBehavior(node);
+      return true;
+    }
 
     if (methodDesc.getParams().size() != node.getArgs().size()) {
       ErrorReporting.reportError(new SemanticException(node.getSourceLoc(),
@@ -55,10 +59,11 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
     } else {
       for (int i = 0; i < methodDesc.getParams().size(); i++) {
         DecafType expected =
-          methodDesc.getSymbolTable().getParam(methodDesc.getParams().get(i))
-          .getType();
-        DecafType got = node.getArgs().get(i).getType();
-        if (expected != got) {
+          DecafType.simplify(methodDesc.getSymbolTable()
+          .getParam(methodDesc.getParams().get(i)).getType());
+        DecafType got = DecafType.simplify(node.getArgs().get(i).getType());
+
+        if ((expected != null) && (got != null) && (expected != got)) {
           ErrorReporting.reportError(
             new SemanticException(node.getArgs().get(i).getSourceLoc(),
               "Argument " + i + " to method " + node.getName() +

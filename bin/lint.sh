@@ -13,3 +13,9 @@ find $base/src $base/tests/src -name "*.java" |
 echo 'Detecting tabs.'
 find $base/src $base/tests/src -name "*.java" |
     xargs grep -n -E '	';
+
+echo 'Detecting >80c.'
+find $base/src $base/tests/src -name "*.java" |
+    xargs grep -n -E '.{81,}';
+
+exit 0;
