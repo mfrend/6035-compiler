@@ -74,6 +74,6 @@ public final class MethodCallNode extends CallNode {
 
   @Override
   public DecafType getType() {
-    return desc.getType();
+    return (desc == null) ? null : desc.getType();
   }
 }
