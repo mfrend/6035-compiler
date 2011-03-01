@@ -58,7 +58,7 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
           DecafType.simplify(methodDesc.getSymbolTable()
           .getParam(methodDesc.getParams().get(i)).getType());
         DecafType got = DecafType.simplify(node.getArgs().get(i).getType());
-        if (expected != got) {
+        if ((expected != null) && (got != null) && (expected != got)) {
           ErrorReporting.reportError(
             new SemanticException(node.getArgs().get(i).getSourceLoc(),
               "Argument " + i + " to method " + node.getName() +

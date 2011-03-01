@@ -45,18 +45,25 @@ public class CheckReturnValues extends ASTNodeVisitor<Boolean> {
 
   @Override
   public Boolean visit(ReturnNode node) {
+    if (curType == null) {
+      defaultBehavior(node);
+      return true;
+    }
+
     if (!node.hasValue()) {
       if (curType != DecafType.VOID) {
       ErrorReporting.reportError(
         new SemanticException(node.getSourceLoc(),
           "Method " + curMethod + " must return " + curType));
       }
-    } else if (DecafType.simplify(node.getRetValue().getType()) != curType) {
-      ErrorReporting.reportError(
-        new SemanticException(node.getSourceLoc(),
-          "Method " + curMethod + " should return " + curType +
-          ", but it returned " +
-          DecafType.simplify(node.getRetValue().getType()) + " instead"));
+    } else {
+      DecafType got = DecafType.simplify(node.getRetValue().getType());
+      if ((got != null) && (got != curType)) {
+        ErrorReporting.reportError(
+          new SemanticException(node.getSourceLoc(),
+            "Method " + curMethod + " should return " + curType +
+            ", but it returned " + got + " instead"));
+      }
     }
 
     defaultBehavior(node);
