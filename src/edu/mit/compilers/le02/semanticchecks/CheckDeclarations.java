@@ -14,7 +14,6 @@ import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.semanticchecks.SemanticException;
 import edu.mit.compilers.le02.stgenerator.SymbolTableException;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
-import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.le02.symboltable.SymbolTable.SymbolType;
 

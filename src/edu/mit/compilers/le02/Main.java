@@ -28,6 +28,7 @@ import edu.mit.compilers.le02.stgenerator.SymbolTableGenerator;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.le02.semanticchecks.MasterChecker;
 import edu.mit.compilers.tools.CLI;
+import edu.mit.compilers.tools.CLI.Action;
 
 /**
  * Main class used to invoke subcomponents of the compiler.
@@ -130,7 +131,9 @@ public class Main {
     DecafScanner scanner = new DecafScanner(new DataInputStream(inputStream));
 
     // If debug mode is set, enable tracing in the scanner.
-    scanner.setTrace(CLI.debug);
+    if (CLI.target == Action.SCAN) {
+      scanner.setTrace(CLI.debug);
+    }
     if (!CLI.compat) {
       scanner.setFilename(CLI.infile);
     }
@@ -233,7 +236,9 @@ public class Main {
       parser.setFilename(CLI.infile);
     }
     // If debug mode is set, enable tracing in the parser.
-    parser.setTrace(CLI.debug);
+    if (CLI.target == Action.PARSE) {
+      parser.setTrace(CLI.debug);
+    }
 
     return parser;
   }
