@@ -1,6 +1,7 @@
 package edu.mit.compilers.le02.ir;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import antlr.collections.AST;
@@ -85,9 +86,12 @@ public class IrGenerator {
         new IrException(SourceLocation.getSourceLocationWithoutDetails(),
           "Attempted to visit null node. Check if parse tree is malformed"));
       // This should never happen, but if it does, we return a dummy
-      // BooleanNode so that the rest of IrGenerator can run.
-      return new BooleanNode(
-        SourceLocation.getSourceLocationWithoutDetails(), false);
+      // ClassNode so that the rest of IrGenerator can run.
+      List<FieldDeclNode> fields = Collections.emptyList();
+      List<MethodDeclNode> methods = Collections.emptyList();
+      return new ClassNode(
+        SourceLocation.getSourceLocationWithoutDetails(), "<undefined>",
+        fields, methods);
     }
 
     final SourceLocation sl = new SourceLocation(node);

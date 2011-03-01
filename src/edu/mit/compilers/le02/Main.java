@@ -309,17 +309,18 @@ public class Main {
       DecafParser parser = initializeParser(inputStream);
       parser.program();
 
-      if (ErrorReporting.noErrors()) {
-        ASTNode parent = IrGenerator.generateIR(parser.getAST());
-        SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
-        MasterChecker.checkAll(parent);
+      ASTNode parent = IrGenerator.generateIR(parser.getAST());
+      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      MasterChecker.checkAll(parent);
 
-        if (CLI.debug) {
-          parent.accept(new AstPrettyPrinter());
-        }
+      if (CLI.debug) {
+        parent.accept(new AstPrettyPrinter());
       }
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);
+      success = false;
+    } catch (RuntimeException re) {
+      ErrorReporting.reportErrorCompat(re);
       success = false;
     }
     return success;
