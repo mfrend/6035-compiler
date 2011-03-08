@@ -11,7 +11,7 @@ public final class CallStatement extends BasicStatement {
   private MethodDescriptor method;
   private List<Argument> args;
   private Descriptor result;
-  
+
   public CallStatement(ExpressionNode expr, MethodDescriptor method,
                        List<Argument> args, Descriptor result) {
     super(expr);
@@ -27,9 +27,9 @@ public final class CallStatement extends BasicStatement {
   public List<Argument> getArgs() {
     return new ArrayList<Argument>(args);
   }
-  
+
   public Descriptor getResult() {
     return result;
   }
-  
+
 }
