@@ -14,6 +14,7 @@ public final class OpStatement extends BasicStatement {
     SUBTRACT,
     MULTIPLY,
     DIVIDE,
+    MODULO,
     RETURN
   }
 
