@@ -14,7 +14,7 @@ public final class ConstantArgument extends Argument {
 
   public ConstantArgument(boolean b) {
     this.b = b;
-    this.isInt = true;
+    this.isInt = false;
   }
 
   @Override
