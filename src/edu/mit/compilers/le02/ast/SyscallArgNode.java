@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class SyscallArgNode extends ASTNode {
   private boolean isString;

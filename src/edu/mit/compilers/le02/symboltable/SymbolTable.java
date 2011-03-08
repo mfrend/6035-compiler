@@ -1,6 +1,8 @@
 package edu.mit.compilers.le02.symboltable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
@@ -10,6 +12,10 @@ import edu.mit.compilers.le02.stgenerator.SymbolTableException;
 public class SymbolTable {
   private SymbolTable parent;
   private Map<String, Descriptor> table;
+  private List<LocalDescriptor> locals;
+  private List<ParamDescriptor> params;
+  private List<FieldDescriptor> fields;
+  private List<MethodDescriptor> methods;
 
   public enum SymbolType {
     METHOD,
@@ -20,8 +26,34 @@ public class SymbolTable {
   public SymbolTable(SymbolTable parent) {
     this.parent = parent;
     this.table = new HashMap<String, Descriptor>();
+    
+    this.locals = new ArrayList<LocalDescriptor>(this.parent.locals);
+    this.params = new ArrayList<ParamDescriptor>(this.parent.params);
+    this.fields = new ArrayList<FieldDescriptor>(this.parent.fields);
+    this.methods = new ArrayList<MethodDescriptor>(this.parent.methods);
   }
 
+  public boolean put(String id, LocalDescriptor descriptor, SourceLocation sl) {
+    this.locals.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, ParamDescriptor descriptor, SourceLocation sl) {
+    this.params.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, FieldDescriptor descriptor, SourceLocation sl) {
+    this.fields.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, 
+                     MethodDescriptor descriptor, SourceLocation sl) {
+    this.methods.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+  
   /**
    * Add a new entry to the symbol table. Verify that it does not already
    * exist in this table or any ancestor
@@ -30,7 +62,8 @@ public class SymbolTable {
    * @param descriptor The descriptor of the new entry
    * @return True if entry was successful
    */
-  public boolean put(String id, Descriptor descriptor, SourceLocation sl) {
+  private boolean putHelper(String id, 
+                            Descriptor descriptor, SourceLocation sl) {
     if (table.containsKey(id)) {
       ErrorReporting.reportError(
       new SymbolTableException(sl, "Duplicate identifier " + id));
@@ -100,7 +133,7 @@ public class SymbolTable {
 
 
   /**
-   * Convenience method to get a MethodDescriptor
+   * Convenience method to get a LocalDescriptor
    * @param id The id of the descriptor
    * @return Returns the requested descriptor, or null if not found
    * @see SymbolTable.get

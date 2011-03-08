@@ -5,6 +5,7 @@ import java.util.List;
 
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.Util;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class StringNode extends ASTNode {
   private String value;

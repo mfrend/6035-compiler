@@ -68,7 +68,7 @@ public class CheckDeclarations extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(BlockNode node) {
     SymbolTable parent = symbolTable;
-    symbolTable = node.getLocalSymbolTable();
+    symbolTable = node.getSymbolTable();
 
     defaultBehavior(node);
 

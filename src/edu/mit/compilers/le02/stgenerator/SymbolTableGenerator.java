@@ -65,6 +65,10 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     // Set the descriptors for the AST
     ASTDescriptorVisitor v = new ASTDescriptorVisitor();
     v.setASTDescriptors(root, desc);
+    
+    // Set the parents for the AST (so they can find the symbol tables)
+    ASTParentVisitor pv = new ASTParentVisitor();
+    pv.visit(root);
     return st;
   }
 
@@ -121,7 +125,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     String name = node.getInit().getLoc().getName();
 
     body.accept(this);
-    body.getLocalSymbolTable().put(
+    body.getSymbolTable().put(
       name, new LocalDescriptor(currParent, name, DecafType.INT),
       node.getInit().getLoc().getSourceLoc());
     return null;
@@ -145,7 +149,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     }
 
     currParent = parent;
-    node.setLocalSymbolTable(localSymbolTable);
+    node.setSymbolTable(localSymbolTable);
     return null;
   }
 

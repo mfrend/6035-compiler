@@ -22,7 +22,7 @@ public class MethodDescriptor extends TypedDescriptor {
   @Override
   public String toString() {
     return "[" + this.symbolTable.toString() +
-      "],[" + this.code.getLocalSymbolTable().toString() + "]";
+      "],[" + this.code.getSymbolTable().toString() + "]";
 
   }
 

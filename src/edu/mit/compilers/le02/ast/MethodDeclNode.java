@@ -5,6 +5,7 @@ import java.util.List;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class MethodDeclNode extends DeclNode {
   private List<VarDeclNode> params;
@@ -40,5 +41,10 @@ public final class MethodDeclNode extends DeclNode {
   @Override
   public <T> T accept(ASTNodeVisitor<T> v) {
     return v.visit(this);
+  }
+
+  @Override
+  public SymbolTable getSymbolTable() {
+    return body.getSymbolTable();
   }
 }
