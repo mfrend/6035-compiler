@@ -1,6 +1,8 @@
 package edu.mit.compilers.le02.symboltable;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,10 @@ public class SymbolTable {
     this.methods = new ArrayList<MethodDescriptor>(this.parent.methods);
   }
 
+  public boolean put(String id, ClassDescriptor descriptor, SourceLocation sl) {
+    return this.putHelper(id, descriptor, sl);
+  }
+  
   public boolean put(String id, LocalDescriptor descriptor, SourceLocation sl) {
     this.locals.add(descriptor);
     return this.putHelper(id, descriptor, sl);
@@ -160,6 +166,16 @@ public class SymbolTable {
    */
   public MethodDescriptor getMethod(String id) {
     return (MethodDescriptor) get(id, SymbolType.METHOD);
+  }
+  
+  public int getHighestLocalIndex() {
+    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
+      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
+        return d1.getIndex() - d2.getIndex();
+      }
+    };
+    
+    return Collections.max(locals, c).getIndex();
   }
 
   /**

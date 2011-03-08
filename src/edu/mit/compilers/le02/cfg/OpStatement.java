@@ -15,6 +15,8 @@ public final class OpStatement extends BasicStatement {
     MULTIPLY,
     DIVIDE,
     MODULO,
+    UNARY_MINUS,
+    NOT,
     RETURN
   }
 
