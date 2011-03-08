@@ -20,13 +20,26 @@ public final class ControlFlowGraph {
   public BasicBlockNode getBasicBlock(String id) {
     return basicBlocks.get(id);
   }
+  
+  public void putBasicBlock(String id, BasicBlockNode node) {
+    basicBlocks.put(id, node);
+  }
 
   public FieldDescriptor getGlobal(String id) {
     return globals.get(id);
   }
 
+  public void putGlobal(String id, FieldDescriptor desc) {
+    globals.put(id, desc);
+  }
+  
   public String getStringData(String id) {
     return stringData.get(id);
+  }
+  
+
+  public void putStringData(String id, String data) {
+    stringData.put(id, data);
   }
 
 }
