@@ -8,9 +8,4 @@ public class LocalDescriptor extends TypedDescriptor {
     super(parent, id, type);
   }
 
-  @Override
-  public String toString() {
-    return this.getType().toString();
-  }
-
 }
