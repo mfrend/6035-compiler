@@ -7,10 +7,5 @@ public class ParamDescriptor extends TypedDescriptor {
   public ParamDescriptor(SymbolTable parent, String id, DecafType type) {
     super(parent, id, type);
   }
-
-  @Override
-  public String toString() {
-    return this.getType().toString();
-  }
-
+  
 }
