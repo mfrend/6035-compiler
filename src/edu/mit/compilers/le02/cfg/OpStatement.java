@@ -15,6 +15,13 @@ public final class OpStatement extends BasicStatement {
     MULTIPLY,
     DIVIDE,
     MODULO,
+    UNARY_MINUS,
+    EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    LESS_OR_EQUAL,
+    GREATER_THAN,
+    GREATER_OR_EQUAL,
     RETURN
   }
 
