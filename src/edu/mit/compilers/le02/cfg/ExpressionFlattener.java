@@ -27,8 +27,13 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
  * This singleton class takes a control flow graph and flattens all the
- * UnexpandedStatements into BasicStatements.  It is ok with having existing
- * BasicStatements in the control flow graph.
+ * UnexpandedStatements into expanded BasicStatements.  It is ok with having 
+ * existing expanded BasicStatements in the control flow graph.
+ * 
+ * If the final conditional BasicStatement is unexpanded, it will be replaced
+ * by the last statement of its the expanded expression, and the rest of the
+ * BasicStatements which evaluate the expression will be appended to the
+ * statement list of the basic block.   
  * 
  * The class will add some temporary locations into the symbol tables in order
  * to handle complex expressions with more than one operator.
@@ -47,18 +52,44 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return instance;
   }
   
+  /*
+   * Static Helper Methods
+   */
   public static List<BasicStatement> flatten(UnexpandedStatement us) {
     return getInstance().flattenStatement(us);
   }
   
-  public static List<BasicStatement> 
-  flattenStatements(List<BasicStatement> statementList) {
-    ArrayList<BasicStatement> retList = new ArrayList<BasicStatement>();
+  public static void flattenCFG(ControlFlowGraph cfg) {
+    // TODO: iterate all basic blocks adn call flattenStatements(bb)
     
+  }
+  
+  /**
+   * Flattens all the unexpanded statements in the given basic block.
+   * @param bb The basic block to flatten.
+   */
+  public static void flattenStatements(BasicBlockNode bb) {
+    ArrayList<BasicStatement> newStatementList = new ArrayList<BasicStatement>();
+    List<BasicStatement> statementList = bb.getStatements();
     for (BasicStatement bs : statementList) {
-      retList.addAll(bs.flatten());
+      newStatementList.addAll(bs.flatten());
     }
-    return retList;
+    
+    BasicStatement cond = bb.getConditional();
+    if (cond != null) {
+      List<BasicStatement> condStatements = cond.flatten();
+      
+      // Make the result of the flattened conditional 
+      // the new conditional statement
+      BasicStatement last = condStatements.remove(condStatements.size() - 1);
+      bb.setConditional(last);
+      
+      // Add the rest of the flattened conditional 
+      // to the end of the basic block
+      newStatementList.addAll(condStatements);
+    }
+    
+    bb.setStatements(newStatementList);
   }
 
   public List<BasicStatement> flattenStatement(UnexpandedStatement us) {
@@ -67,6 +98,10 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return statements;
   }
   
+
+  /*
+   * Utility Methods
+   */
   
   private Op convertOp(MathOpNode.MathOp op) {
     switch(op) {

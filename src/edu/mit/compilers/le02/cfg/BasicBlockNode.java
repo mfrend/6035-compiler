@@ -32,6 +32,10 @@ public final class BasicBlockNode {
     ArrayList<BasicStatement> list = new ArrayList<BasicStatement>(statements);
     return list;
   }
+  
+  public void setConditional(BasicStatement conditional) {
+    this.conditional = conditional;
+  }
 
   public BasicStatement getConditional() {
     return conditional;
