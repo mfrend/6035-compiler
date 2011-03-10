@@ -12,21 +12,31 @@ public final class OpStatement extends BasicStatement {
   private VariableLocation result;
   
   public enum Op {
-    MOVE,
-    ADD,
-    SUBTRACT,
-    MULTIPLY,
-    DIVIDE,
-    MODULO,
-    UNARY_MINUS,
-    EQUAL,
-    NOT_EQUAL,
-    LESS_THAN,
-    LESS_OR_EQUAL,
-    GREATER_THAN,
-    GREATER_OR_EQUAL,
-    NOT,
-    RETURN
+    MOVE("mov"),
+    ADD("add"),
+    SUBTRACT("sub"),
+    MULTIPLY("mul"),
+    DIVIDE("div"),
+    MODULO("mod"),
+    UNARY_MINUS(""), // help, this shouldn't be here. need to already have transformed to (0 - temp)
+    NOT(""),
+    EQUAL("cmp"),
+    NOT_EQUAL("cmp"),
+    LESS_THAN("eq"),
+    LESS_OR_EQUAL("le"),
+    GREATER_THAN("gt"),
+    GREATER_OR_EQUAL("ge"),
+    RETURN("return");
+
+    private String opcode;
+
+    private Op(String code) {
+      opcode = code;
+    }
+    @Override
+    public String toString() {
+      return opcode;
+    }
   }
 
   public OpStatement(ASTNode node, Op op, Argument arg1, Argument arg2,
