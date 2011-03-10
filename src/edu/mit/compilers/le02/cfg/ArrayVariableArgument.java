@@ -1,12 +1,11 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.cfg.Argument.ArgType;
-import edu.mit.compilers.le02.symboltable.Location;
+import edu.mit.compilers.le02.VariableLocation;
 
 public class ArrayVariableArgument extends VariableArgument {
   private Argument index;
 
-  public ArrayVariableArgument(Location loc, Argument index) {
+  public ArrayVariableArgument(VariableLocation loc, Argument index) {
     super(loc);
   }
 

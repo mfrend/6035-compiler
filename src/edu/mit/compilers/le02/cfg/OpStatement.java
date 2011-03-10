@@ -4,12 +4,12 @@ import java.util.Collections;
 import java.util.List;
 
 import edu.mit.compilers.le02.ast.ASTNode;
-import edu.mit.compilers.le02.symboltable.Location;
+import edu.mit.compilers.le02.VariableLocation;
 
 public final class OpStatement extends BasicStatement {
   private Op op;
   private Argument arg1, arg2;
-  private Location result;
+  private VariableLocation result;
   
   public enum Op {
     MOVE,
@@ -30,7 +30,7 @@ public final class OpStatement extends BasicStatement {
   }
 
   public OpStatement(ASTNode node, Op op, Argument arg1, Argument arg2,
-                     Location result) {
+                     VariableLocation result) {
     super(node);
     this.op = op;
     this.arg1 = arg1;
@@ -50,7 +50,7 @@ public final class OpStatement extends BasicStatement {
     return arg2;
   }
 
-  public Location getResult() {
+  public VariableLocation getResult() {
     return result;
   }
 

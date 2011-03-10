@@ -1,11 +1,11 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.symboltable.Location;
+import edu.mit.compilers.le02.VariableLocation;
 
 public class VariableArgument extends Argument {
-  private Location loc;
+  private VariableLocation loc;
 
-  public VariableArgument(Location loc) {
+  public VariableArgument(VariableLocation loc) {
     this.loc = loc;
   }
 
@@ -14,7 +14,7 @@ public class VariableArgument extends Argument {
     return ArgType.VARIABLE;
   }
 
-  public Location getLoc() {
+  public VariableLocation getLoc() {
     return loc;
   }
 

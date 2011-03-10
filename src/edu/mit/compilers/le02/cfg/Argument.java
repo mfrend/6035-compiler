@@ -1,7 +1,6 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.symboltable.Descriptor;
-import edu.mit.compilers.le02.symboltable.Location;
+import edu.mit.compilers.le02.VariableLocation;
 
 public abstract class Argument {
   public enum ArgType {
@@ -13,11 +12,11 @@ public abstract class Argument {
   
   abstract public ArgType getType();
   
-  public static Argument makeArgument(Location loc) {
+  public static Argument makeArgument(VariableLocation loc) {
     return new VariableArgument(loc);
   }
 
-  public static Argument makeArgument(Location loc, Argument index) {
+  public static Argument makeArgument(VariableLocation loc, Argument index) {
     return new ArrayVariableArgument(loc, index);
   }
   

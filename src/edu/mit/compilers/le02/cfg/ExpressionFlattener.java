@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.mit.compilers.le02.DecafType;
+import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayLocationNode;
@@ -22,7 +23,6 @@ import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.ast.VariableNode;
 import edu.mit.compilers.le02.cfg.OpStatement.Op;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
-import edu.mit.compilers.le02.symboltable.Location;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
@@ -139,12 +139,12 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return null;
   }
   
-  private Location makeTemp(ASTNode node) {
+  private VariableLocation makeTemp(ASTNode node) {
     SymbolTable st = node.getSymbolTable();
     
     int nextIndex = st.getLargestLocalOffset() - 8;
-    Location loc = new Location();
-    loc.setStackLocation("rbp", nextIndex);
+    VariableLocation loc = new VariableLocation();
+    loc.setStackLocation(nextIndex);
     
     LocalDescriptor ld = new LocalDescriptor(st, Math.abs(nextIndex) + "lcltmp", 
         DecafType.INT);
@@ -156,7 +156,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
    * Statement Visiting Methods
    */
   public Argument visit(AssignNode node) {
-    Location destLoc = node.getLoc().getDesc().getLocation();
+    VariableLocation destLoc = node.getLoc().getDesc().getLocation();
     Argument dest = Argument.makeArgument(destLoc);
     Argument src = node.getValue().accept(this);
     
@@ -185,7 +185,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   public Argument visit(BoolOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
-    Location loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node);
     
     OpStatement s = new OpStatement(node, convertOp(node.getOp()), 
                                     arg1, arg2, loc);
@@ -196,7 +196,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   public Argument visit(MathOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
-    Location loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node);
     
     OpStatement s = new OpStatement(node, convertOp(node.getOp()), 
                                     arg1, arg2, loc);
@@ -205,7 +205,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   }
   
   public Argument visit(NotNode node) {
-    Location loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node);
     
     OpStatement s = new OpStatement(node, Op.NOT, 
                                     node.getExpr().accept(this), null, loc);
@@ -214,7 +214,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   }
   
   public Argument visit(MinusNode node) {
-    Location loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node);
     
     OpStatement s = new OpStatement(node, Op.UNARY_MINUS, 
                                     node.getExpr().accept(this), null, loc);
@@ -223,7 +223,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   }
   
   public Argument visit(MethodCallNode node) {
-    Location loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node);
     
     List<Argument> args = new ArrayList<Argument>();
     for (ExpressionNode n : node.getArgs()) {

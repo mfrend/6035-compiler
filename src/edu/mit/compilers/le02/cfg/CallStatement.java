@@ -4,17 +4,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ExpressionNode;
-import edu.mit.compilers.le02.symboltable.Location;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 
 public final class CallStatement extends BasicStatement {
   private MethodDescriptor method;
   private List<Argument> args;
-  private Location result;
+  private VariableLocation result;
 
   public CallStatement(ExpressionNode expr, MethodDescriptor method,
-                       List<Argument> args, Location result) {
+                       List<Argument> args, VariableLocation result) {
     super(expr);
     this.method = method;
     this.args = args;
@@ -29,7 +29,7 @@ public final class CallStatement extends BasicStatement {
     return new ArrayList<Argument>(args);
   }
 
-  public Location getResult() {
+  public VariableLocation getResult() {
     return result;
   }
   
