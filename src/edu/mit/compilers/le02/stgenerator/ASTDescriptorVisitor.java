@@ -31,7 +31,7 @@ public final class ASTDescriptorVisitor extends ASTNodeVisitor<Object> {
   @Override
   public Object visit(BlockNode node) {
     SymbolTable last = currST;
-    currST = node.getLocalSymbolTable();
+    currST = node.getSymbolTable();
 
     defaultBehavior(node);
 
@@ -51,7 +51,7 @@ public final class ASTDescriptorVisitor extends ASTNodeVisitor<Object> {
   @Override
   public Object visit(ForNode node) {
     node.getInit().getLoc().setDesc(
-      (TypedDescriptor)node.getBody().getLocalSymbolTable().get(
+      (TypedDescriptor)node.getBody().getSymbolTable().get(
         node.getInit().getLoc().getName(), SymbolType.VARIABLE));
     // Do not visit init statement again, because it'll cause us to overwrite.
     node.getInit().getValue().accept(this);

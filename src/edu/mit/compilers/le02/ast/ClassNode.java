@@ -5,6 +5,7 @@ import java.util.List;
 
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.symboltable.ClassDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 
 public final class ClassNode extends ASTNode {
@@ -61,5 +62,10 @@ public final class ClassNode extends ASTNode {
   @Override
   public <T> T accept(ASTNodeVisitor<T> v) {
     return v.visit(this);
+  }
+
+  @Override
+  public SymbolTable getSymbolTable() {
+    return desc.getSymbolTable();
   }
 }

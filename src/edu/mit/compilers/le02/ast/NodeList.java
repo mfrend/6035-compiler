@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
  * A shallow wrapper around an {@link ArrayList} that allows passing of a list
@@ -144,6 +145,11 @@ public class NodeList<T extends ASTNode> extends ASTNode implements List<T> {
   @Override
   public <V> V accept(ASTNodeVisitor<V> v) {
     return v.visit(this);
+  }
+
+  @Override
+  public SymbolTable getSymbolTable() {
+    return parent.getSymbolTable();
   }
 
 }

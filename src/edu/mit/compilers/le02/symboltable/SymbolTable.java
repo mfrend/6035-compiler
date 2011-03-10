@@ -1,6 +1,10 @@
 package edu.mit.compilers.le02.symboltable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
@@ -10,6 +14,10 @@ import edu.mit.compilers.le02.stgenerator.SymbolTableException;
 public class SymbolTable {
   private SymbolTable parent;
   private Map<String, Descriptor> table;
+  private List<LocalDescriptor> locals;
+  private List<ParamDescriptor> params;
+  private List<FieldDescriptor> fields;
+  private List<MethodDescriptor> methods;
 
   public enum SymbolType {
     METHOD,
@@ -20,8 +28,53 @@ public class SymbolTable {
   public SymbolTable(SymbolTable parent) {
     this.parent = parent;
     this.table = new HashMap<String, Descriptor>();
+    
+    this.locals = new ArrayList<LocalDescriptor>();
+    this.params = new ArrayList<ParamDescriptor>();
+    this.fields = new ArrayList<FieldDescriptor>();
+    this.methods = new ArrayList<MethodDescriptor>();
+    
+    if (this.parent != null) {
+      if (this.parent.locals != null) {
+        this.locals.addAll(this.parent.locals);
+      }
+      if (this.parent.params != null) {
+        this.params.addAll(this.parent.params);
+      }
+      if (this.parent.fields != null) {
+        this.fields.addAll(this.parent.fields);
+      }
+      if (this.parent.methods != null) {
+        this.methods.addAll(this.parent.methods);
+      }
+    }
   }
 
+  public boolean put(String id, ClassDescriptor descriptor, SourceLocation sl) {
+    return this.putHelper(id, descriptor, sl);
+  }
+  
+  public boolean put(String id, LocalDescriptor descriptor, SourceLocation sl) {
+    this.locals.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, ParamDescriptor descriptor, SourceLocation sl) {
+    this.params.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, FieldDescriptor descriptor, SourceLocation sl) {
+    this.fields.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+
+  public boolean put(String id, 
+                     MethodDescriptor descriptor, SourceLocation sl) {
+    this.methods.add(descriptor);
+    return this.putHelper(id, descriptor, sl);
+  }
+  
   /**
    * Add a new entry to the symbol table. Verify that it does not already
    * exist in this table or any ancestor
@@ -30,7 +83,8 @@ public class SymbolTable {
    * @param descriptor The descriptor of the new entry
    * @return True if entry was successful
    */
-  public boolean put(String id, Descriptor descriptor, SourceLocation sl) {
+  private boolean putHelper(String id, 
+                            Descriptor descriptor, SourceLocation sl) {
     if (table.containsKey(id)) {
       ErrorReporting.reportError(
       new SymbolTableException(sl, "Duplicate identifier " + id));
@@ -100,7 +154,7 @@ public class SymbolTable {
 
 
   /**
-   * Convenience method to get a MethodDescriptor
+   * Convenience method to get a LocalDescriptor
    * @param id The id of the descriptor
    * @return Returns the requested descriptor, or null if not found
    * @see SymbolTable.get
@@ -127,6 +181,22 @@ public class SymbolTable {
    */
   public MethodDescriptor getMethod(String id) {
     return (MethodDescriptor) get(id, SymbolType.METHOD);
+  }
+  
+  /**
+   * Finds the most negative local offset of all the locals in the symbol table.
+   *
+   * @return The most negative local offset.
+   */
+  public int getLargestLocalOffset() {
+    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
+      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
+        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
+      }
+    };
+    
+    // Return minimum because the local offsets are negative
+    return Collections.min(locals, c).getLocation().getOffset();
   }
 
   /**

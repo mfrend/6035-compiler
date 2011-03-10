@@ -89,7 +89,7 @@ public class SymbolTableGeneratorTest extends TestCase {
                                                      SymbolType.EITHER);
     checkTypedDesc(md, "method1", DecafType.INT);
     SymbolTable pst = md.getSymbolTable();
-    SymbolTable lst = md.getCode().getLocalSymbolTable();
+    SymbolTable lst = md.getCode().getSymbolTable();
     assertNotNull(pst);
     assertNotNull(lst);
 
@@ -160,7 +160,7 @@ public class SymbolTableGeneratorTest extends TestCase {
                                                      SymbolType.EITHER);
     checkTypedDesc(md, "method1", DecafType.INT);
     BlockNode node = (BlockNode) md.getCode().getStatements().get(1);
-    SymbolTable lst = node.getLocalSymbolTable();
+    SymbolTable lst = node.getSymbolTable();
     assertNotNull(lst);
 
     LocalDescriptor ld = (LocalDescriptor) lst.get("local1",
@@ -174,7 +174,7 @@ public class SymbolTableGeneratorTest extends TestCase {
     checkTypedDesc(ld, "local4", DecafType.INT);
 
     ForNode f = (ForNode) md.getCode().getStatements().get(2);
-    lst = f.getBody().getLocalSymbolTable();
+    lst = f.getBody().getSymbolTable();
     assertNotNull(lst);
     ld = (LocalDescriptor) lst.get("forVar", SymbolType.EITHER);
     checkTypedDesc(ld, "forVar", DecafType.INT);

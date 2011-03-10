@@ -1,16 +1,20 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.ast.ExpressionNode;
+import java.util.List;
+
+import edu.mit.compilers.le02.ast.ASTNode;
 
 public abstract class BasicStatement {
-  private ExpressionNode expr;
+  private ASTNode node;
   
-  public BasicStatement(ExpressionNode expr) {
-    this.expr = expr;
+  public BasicStatement(ASTNode node) {
+    this.node = node;
   }
 
-  public ExpressionNode getExpr() {
-    return expr;
+  public ASTNode getNode() {
+    return node;
   }
+  
+  abstract public List<BasicStatement> flatten();
 
 }

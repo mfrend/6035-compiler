@@ -1,6 +1,7 @@
-package edu.mit.compilers.le02.symboltable;
+package edu.mit.compilers.le02;
 
-public class Location {
+
+public class VariableLocation {
 	private String register;
 	private int offset;
 	private LocationType type;
@@ -19,7 +20,7 @@ public class Location {
 		    }
 		  };
 		  
-	public Location(){
+	public VariableLocation(){
 		this.type = LocationType.UNDEFINED;
 	}
 	
@@ -29,9 +30,9 @@ public class Location {
 		this.offset = 0;
 	}
 	
-	public void setStackLocation(String stackPointer, int offset){
+	public void setStackLocation(int offset){
 		this.type = LocationType.STACK;
-		this.register = stackPointer;
+		this.register = null;
 		this.offset = offset;
 	}
 	

@@ -42,11 +42,12 @@ public final class BlockNode extends StatementNode {
     this.statements = statements;
   }
 
-  public void setLocalSymbolTable(SymbolTable locals) {
+  public void setSymbolTable(SymbolTable locals) {
     localSymbolTable = locals;
   }
 
-  public SymbolTable getLocalSymbolTable() {
+  @Override
+  public SymbolTable getSymbolTable() {
     return localSymbolTable;
   }
 
