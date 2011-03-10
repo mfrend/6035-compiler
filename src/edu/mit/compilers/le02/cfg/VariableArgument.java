@@ -1,12 +1,12 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.symboltable.Descriptor;
+import edu.mit.compilers.le02.symboltable.Location;
 
 public class VariableArgument extends Argument {
-  protected Descriptor desc;
+  private Location loc;
 
-  public VariableArgument(Descriptor desc) {
-    this.desc = desc;
+  public VariableArgument(Location loc) {
+    this.loc = loc;
   }
 
   @Override
@@ -14,8 +14,8 @@ public class VariableArgument extends Argument {
     return ArgType.VARIABLE;
   }
 
-  public Descriptor getDesc() {
-    return desc;
+  public Location getLoc() {
+    return loc;
   }
 
 }

@@ -1,12 +1,13 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.symboltable.Descriptor;
+import edu.mit.compilers.le02.cfg.Argument.ArgType;
+import edu.mit.compilers.le02.symboltable.Location;
 
 public class ArrayVariableArgument extends VariableArgument {
   private Argument index;
 
-  public ArrayVariableArgument(Descriptor desc, Argument index) {
-    super(desc);
+  public ArrayVariableArgument(Location loc, Argument index) {
+    super(loc);
   }
 
   @Override

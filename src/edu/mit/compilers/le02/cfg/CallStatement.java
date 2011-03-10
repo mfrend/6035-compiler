@@ -5,16 +5,16 @@ import java.util.Collections;
 import java.util.List;
 
 import edu.mit.compilers.le02.ast.ExpressionNode;
-import edu.mit.compilers.le02.symboltable.Descriptor;
+import edu.mit.compilers.le02.symboltable.Location;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 
 public final class CallStatement extends BasicStatement {
   private MethodDescriptor method;
   private List<Argument> args;
-  private Descriptor result;
+  private Location result;
 
   public CallStatement(ExpressionNode expr, MethodDescriptor method,
-                       List<Argument> args, Descriptor result) {
+                       List<Argument> args, Location result) {
     super(expr);
     this.method = method;
     this.args = args;
@@ -29,7 +29,7 @@ public final class CallStatement extends BasicStatement {
     return new ArrayList<Argument>(args);
   }
 
-  public Descriptor getResult() {
+  public Location getResult() {
     return result;
   }
   
