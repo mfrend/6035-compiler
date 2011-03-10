@@ -4,6 +4,7 @@ import edu.mit.compilers.le02.symboltable.Descriptor;
 
 public abstract class Argument {
   public enum ArgType {
+    ARRAY_VARIABLE,
     VARIABLE,
     CONST_INT,
     CONST_BOOL
@@ -13,6 +14,10 @@ public abstract class Argument {
   
   public static Argument makeArgument(Descriptor d) {
     return new VariableArgument(d);
+  }
+
+  public static Argument makeArgument(Descriptor d, Argument index) {
+    return new ArrayVariableArgument(d, index);
   }
   
   public static Argument makeArgument(int i) {

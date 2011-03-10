@@ -1,6 +1,5 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.symboltable.Descriptor;
 
 public final class ConstantArgument extends Argument {
   private int i;

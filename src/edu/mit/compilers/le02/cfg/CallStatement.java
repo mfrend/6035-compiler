@@ -1,6 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import edu.mit.compilers.le02.ast.ExpressionNode;
@@ -30,6 +31,11 @@ public final class CallStatement extends BasicStatement {
 
   public Descriptor getResult() {
     return result;
+  }
+  
+  @Override
+  public List<BasicStatement> flatten() {
+    return Collections.singletonList((BasicStatement) this);
   }
 
 }

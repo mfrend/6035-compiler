@@ -2,8 +2,8 @@ package edu.mit.compilers.le02.cfg;
 
 import edu.mit.compilers.le02.symboltable.Descriptor;
 
-public final class VariableArgument extends Argument {
-  private Descriptor desc;
+public class VariableArgument extends Argument {
+  protected Descriptor desc;
 
   public VariableArgument(Descriptor desc) {
     this.desc = desc;

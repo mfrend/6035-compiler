@@ -1,6 +1,9 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.ast.ExpressionNode;
+import java.util.Collections;
+import java.util.List;
+
+import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.symboltable.Descriptor;
 
 public final class OpStatement extends BasicStatement {
@@ -16,25 +19,25 @@ public final class OpStatement extends BasicStatement {
     DIVIDE,
     MODULO,
     UNARY_MINUS,
-    NOT,
     EQUAL,
     NOT_EQUAL,
     LESS_THAN,
     LESS_OR_EQUAL,
     GREATER_THAN,
     GREATER_OR_EQUAL,
+    NOT,
     RETURN
   }
 
-  public OpStatement(ExpressionNode expr, Op op, Argument arg1, Argument arg2,
+  public OpStatement(ASTNode node, Op op, Argument arg1, Argument arg2,
                      Descriptor result) {
-    super(expr);
+    super(node);
     this.op = op;
     this.arg1 = arg1;
     this.arg2 = arg2;
     this.result = result;
   }
-
+  
   public Op getOp() {
     return op;
   }
@@ -49,6 +52,11 @@ public final class OpStatement extends BasicStatement {
 
   public Descriptor getResult() {
     return result;
+  }
+
+  @Override
+  public List<BasicStatement> flatten() {
+    return Collections.singletonList((BasicStatement) this);
   }
 
   
