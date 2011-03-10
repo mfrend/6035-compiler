@@ -55,6 +55,11 @@ public class CheckExprTypes extends ASTNodeVisitor<Boolean> {
       if (expected == null) {
         defaultBehavior(node);
         return true;
+      } else if (expected == DecafType.VOID) {
+        ErrorReporting.reportError(
+          new SemanticException(node.getLeft().getSourceLoc(),
+            "Type mismatch: left side of " + node.getOp() +
+            " should not be void."));
       }
     } else {
       got = DecafType.simplify(node.getLeft().getType());

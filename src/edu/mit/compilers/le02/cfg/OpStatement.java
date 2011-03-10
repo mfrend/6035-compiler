@@ -17,6 +17,12 @@ public final class OpStatement extends BasicStatement {
     MODULO,
     UNARY_MINUS,
     NOT,
+    EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    LESS_OR_EQUAL,
+    GREATER_THAN,
+    GREATER_OR_EQUAL,
     RETURN
   }
 
