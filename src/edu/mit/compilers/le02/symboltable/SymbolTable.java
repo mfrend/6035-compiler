@@ -29,10 +29,11 @@ public class SymbolTable {
     this.parent = parent;
     this.table = new HashMap<String, Descriptor>();
     
-    this.locals = new ArrayList<LocalDescriptor>(this.parent.locals);
-    this.params = new ArrayList<ParamDescriptor>(this.parent.params);
-    this.fields = new ArrayList<FieldDescriptor>(this.parent.fields);
-    this.methods = new ArrayList<MethodDescriptor>(this.parent.methods);
+    //TODO
+    this.locals = new ArrayList<LocalDescriptor>();
+    this.params = new ArrayList<ParamDescriptor>();
+    this.fields = new ArrayList<FieldDescriptor>();
+    this.methods = new ArrayList<MethodDescriptor>();
   }
 
   public boolean put(String id, ClassDescriptor descriptor, SourceLocation sl) {
