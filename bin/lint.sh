@@ -8,7 +8,7 @@ find $base/src $base/tests/src -name "*.java" |
 
 echo 'Detecting trailing whitespace.'
 find $base/src $base/tests/src -name "*.java" |
-    xargs grep -n -E ' $'
+    xargs grep -n -E '\S+\s+$'
 
 echo 'Detecting tabs.'
 find $base/src $base/tests/src -name "*.java" |

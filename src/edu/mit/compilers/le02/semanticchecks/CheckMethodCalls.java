@@ -7,9 +7,7 @@ import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.MethodCallNode;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
-import edu.mit.compilers.le02.symboltable.ParamDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
-import edu.mit.compilers.le02.symboltable.SymbolTable.SymbolType;
 
 public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   /** Holds the CheckMethodCalls singleton. */
@@ -58,9 +56,9 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
         " arguments, got " + node.getArgs().size()));
     } else {
       for (int i = 0; i < methodDesc.getParams().size(); i++) {
-        DecafType expected =
-          DecafType.simplify(methodDesc.getSymbolTable()
-          .getParam(methodDesc.getParams().get(i)).getType());
+        DecafType expected = DecafType.simplify(
+          methodDesc.getSymbolTable().getParam(
+            methodDesc.getParams().get(i)).getType());
         DecafType got = DecafType.simplify(node.getArgs().get(i).getType());
 
         if ((expected != null) && (got != null) && (expected != got)) {
