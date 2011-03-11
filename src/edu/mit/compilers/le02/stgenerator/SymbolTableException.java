@@ -1,8 +1,9 @@
 package edu.mit.compilers.le02.stgenerator;
 
-import edu.mit.compilers.le02.semanticchecks.SemanticException;
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.semanticchecks.SemanticException;
 
+@SuppressWarnings("serial")
 public class SymbolTableException extends SemanticException {
 
   public SymbolTableException(int line, int col, String msg) {

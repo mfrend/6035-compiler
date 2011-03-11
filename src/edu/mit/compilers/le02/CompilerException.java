@@ -8,6 +8,7 @@ import edu.mit.compilers.tools.CLI;
  * where the error occurred. Like other Exceptions, also stores stack trace
  * information for the error occurred in the code.
  */
+@SuppressWarnings("serial")
 public class CompilerException extends Exception {
 
   /** The source location in the input where the error was thrown. */
