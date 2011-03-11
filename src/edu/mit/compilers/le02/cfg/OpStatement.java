@@ -7,11 +7,11 @@ import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.VariableLocation;
 
 public final class OpStatement extends BasicStatement {
-  private Op op;
+  private AsmOp op;
   private Argument arg1, arg2;
   private VariableLocation result;
   
-  public enum Op {
+  public enum AsmOp {
     MOVE,
     ADD,
     SUBTRACT,
@@ -29,7 +29,7 @@ public final class OpStatement extends BasicStatement {
     RETURN
   }
 
-  public OpStatement(ASTNode node, Op op, Argument arg1, Argument arg2,
+  public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
                      VariableLocation result) {
     super(node);
     this.op = op;
@@ -38,7 +38,7 @@ public final class OpStatement extends BasicStatement {
     this.result = result;
   }
   
-  public Op getOp() {
+  public AsmOp getOp() {
     return op;
   }
 
