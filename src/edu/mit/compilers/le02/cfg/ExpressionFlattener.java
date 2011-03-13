@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.mit.compilers.le02.DecafType;
+import edu.mit.compilers.le02.StackLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -144,7 +145,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     
     int nextIndex = st.getLargestLocalOffset() - 8;
     VariableLocation loc = new VariableLocation();
-    loc.setStackLocation(nextIndex);
+    loc.setStackLocation(false,nextIndex);
     
     LocalDescriptor ld = new LocalDescriptor(st, Math.abs(nextIndex) + "lcltmp", 
         DecafType.INT);

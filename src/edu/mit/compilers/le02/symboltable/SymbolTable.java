@@ -191,12 +191,12 @@ public class SymbolTable {
   public int getLargestLocalOffset() {
     Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
       public int compare(LocalDescriptor d1, LocalDescriptor d2) {
-        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
+        return d1.getLocation().getStackLocation().getOffset() - d2.getLocation().getStackLocation().getOffset();
       }
     };
     
     // Return minimum because the local offsets are negative
-    return Collections.min(locals, c).getLocation().getOffset();
+    return Collections.min(locals, c).getLocation().getStackLocation().getOffset();
   }
 
   /**
