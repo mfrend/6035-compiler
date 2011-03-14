@@ -38,8 +38,10 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 public final class CFGGenerator extends ASTNodeVisitor<Argument> {
     private static CFGGenerator instance = null;
     private static BasicBlockNode curNode;
-    private static String loopID, postLoopID;
     private static int id;
+
+    private static String loopID, postLoopID;
+    private static VariableArgument loopVar;
   
     public static CFGGenerator getInstance() {
         if (instance == null) {
@@ -106,8 +108,12 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
 
     @Override
     public Argument visit(ForNode node) {
-        Argument loopVar = node.getInit().accept(this);
+        Argument loopVarArg = node.getInit().accept(this);
         Argument endVar = node.getEnd().accept(this);
+
+        assert(loopVarArg instanceof VariableArgument);
+        VariableArgument oldLoopVar = loopVar;
+        loopVar = (VariableArgument)loopVarArg;
 
         String oldLoopID = loopID;
         String oldPostLoopID = postLoopID;
@@ -118,15 +124,17 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
 
         curNode = new BasicBlockNode(loopID);
         node.getBody().accept(this);
+        OpStatement s = new OpStatement(node, AsmOp.ADD, loopVar, new ConstantArgument(1), loopVar.getLoc());
+        curNode.addStatement(s);
 
         // TODO: Create a BoolOpNode which expresses the for loop condition
-        // TODO: INCREMENT THE FOR LOOP VARIABLE
         VariableLocation temp = makeTemp(node.getBody(), DecafType.BOOLEAN);
         BasicStatement condition = new OpStatement(null, AsmOp.LESS_THAN, loopVar, endVar, temp);
         curNode.setOutEdges(condition, loopID, postLoopID);
 
         curNode = new BasicBlockNode(postLoopID);
 
+        loopVar = oldLoopVar;
         loopID = oldLoopID;
         postLoopID = oldPostLoopID;
         return null;
@@ -142,7 +150,8 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
 
     @Override
     public Argument visit(ContinueNode node) {
-        // TODO: INCREMENT THE FOR LOOP VARIABLE
+        OpStatement s = new OpStatement(node, AsmOp.ADD, loopVar, new ConstantArgument(1), loopVar.getLoc());
+        curNode.addStatement(s);
         curNode.setOutEdges(null, loopID, null);
         curNode = new BasicBlockNode(nextID());
 
