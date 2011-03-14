@@ -10,12 +10,11 @@ public final class BasicBlockNode {
   private String trueBranch;
   private String falseBranch;
   
-  public BasicBlockNode(String id, BasicStatement cond, String trueBranch,
-                        String falseBranch) {
+  public BasicBlockNode(String id) {
     this.id = id;
-    this.conditional = cond;
-    this.trueBranch = trueBranch;
-    this.falseBranch = falseBranch;
+    this.conditional = null;
+    this.trueBranch = null;
+    this.falseBranch = null;
     
     this.statements = new ArrayList<BasicStatement>();
   }
@@ -37,24 +36,18 @@ public final class BasicBlockNode {
     return list;
   }
   
-  public void setConditional(BasicStatement conditional) {
+  public void setOutEdges(BasicStatement conditional, String trueBranch, String falseBranch) {
     this.conditional = conditional;
+    this.trueBranch = trueBranch;
+    this.falseBranch = falseBranch;
   }
 
   public BasicStatement getConditional() {
     return conditional;
   }
 
-  public void setTrueBranch(String branch) {
-    this.trueBranch = branch;
-  }
-
   public String getTrueBranch() {
     return trueBranch;
-  }
-
-  public void setFalseBranch(String branch) {
-    this.falseBranch = branch;
   }
 
   public String getFalseBranch() {

@@ -69,7 +69,7 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
 
     @Override
     public Argument visit(MethodDeclNode node) {
-        curNode = new BasicBlockNode(nextID(), null, null, null);
+        curNode = new BasicBlockNode(nextID());
 
         defaultBehavior(node);
         return null;
@@ -109,19 +109,17 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
         String loopID = nextID();
         String postLoopID = nextID();
 
-        curNode.setTrueBranch(loopID);
+        curNode.setOutEdges(null, loopID, null);
 
-        curNode = new BasicBlockNode(loopID, null, null, null);
+        curNode = new BasicBlockNode(loopID);
         node.getBody().accept(this);
 
         // TODO: Create a BoolOpNode which expresses the for loop condition
         VariableLocation temp = makeTemp(node.getBody(), DecafType.BOOLEAN);
         BasicStatement condition = new OpStatement(null, AsmOp.LESS_THAN, loopVar, endVar, temp);
-        curNode.setConditional(condition);
-        curNode.setTrueBranch(loopID);
-        curNode.setFalseBranch(postLoopID);
+        curNode.setOutEdges(condition, loopID, postLoopID);
 
-        curNode = new BasicBlockNode(postLoopID, null, null, null);
+        curNode = new BasicBlockNode(postLoopID);
 
         return null;
     }
@@ -139,21 +137,19 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
         VariableLocation temp = makeTemp(node, DecafType.BOOLEAN);
         BasicStatement condition = new OpStatement(null, AsmOp.EQUAL,
                 node.getCondition().accept(this), new ConstantArgument(true), temp);
-        curNode.setConditional(condition);
-        curNode.setTrueBranch(thenID);
-        curNode.setFalseBranch(elseID);
+        curNode.setOutEdges(condition, thenID, elseID);
 
-        curNode = new BasicBlockNode(thenID, null, null, null);
+        curNode = new BasicBlockNode(thenID);
         node.getThenBlock().accept(this);
-        curNode.setTrueBranch(postIfID);
+        curNode.setOutEdges(null, postIfID, null);
 
         if (node.hasElse()) {
-            curNode = new BasicBlockNode(elseID, null, null, null);
+            curNode = new BasicBlockNode(elseID);
             node.getElseBlock().accept(this);
-            curNode.setTrueBranch(postIfID);
+            curNode.setOutEdges(null, postIfID, null);
         }
 
-        curNode = new BasicBlockNode(postIfID, null, null, null);
+        curNode = new BasicBlockNode(postIfID);
 
         return null;
     }
@@ -195,22 +191,20 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
             VariableLocation temp = makeTemp(node, DecafType.BOOLEAN);
             BasicStatement condition = new OpStatement(null, AsmOp.EQUAL,
                 arg1, new ConstantArgument(shortCircuitValue), temp);
-            curNode.setConditional(condition);
-            curNode.setTrueBranch(shortCircuitID);
-            curNode.setFalseBranch(recomputeID);
+            curNode.setOutEdges(condition, shortCircuitID, recomputeID);
 
-            curNode = new BasicBlockNode(shortCircuitID, null, null, null);
+            curNode = new BasicBlockNode(shortCircuitID);
             // TODO: Create an AssignNode for this MOVE operation
             curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg1, dest, null));
-            curNode.setTrueBranch(postExprID);
+            curNode.setOutEdges(null, postExprID, null);
 
-            curNode = new BasicBlockNode(recomputeID, null, null, null);
+            curNode = new BasicBlockNode(recomputeID);
             Argument arg2 = node.getRight().accept(this);
             // TODO: Create an AssignNode for this MOVE operation
             curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg2, dest, null));
-            curNode.setTrueBranch(postExprID);
+            curNode.setOutEdges(null, postExprID, null);
 
-            curNode = new BasicBlockNode(postExprID, null, null, null);
+            curNode = new BasicBlockNode(postExprID);
         } else {
             Argument arg2 = node.getRight().accept(this);
             curNode.addStatement(new OpStatement(node, getAsmOp(node), arg1, arg2, destLoc));
