@@ -4,18 +4,20 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 
 
 public class VariableLocation {
-  private int type;
+  protected LocationType type;
 
-  public static int UNDEFINED = 0;
-  public static int STACK_LOCATION = 1;
-  public static int REGISTER_LOCATION = 2;
-  public static int GLOBAL_LOCATION = 1;
-
-  public VariableLocation() {
-    this.type = UNDEFINED;
+  public enum LocationType {
+    UNDEFINED,
+    STACK,
+    REGISTER,
+    GLOBAL;
   }
 
-  public int getLocationType() {
+  public VariableLocation() {
+    this.type = LocationType.UNDEFINED;
+  }
+
+  public LocationType getLocationType() {
     return this.type;
   }
   
@@ -25,7 +27,7 @@ public class VariableLocation {
    * @return Offset of location on the stack
    */
   public int getOffset() {
-    assert this.type == STACK_LOCATION;
+    assert this.type == LocationType.STACK;
     return ((StackLocation) this).getOffset();
   }
   
@@ -35,7 +37,7 @@ public class VariableLocation {
    * @return Register in which variable resides
    */
   public Register getRegister() {
-    assert this.type == REGISTER_LOCATION;
+    assert this.type == LocationType.REGISTER;
     return ((RegisterLocation) this).getRegister();
   }
 
@@ -45,7 +47,7 @@ public class VariableLocation {
    * @return Symbol at which the variable is stored.
    */
   public String getSymbol() {
-    assert this.type == GLOBAL_LOCATION;
+    assert this.type == LocationType.GLOBAL;
     return ((GlobalLocation) this).getSymbol();
   }
 }

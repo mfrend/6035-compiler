@@ -1,5 +1,7 @@
 package edu.mit.compilers.le02;
 
+import edu.mit.compilers.le02.VariableLocation.LocationType;
+
 
 public class RegisterLocation extends VariableLocation{
   private Register reg;
@@ -21,11 +23,16 @@ public class RegisterLocation extends VariableLocation{
     R13,
     R14,
     R15,
-    RFLAGS,
-    RIP
+    RIP;
+    
+    @Override
+    public String toString() {
+      return "%" + this.name().toLowerCase();
+    }
   }
 
   public RegisterLocation(Register reg) {
+    this.type = LocationType.REGISTER;
     this.reg = reg;
   }
 
