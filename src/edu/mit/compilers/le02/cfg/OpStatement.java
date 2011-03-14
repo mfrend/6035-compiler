@@ -26,7 +26,8 @@ public final class OpStatement extends BasicStatement {
     GREATER_THAN,
     GREATER_OR_EQUAL,
     NOT,
-    RETURN
+    RETURN,
+    METHOD_PREAMBLE,
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
