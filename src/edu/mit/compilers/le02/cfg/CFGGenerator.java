@@ -84,9 +84,10 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
     public Argument visit(AssignNode node) {
         VariableLocation destLoc = node.getLoc().getDesc().getLocation();
         Argument src = node.getValue().accept(this);
+        Argument dest = Argument.makeArgument(destLoc);
     
-        curNode.addStatement(new OpStatement(node, AsmOp.MOVE, src, null, destLoc));
-        return Argument.makeArgument(destLoc);
+        curNode.addStatement(new OpStatement(node, AsmOp.MOVE, src, dest, null));
+        return dest;
     }
 
     @Override
@@ -178,7 +179,8 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
      */
     public Argument visit(BoolOpNode node) {
         Argument arg1 = node.getLeft().accept(this);
-        VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
+        VariableLocation destLoc = makeTemp(node, DecafType.BOOLEAN);
+        Argument dest = Argument.makeArgument(destLoc);
 
         if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
             boolean shortCircuitValue = true;
@@ -199,21 +201,21 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
 
             curNode = new BasicBlockNode(shortCircuitID, null, null, null);
             // TODO: Create an AssignNode for this MOVE operation
-            curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg1, null, loc));
+            curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg1, dest, null));
             curNode.setTrueBranch(postExprID);
 
             curNode = new BasicBlockNode(recomputeID, null, null, null);
             Argument arg2 = node.getRight().accept(this);
             // TODO: Create an AssignNode for this MOVE operation
-            curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg2, null, loc));
+            curNode.addStatement(new OpStatement(null, AsmOp.MOVE, arg2, dest, null));
             curNode.setTrueBranch(postExprID);
 
             curNode = new BasicBlockNode(postExprID, null, null, null);
         } else {
             Argument arg2 = node.getRight().accept(this);
-            curNode.addStatement(new OpStatement(node, getAsmOp(node), arg1, arg2, loc));
+            curNode.addStatement(new OpStatement(node, getAsmOp(node), arg1, arg2, destLoc));
         }
-        return Argument.makeArgument(loc);
+        return dest;
     }
   
     public Argument visit(MathOpNode node) {
