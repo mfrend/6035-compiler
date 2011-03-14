@@ -127,11 +127,11 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
     @Override
     public Argument visit(IfNode node) {
         String thenID = nextID();
-        String elseID = null;
+        String postIfID = nextID();
+        String elseID = postIfID;
         if (node.hasElse()) {
             elseID = nextID();
         }
-        String postIfID = nextID();
 
         // TODO: Create a BoolOpNode which expresses the if condition
         VariableLocation temp = makeTemp(node, DecafType.BOOLEAN);
