@@ -1,7 +1,5 @@
 package edu.mit.compilers.le02;
 
-import edu.mit.compilers.le02.VariableLocation;
-import edu.mit.compilers.le02.VariableLocation.LocationType;
 
 public class GlobalLocation extends VariableLocation {
   private String symbol;
@@ -16,4 +14,12 @@ public class GlobalLocation extends VariableLocation {
     return this.symbol;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof GlobalLocation)) return false;
+    
+    GlobalLocation other = (GlobalLocation) o;
+    return this.symbol.equals(other.symbol);
+  }
 }

@@ -184,11 +184,36 @@ public class SymbolTable {
   }
   
   /**
+   * Returns the number of parameters in the symbol table.
+   *
+   * @return The number of parameters stored in the symbol table.
+   */
+  public int getNumParams() {
+    if (locals.size() == 0) {
+      return 0;
+    }
+    
+    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
+      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
+        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
+      }
+    };
+    
+    // Return minimum because the local offsets are negative
+    return Collections.min(locals, c).getLocation().getOffset();
+  }
+  
+  /**
    * Finds the most negative local offset of all the locals in the symbol table.
    *
-   * @return The most negative local offset.
+   * @return The most negative local offset, or 0 if there are no locals in the
+   * table.
    */
   public int getLargestLocalOffset() {
+    if (locals.size() == 0) {
+      return 0;
+    }
+    
     Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
       public int compare(LocalDescriptor d1, LocalDescriptor d2) {
         return d1.getLocation().getOffset() - d2.getLocation().getOffset();

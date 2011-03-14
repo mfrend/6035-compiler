@@ -34,4 +34,23 @@ public final class ConstantArgument extends Argument {
     return b;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof ConstantArgument)) return false;
+    
+    ConstantArgument other = (ConstantArgument) o;
+    if (this.isInt != other.isInt) {
+      return false;
+    }
+    
+    if (this.isInt) {
+      return this.i == other.i;
+    }
+    else {
+      return this.b == other.b;
+    }
+  }
+
+  
 }

@@ -3,7 +3,7 @@ package edu.mit.compilers.le02.cfg;
 import edu.mit.compilers.le02.VariableLocation;
 
 public class VariableArgument extends Argument {
-  private VariableLocation loc;
+  protected VariableLocation loc;
 
   public VariableArgument(VariableLocation loc) {
     this.loc = loc;
@@ -16,6 +16,15 @@ public class VariableArgument extends Argument {
 
   public VariableLocation getLoc() {
     return loc;
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof VariableArgument)) return false;
+    
+    VariableArgument other = (VariableArgument) o;
+    return this.loc.equals(other.loc);
   }
 
 }

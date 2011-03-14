@@ -319,9 +319,6 @@ public class Main {
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);
       success = false;
-    } catch (RuntimeException re) {
-      ErrorReporting.reportErrorCompat(re);
-      success = false;
     }
     return success;
   }

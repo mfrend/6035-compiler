@@ -1,18 +1,25 @@
 package edu.mit.compilers.le02.semanticchecks;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.MethodCallNode;
+import edu.mit.compilers.le02.ast.MethodDeclNode;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   /** Holds the CheckMethodCalls singleton. */
   private static CheckMethodCalls instance;
-  private static SymbolTable methodTable;
+  private SymbolTable methodTable;
+  private int methodIndex;
+  private Set<String> processedMethods;
 
   /**
    * Retrieves the CheckMethodCalls singleton, creating if necessary.
@@ -36,7 +43,19 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(ClassNode node) {
     methodTable = node.getDesc().getSymbolTable();
+    processedMethods = new HashSet<String>();
 
+    List<MethodDeclNode> methods = node.getMethods();
+    for (MethodDeclNode mdn : methods) {
+      mdn.accept(this);
+    }
+    return true;
+  }
+
+  @Override
+  public Boolean visit(MethodDeclNode node) {
+    processedMethods.add(node.getName());
+    
     defaultBehavior(node);
     return true;
   }
@@ -47,6 +66,12 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
     if (methodDesc == null) {
       defaultBehavior(node);
       return true;
+    }
+    
+    if (!processedMethods.contains(methodDesc.getId())) {
+      ErrorReporting.reportError(new SemanticException(node.getSourceLoc(),
+          "Method " + node.getName() + " called before its declaration."));
+      return false;
     }
 
     if (methodDesc.getParams().size() != node.getArgs().size()) {

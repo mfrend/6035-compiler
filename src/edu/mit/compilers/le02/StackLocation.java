@@ -1,7 +1,5 @@
 package edu.mit.compilers.le02;
 
-import edu.mit.compilers.le02.VariableLocation;
-import edu.mit.compilers.le02.VariableLocation.LocationType;
 
 public class StackLocation extends VariableLocation {
   private int offset;
@@ -23,5 +21,14 @@ public class StackLocation extends VariableLocation {
    */
   public void setOffset(int offset) {
     this.offset = offset;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof StackLocation)) return false;
+    
+    StackLocation other = (StackLocation) o;
+    return this.offset == other.offset;
   }
 }
