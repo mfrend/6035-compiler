@@ -1,8 +1,9 @@
 package edu.mit.compilers.le02.symboltable;
 
-import edu.mit.compilers.le02.DecafType;
-import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.ast.BlockNode;
+import edu.mit.compilers.le02.DecafType;
+import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.SourceLocation;
 
 import java.util.ArrayList;
 import java.util.TreeSet;
@@ -13,7 +14,8 @@ public class MethodDescriptor extends TypedDescriptor {
   private BlockNode code;
   private SymbolTable symbolTable;
   private List<String> params;
-  private SortedSet<Register> usedRegisters = new TreeSet<Register>();
+  private SortedSet<Register> usedCalleeRegisters = new TreeSet<Register>();
+  private SortedSet<Register> usedCallerRegisters = new TreeSet<Register>();
   private SourceLocation sl;
 
   public MethodDescriptor(SymbolTable parent, String id, DecafType type,
@@ -55,11 +57,28 @@ public class MethodDescriptor extends TypedDescriptor {
     return sl;
   }
 
+  public static Register[] calleeSaved = {
+    Register.R12,
+    Register.R13,
+    Register.R14,
+    Register.R15,
+    Register.RBX,
+  };
+
   public void markRegisterUsed(Register reg) {
-    usedRegisters.put(reg);
+    for (Register callee : calleeSaved) {
+      if (callee == reg) {
+        usedCalleeRegisters.add(reg);
+        return;
+      }
+    }
+    usedCallerRegisters.add(reg);
   }
 
-  public SortedSet<Register> getUsedRegisters() {
-    return usedRegisters;
+  public List<Register> getUsedCalleeRegisters() {
+    return new ArrayList<Register>(usedCalleeRegisters);
+  }
+  public List<Register> getUsedCallerRegisters() {
+    return new ArrayList<Register>(usedCallerRegisters);
   }
 }

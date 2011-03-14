@@ -4,10 +4,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.ErrorReporting;
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.MethodDeclNode;
@@ -60,15 +63,19 @@ public class AsmWriter {
             writeOp("sub", arg1, arg2, result, sl);
            case MULTIPLY:
             writeOp("imul", arg1, arg2, result, sl);
+            // TODO: actually do this correctly using fixed registers.
            case DIVIDE:
             writeOp("idiv", arg1, arg2, result, sl);
+            // TODO: actually do this correctly using fixed registers.
            case MODULO:
-            writeOp("mod", arg1, arg2, result, sl);
+            writeOp("idiv", arg1, arg2, result, sl);
+            // TODO: actually do this correctly using fixed registers.
            case UNARY_MINUS:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("neg", arg1, sl);
            case NOT:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("xor", "1", arg1, sl);
            case EQUAL:
+            // TODO: write comparison boilerplate that reads flags
             writeOp("add", arg1, arg2, result, sl);
            case NOT_EQUAL:
             writeOp("add", arg1, arg2, result, sl);
@@ -81,10 +88,14 @@ public class AsmWriter {
            case GREATER_OR_EQUAL:
             writeOp("add", arg1, arg2, result, sl);
            case RETURN:
-            writeOp("add", arg1, arg2, result, sl);
+            // This is categorically wrong. the return statement needs to
+            // provide at least the name of, if not the descriptor for,
+            // the method we're returning from.
+            MethodDeclNode method = (MethodDeclNode)stmt.getNode().getParent();
+            generateMethodReturn(arg1, method.getDescriptor(), sl);
            case METHOD_PREAMBLE:
             MethodDeclNode decl = (MethodDeclNode)stmt.getNode().getParent();
-            generateCallHeader(decl.getDescriptor());
+            generateMethodHeader(decl.getDescriptor());
             break;
            default:
             ErrorReporting.reportError(new AsmException(
@@ -100,18 +111,67 @@ public class AsmWriter {
     }
   }
 
-  protected void generateCallHeader(MethodDescriptor desc) {
+  public static Register[] argumentRegisters = {
+    Register.RDI, // 1st arg
+    Register.RSI, // 2nd arg
+    Register.RDX, // 3rd arg
+    Register.RCX, // 4th arg
+    Register.R8, // 5th arg
+    Register.R9, // 6th arg
+  };
+
+  protected void generateMethodHeader(MethodDescriptor desc) {
     SourceLocation sl = desc.getSourceLocation();
-    writeOp("push", "%rbp", sl); // Push old base pointer
+    writeOp("push", "%rbp", sl); // Push old base pointer.
     writeOp("mov", "%rsp", "%rbp", sl); // Set new base pointer.
-    for (Register reg : desc.getUsedRegisters()) {
-      writeOp("push", "%rax", sl); // Save rbx
+    // Pop any arguments from registers onto the stack.
+    
+    int numRegisterArguments = Math.min(desc.getParams().size(), 6);
+    for (int ii = 0; ii < numRegisterArguments; ii++) {
+      writeOp("push", argumentRegisters[ii].toString(), sl);
     }
+    for (Register reg : desc.getUsedCalleeRegisters()) {
+      writeOp("push", reg.toString(), sl); // Save registers used in method.
+    }
+    // TODO: Allocate enough space for the method's locals.
+  }
+
+  protected void generateMethodReturn(String arg1, MethodDescriptor desc,
+                                      SourceLocation sl) {
+    writeOp("mov", arg1, "%rax", sl); // Save result in return register
+    // TODO: Deallocate enough to remove all the locals we allocated.
+    List<Register> usedRegisters = desc.getUsedCalleeRegisters();
+    Collections.reverse(usedRegisters);
+    for (Register reg : usedRegisters) {
+      writeOp("pop", reg.toString(), sl); // Save registers used in method.
+    }
+    // Take everything off the stack. This automatically removes the
+    // arguments we pushed into place.
+    writeOp("mov", "%rbp", "%rsp", sl);
+    writeOp("pop", "%rbp", sl); // Push old base pointer.
+    // Caller cleans up arguments.
   }
 
   protected void generateCall(CallStatement call) {
-    writeOp("call", call.getMethod().getId(),
-      call.getNode().getSourceLoc());
+    SourceLocation sl = call.getNode().getSourceLoc();
+    // Push variables we need to save. for now, we can assume none need saving.
+    // because we are not using registers at all, but this won't fly in future
+    // We'd instead find the parent MethodDescriptor and use
+    // getUsedCallerRegisters().
+
+    // Push arguments
+    // First six go into registers, rest go on stack in right to left order
+    List<Argument> args = call.getArgs();
+    for (int ii = args.size() - 1; ii > 0; ii--) {
+      if (ii > 6) {
+        writeOp("push", prepareArgument(args.get(ii)), sl);
+      } else {
+        writeOp("mov", prepareArgument(args.get(ii)),
+                argumentRegisters[ii].toString(), sl);
+      }
+    }
+
+    writeOp("call", call.getMethod().getId(), sl);
   }
 
   protected String prepareArgument(Argument arg) {
@@ -126,8 +186,9 @@ public class AsmWriter {
      case CONST_INT:
       return "" + ((ConstantArgument)arg).getInt();
      case ARRAY_VARIABLE:
+      // TODO
      case VARIABLE:
-      
+      return "";
     }
     return "";
   }
