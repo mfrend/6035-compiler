@@ -10,10 +10,12 @@ import java.util.Map.Entry;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.ast.MethodDeclNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
+import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
@@ -45,29 +47,45 @@ public class AsmWriter {
           generateCall((CallStatement)stmt);
         } else if (stmt instanceof OpStatement) {
           OpStatement op = (OpStatement)stmt;
-          String arg1 = convertArgument(op.getArg1());
-          String arg2 = convertArgument(op.getArg2());
+          String arg1 = prepareArgument(op.getArg1());
+          String arg2 = prepareArgument(op.getArg2());
           String result = convertVariableLocation(op.getResult());
           SourceLocation sl = stmt.getNode().getSourceLoc();
           switch(op.getOp()) {
            case MOVE:
-             writeOp("mov", arg1, result, sl);
+            writeOp("mov", arg1, result, sl);
            case ADD:
+            writeOp("add", arg1, arg2, result, sl);
            case SUBTRACT:
+            writeOp("sub", arg1, arg2, result, sl);
            case MULTIPLY:
+            writeOp("imul", arg1, arg2, result, sl);
            case DIVIDE:
+            writeOp("idiv", arg1, arg2, result, sl);
            case MODULO:
+            writeOp("mod", arg1, arg2, result, sl);
            case UNARY_MINUS:
+            writeOp("add", arg1, arg2, result, sl);
            case NOT:
+            writeOp("add", arg1, arg2, result, sl);
            case EQUAL:
+            writeOp("add", arg1, arg2, result, sl);
            case NOT_EQUAL:
+            writeOp("add", arg1, arg2, result, sl);
            case LESS_THAN:
+            writeOp("add", arg1, arg2, result, sl);
            case LESS_OR_EQUAL:
+            writeOp("add", arg1, arg2, result, sl);
            case GREATER_THAN:
+            writeOp("add", arg1, arg2, result, sl);
            case GREATER_OR_EQUAL:
+            writeOp("add", arg1, arg2, result, sl);
            case RETURN:
+            writeOp("add", arg1, arg2, result, sl);
            case METHOD_PREAMBLE:
-             
+            MethodDeclNode decl = (MethodDeclNode)stmt.getNode().getParent();
+            generateCallHeader(decl.getDescriptor());
+            break;
            default:
             ErrorReporting.reportError(new AsmException(
               sl, "Unknown opcode."));
@@ -83,15 +101,34 @@ public class AsmWriter {
   }
 
   protected void generateCallHeader(MethodDescriptor desc) {
-    writeOp("push", "%eax", desc.getCode().getSourceLoc());
+    SourceLocation sl = desc.getSourceLocation();
+    writeOp("push", "%rbp", sl); // Push old base pointer
+    writeOp("mov", "%rsp", "%rbp", sl); // Set new base pointer.
+    for (Register reg : desc.getUsedRegisters()) {
+      writeOp("push", "%rax", sl); // Save rbx
+    }
   }
 
   protected void generateCall(CallStatement call) {
-    writeOp("call", "C_" + call.getMethod().getId(),
+    writeOp("call", call.getMethod().getId(),
       call.getNode().getSourceLoc());
   }
 
-  protected String convertArgument(Argument arg) {
+  protected String prepareArgument(Argument arg) {
+    assert(arg != null);
+    switch (arg.getType()) {
+     case CONST_BOOL:
+     if (((ConstantArgument)arg).getBool()) {
+       return "1";
+     } else {
+       return "0";
+     }
+     case CONST_INT:
+      return "" + ((ConstantArgument)arg).getInt();
+     case ARRAY_VARIABLE:
+     case VARIABLE:
+      
+    }
     return "";
   }
 

@@ -5,11 +5,13 @@ import java.util.List;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class MethodDeclNode extends DeclNode {
   private List<VarDeclNode> params;
   private BlockNode body;
+  private MethodDescriptor descriptor;
 
   public MethodDeclNode(SourceLocation sl, DecafType type,
                         String id, List<VarDeclNode> params, BlockNode body) {
@@ -46,5 +48,13 @@ public final class MethodDeclNode extends DeclNode {
   @Override
   public SymbolTable getSymbolTable() {
     return body.getSymbolTable();
+  }
+
+  public void setDescriptor(MethodDescriptor desc) {
+    descriptor = desc;
+  }
+
+  public MethodDescriptor getDescriptor() {
+    return descriptor;
   }
 }

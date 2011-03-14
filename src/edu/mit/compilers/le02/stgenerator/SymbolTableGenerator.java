@@ -116,9 +116,12 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     node.getBody().accept(this);
 
     currParent = parent;
-    return new MethodDescriptor(parent, node.getName(), node.getType(),
-                                paramSymbolTable, params,
-                                node.getBody());
+    MethodDescriptor desc =
+      new MethodDescriptor(parent, node.getName(), node.getType(),
+                           paramSymbolTable, params, node.getBody(),
+                           node.getSourceLoc());
+    node.setDescriptor(desc);
+    return desc;
   }
 
 
