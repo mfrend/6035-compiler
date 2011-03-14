@@ -28,6 +28,10 @@ public final class BasicBlockNode {
     this.statements = statements;
   }
 
+  public void addStatement(BasicStatement statement) {
+    this.statements.add(statement);
+  }
+
   public List<BasicStatement> getStatements() {
     ArrayList<BasicStatement> list = new ArrayList<BasicStatement>(statements);
     return list;
@@ -41,8 +45,16 @@ public final class BasicBlockNode {
     return conditional;
   }
 
+  public void setTrueBranch(String branch) {
+    this.trueBranch = branch;
+  }
+
   public String getTrueBranch() {
     return trueBranch;
+  }
+
+  public void setFalseBranch(String branch) {
+    this.falseBranch = branch;
   }
 
   public String getFalseBranch() {
