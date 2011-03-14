@@ -1,6 +1,6 @@
 package edu.mit.compilers.le02;
 
-import edu.mit.compilers.le02.VariableLocation.LocationType;
+
 
 
 public class RegisterLocation extends VariableLocation{
@@ -39,5 +39,15 @@ public class RegisterLocation extends VariableLocation{
   public Register getRegister(){
     return this.reg;
   }
+  
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof RegisterLocation)) return false;
+    
+    RegisterLocation other = (RegisterLocation) o;
+    return this.reg == other.reg;
+  }
+
 
 }

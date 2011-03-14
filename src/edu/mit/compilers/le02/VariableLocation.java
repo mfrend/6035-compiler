@@ -3,18 +3,14 @@ package edu.mit.compilers.le02;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 
 
+
 public class VariableLocation {
   protected LocationType type;
 
   public enum LocationType {
-    UNDEFINED,
     STACK,
     REGISTER,
     GLOBAL;
-  }
-
-  public VariableLocation() {
-    this.type = LocationType.UNDEFINED;
   }
 
   public LocationType getLocationType() {
