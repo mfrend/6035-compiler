@@ -14,9 +14,11 @@ import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
 import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.ast.BooleanNode;
+import edu.mit.compilers.le02.ast.BreakNode;
 import edu.mit.compilers.le02.ast.CallStatementNode;
 import edu.mit.compilers.le02.ast.CallNode;
 import edu.mit.compilers.le02.ast.ClassNode;
+import edu.mit.compilers.le02.ast.ContinueNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.ForNode;
 import edu.mit.compilers.le02.ast.IfNode;
@@ -35,7 +37,8 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class CFGGenerator extends ASTNodeVisitor<Argument> {
     private static CFGGenerator instance = null;
-    private static BasicBlockNode curNode, blockBegin, blockEnd;
+    private static BasicBlockNode curNode;
+    private static String loopID, postLoopID;
     private static int id;
   
     public static CFGGenerator getInstance() {
@@ -106,8 +109,10 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
         Argument loopVar = node.getInit().accept(this);
         Argument endVar = node.getEnd().accept(this);
 
-        String loopID = nextID();
-        String postLoopID = nextID();
+        String oldLoopID = loopID;
+        String oldPostLoopID = postLoopID;
+        loopID = nextID();
+        postLoopID = nextID();
 
         curNode.setOutEdges(null, loopID, null);
 
@@ -115,11 +120,31 @@ public final class CFGGenerator extends ASTNodeVisitor<Argument> {
         node.getBody().accept(this);
 
         // TODO: Create a BoolOpNode which expresses the for loop condition
+        // TODO: INCREMENT THE FOR LOOP VARIABLE
         VariableLocation temp = makeTemp(node.getBody(), DecafType.BOOLEAN);
         BasicStatement condition = new OpStatement(null, AsmOp.LESS_THAN, loopVar, endVar, temp);
         curNode.setOutEdges(condition, loopID, postLoopID);
 
         curNode = new BasicBlockNode(postLoopID);
+
+        loopID = oldLoopID;
+        postLoopID = oldPostLoopID;
+        return null;
+    }
+
+    @Override
+    public Argument visit(BreakNode node) {
+        curNode.setOutEdges(null, postLoopID, null);
+        curNode = new BasicBlockNode(nextID());
+
+        return null;
+    }
+
+    @Override
+    public Argument visit(ContinueNode node) {
+        // TODO: INCREMENT THE FOR LOOP VARIABLE
+        curNode.setOutEdges(null, loopID, null);
+        curNode = new BasicBlockNode(nextID());
 
         return null;
     }
