@@ -7,6 +7,7 @@ import edu.mit.compilers.le02.SourceLocation;
 /**
  * Represents an exception discovered in the IrGenerator.
  */
+@SuppressWarnings("serial")
 public class IrException extends SemanticException {
   public IrException(SourceLocation loc) {
     super(loc);

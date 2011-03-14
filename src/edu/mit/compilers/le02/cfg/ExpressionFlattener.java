@@ -3,7 +3,9 @@ package edu.mit.compilers.le02.cfg;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
+import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -21,7 +23,7 @@ import edu.mit.compilers.le02.ast.NotNode;
 import edu.mit.compilers.le02.ast.ReturnNode;
 import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.ast.VariableNode;
-import edu.mit.compilers.le02.cfg.OpStatement.Op;
+import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 
@@ -103,43 +105,48 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
    * Utility Methods
    */
   
-  private Op convertOp(MathOpNode.MathOp op) {
-    switch(op) {
+  private AsmOp getAsmOp(MathOpNode node) {
+    switch(node.getOp()) {
       case ADD:
-        return Op.ADD;
+        return AsmOp.ADD;
       case SUBTRACT:
-        return Op.SUBTRACT;
+        return AsmOp.SUBTRACT;
       case MULTIPLY:
-        return Op.MULTIPLY;
+        return AsmOp.MULTIPLY;
       case DIVIDE:
-        return Op.DIVIDE;
+        return AsmOp.DIVIDE;
       case MODULO:
-        return Op.MODULO;
+        return AsmOp.MODULO;
+      default:
+        ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+          "MathOp " + node.getOp() + " cannot be converted into an AsmOp."));
+        return null;
     }
-    assert false;
-    return null;
   }
   
-  private Op convertOp(BoolOpNode.BoolOp op) {
-    switch(op) {
+  private AsmOp getAsmOp(BoolOpNode node) {
+    switch(node.getOp()) {
       case LE:
-        return Op.LESS_OR_EQUAL;
+        return AsmOp.LESS_OR_EQUAL;
       case LT:
-        return Op.LESS_THAN;
+        return AsmOp.LESS_THAN;
       case GE:
-        return Op.GREATER_OR_EQUAL;
+        return AsmOp.GREATER_OR_EQUAL;
       case GT:
-        return Op.GREATER_THAN;
+        return AsmOp.GREATER_THAN;
       case EQ:
-        return Op.EQUAL;
+        return AsmOp.EQUAL;
       case NEQ:
-        return Op.NOT_EQUAL;
+        return AsmOp.NOT_EQUAL;
+      default:
+         ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+           "BoolOp " + node.getOp() + " cannot be converted into an AsmOp."));
+
+         return null;
     }
-    assert false;
-    return null;
   }
   
-  private VariableLocation makeTemp(ASTNode node) {
+  private VariableLocation makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
     
     int nextIndex = st.getLargestLocalOffset() - 8;
@@ -147,7 +154,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     loc.setStackLocation(nextIndex);
     
     LocalDescriptor ld = new LocalDescriptor(st, Math.abs(nextIndex) + "lcltmp", 
-        DecafType.INT);
+        type);
     st.put(ld.getId(), ld, node.getSourceLoc());
     return loc;
   }
@@ -160,7 +167,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     Argument dest = Argument.makeArgument(destLoc);
     Argument src = node.getValue().accept(this);
     
-    statements.add(new OpStatement(node, Op.RETURN, src, dest, null));
+    statements.add(new OpStatement(node, AsmOp.RETURN, src, dest, null));
     return null;
   }
   
@@ -175,7 +182,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
       arg1 = node.getRetValue().accept(this);
     }
     
-    statements.add(new OpStatement(node, Op.RETURN, arg1, null, null));
+    statements.add(new OpStatement(node, AsmOp.RETURN, arg1, null, null));
     return null;
   }
   
@@ -185,9 +192,9 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   public Argument visit(BoolOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
-    VariableLocation loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
     
-    OpStatement s = new OpStatement(node, convertOp(node.getOp()), 
+    OpStatement s = new OpStatement(node, getAsmOp(node), 
                                     arg1, arg2, loc);
     statements.add(s);
     return Argument.makeArgument(loc);
@@ -196,34 +203,34 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   public Argument visit(MathOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
-    VariableLocation loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node, DecafType.INT);
     
-    OpStatement s = new OpStatement(node, convertOp(node.getOp()), 
+    OpStatement s = new OpStatement(node, getAsmOp(node), 
                                     arg1, arg2, loc);
     statements.add(s);
     return Argument.makeArgument(loc);
   }
   
   public Argument visit(NotNode node) {
-    VariableLocation loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
     
-    OpStatement s = new OpStatement(node, Op.NOT, 
+    OpStatement s = new OpStatement(node, AsmOp.NOT, 
                                     node.getExpr().accept(this), null, loc);
     statements.add(s);
     return Argument.makeArgument(loc);
   }
   
   public Argument visit(MinusNode node) {
-    VariableLocation loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node, DecafType.INT);
     
-    OpStatement s = new OpStatement(node, Op.UNARY_MINUS, 
+    OpStatement s = new OpStatement(node, AsmOp.UNARY_MINUS, 
                                     node.getExpr().accept(this), null, loc);
     statements.add(s);
     return Argument.makeArgument(loc);
   }
   
   public Argument visit(MethodCallNode node) {
-    VariableLocation loc = makeTemp(node);
+    VariableLocation loc = makeTemp(node, node.getType());
     
     List<Argument> args = new ArrayList<Argument>();
     for (ExpressionNode n : node.getArgs()) {

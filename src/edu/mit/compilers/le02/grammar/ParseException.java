@@ -9,6 +9,7 @@ import edu.mit.compilers.le02.SourceLocation;
 /**
  * Represents an exception discovered in the DecafParser.
  */
+@SuppressWarnings("serial")
 public class ParseException extends CompilerException {
   public ParseException(RecognitionException rex) {
     super(rex.getLine(), rex.getColumn(), rex.getMessage());

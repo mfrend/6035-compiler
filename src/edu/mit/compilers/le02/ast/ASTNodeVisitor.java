@@ -40,7 +40,7 @@ public abstract class ASTNodeVisitor<T> {
   public T visit(MethodCallNode node) {defaultBehavior(node); return null;}
   public T visit(MethodDeclNode node) {defaultBehavior(node); return null;}
   public T visit(MinusNode node) {defaultBehavior(node); return null;}
-  public T visit(NodeList node) {defaultBehavior(node); return null;}
+  public T visit(NodeList<?> node) {defaultBehavior(node); return null;}
   public T visit(NotNode node) {defaultBehavior(node); return null;}
   public T visit(ReturnNode node) {defaultBehavior(node); return null;}
   public T visit(ScalarLocationNode node) {defaultBehavior(node); return null;}

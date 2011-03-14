@@ -7,6 +7,7 @@ import antlr.Token;
  * Implement a version of an AST node that stores token locations.
  * @author lizfong@mit.edu (Liz Fong)
  */
+@SuppressWarnings("serial")
 public class LineNumberedAST extends CommonAST {
   private int line = -1;
   private int col = -1;

@@ -24,9 +24,9 @@ import edu.mit.compilers.le02.grammar.DecafScannerTokenTypes;
 import edu.mit.compilers.le02.grammar.LineNumberedAST;
 import edu.mit.compilers.le02.grammar.ScanException;
 import edu.mit.compilers.le02.ir.IrGenerator;
+import edu.mit.compilers.le02.semanticchecks.MasterChecker;
 import edu.mit.compilers.le02.stgenerator.SymbolTableGenerator;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
-import edu.mit.compilers.le02.semanticchecks.MasterChecker;
 import edu.mit.compilers.tools.CLI;
 import edu.mit.compilers.tools.CLI.Action;
 

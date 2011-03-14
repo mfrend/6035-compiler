@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.semanticchecks;
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.SourceLocation;
 
+@SuppressWarnings("serial")
 public class SemanticException extends CompilerException {
 
   public SemanticException(int line, int col, String msg) {
