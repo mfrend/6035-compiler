@@ -11,16 +11,21 @@ import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.MethodDeclNode;
 import edu.mit.compilers.le02.cfg.Argument;
+import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.VariableArgument;
+import edu.mit.compilers.le02.cfg.Argument.ArgType;
+import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.tools.CLI;
 
@@ -49,44 +54,56 @@ public class AsmWriter {
         if (stmt instanceof CallStatement) {
           generateCall((CallStatement)stmt);
         } else if (stmt instanceof OpStatement) {
+          // Default to saving results in R10; we can pull results from a
+          // different register if the CPU spec mandates it.
+          Register resultReg = Register.R10;
           OpStatement op = (OpStatement)stmt;
-          String arg1 = prepareArgument(op.getArg1());
-          String arg2 = prepareArgument(op.getArg2());
-          String result = convertVariableLocation(op.getResult());
           SourceLocation sl = stmt.getNode().getSourceLoc();
+
+          // prepareArgument loads an argument from memory into R10 or R11
+          // and returns the register it stored the argument in.
+          // If the argument was a register to begin with, 
+          String arg1 = prepareArgument(op.getArg1(), true, sl);
+          String arg2 = prepareArgument(op.getArg2(), false, sl);
+
           switch(op.getOp()) {
            case MOVE:
-            writeOp("mov", arg1, result, sl);
+            writeOp("mov", arg1, "" + resultReg, sl);
            case ADD:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case SUBTRACT:
-            writeOp("sub", arg1, arg2, result, sl);
+            writeOp("sub", arg1, arg2, sl);
            case MULTIPLY:
-            writeOp("imul", arg1, arg2, result, sl);
+            writeOp("imul", arg1, arg2, sl);
             // TODO: actually do this correctly using fixed registers.
            case DIVIDE:
-            writeOp("idiv", arg1, arg2, result, sl);
-            // TODO: actually do this correctly using fixed registers.
            case MODULO:
-            writeOp("idiv", arg1, arg2, result, sl);
-            // TODO: actually do this correctly using fixed registers.
+            writeOp("mov", arg1, "%rax", sl);
+            writeOp("idiv", arg2, sl);
+            if (op.getOp() == AsmOp.DIVIDE) {
+              // RDX is fixed to hold the quotient.
+              resultReg = Register.RAX;
+            } else {
+              // RDX is fixed to hold the remainder.
+              resultReg = Register.RDX;
+            }
            case UNARY_MINUS:
             writeOp("neg", arg1, sl);
            case NOT:
-            writeOp("xor", "1", arg1, sl);
+            writeOp("xor", "$1", arg1, sl);
            case EQUAL:
             // TODO: write comparison boilerplate that reads flags
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case NOT_EQUAL:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case LESS_THAN:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case LESS_OR_EQUAL:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case GREATER_THAN:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case GREATER_OR_EQUAL:
-            writeOp("add", arg1, arg2, result, sl);
+            writeOp("add", arg1, arg2, sl);
            case RETURN:
             // This is categorically wrong. the return statement needs to
             // provide at least the name of, if not the descriptor for,
@@ -100,6 +117,15 @@ public class AsmWriter {
            default:
             ErrorReporting.reportError(new AsmException(
               sl, "Unknown opcode."));
+            continue;
+          }
+          switch (op.getResult().getLocationType()) {
+           case REGISTER:
+            continue;
+           case STACK:
+            writeOp("mov", "" + resultReg, op.getResult().getOffset() + "(%ebp)", sl);
+           case GLOBAL:
+            writeOp("mov", "" + resultReg, op.getResult().getSymbol(), sl);
           }
         } else {
           // We have an UnexpandedStatement that made it to ASM generation.
@@ -128,10 +154,10 @@ public class AsmWriter {
     
     int numRegisterArguments = Math.min(desc.getParams().size(), 6);
     for (int ii = 0; ii < numRegisterArguments; ii++) {
-      writeOp("push", argumentRegisters[ii].toString(), sl);
+      writeOp("push", "" + argumentRegisters[ii], sl);
     }
     for (Register reg : desc.getUsedCalleeRegisters()) {
-      writeOp("push", reg.toString(), sl); // Save registers used in method.
+      writeOp("push", "" + reg, sl); // Save registers used in method.
     }
     // TODO: Allocate enough space for the method's locals.
   }
@@ -143,10 +169,11 @@ public class AsmWriter {
     List<Register> usedRegisters = desc.getUsedCalleeRegisters();
     Collections.reverse(usedRegisters);
     for (Register reg : usedRegisters) {
-      writeOp("pop", reg.toString(), sl); // Save registers used in method.
+      writeOp("pop", "" + reg, sl); // Save registers used in method.
     }
     // Take everything off the stack. This automatically removes the
     // arguments we pushed into place.
+    // This could also just be expressed with the leave opcode;
     writeOp("mov", "%rbp", "%rsp", sl);
     writeOp("pop", "%rbp", sl); // Push old base pointer.
     // Caller cleans up arguments.
@@ -164,9 +191,9 @@ public class AsmWriter {
     List<Argument> args = call.getArgs();
     for (int ii = args.size() - 1; ii > 0; ii--) {
       if (ii > 6) {
-        writeOp("push", prepareArgument(args.get(ii)), sl);
+        writeOp("push", prepareArgument(args.get(ii), true, sl), sl);
       } else {
-        writeOp("mov", prepareArgument(args.get(ii)),
+        writeOp("mov", prepareArgument(args.get(ii), true, sl),
                 argumentRegisters[ii].toString(), sl);
       }
     }
@@ -174,23 +201,42 @@ public class AsmWriter {
     writeOp("call", call.getMethod().getId(), sl);
   }
 
-  protected String prepareArgument(Argument arg) {
+  protected String prepareArgument(Argument arg, boolean first, SourceLocation sl) {
     assert(arg != null);
+    Register tempStorage = first ? Register.R10 : Register.R11;
     switch (arg.getType()) {
      case CONST_BOOL:
-     if (((ConstantArgument)arg).getBool()) {
-       return "1";
-     } else {
-       return "0";
-     }
+      if (((ConstantArgument)arg).getBool()) {
+        return "$1";
+      } else {
+        return "$0";
+      }
      case CONST_INT:
-      return "" + ((ConstantArgument)arg).getInt();
+      // It's possible for an immediate value to have >32 bits. For now,
+      // store the immediate value to a 64-bit register to be sure we don't
+      // truncate bits by accident when doing IMUL, etc.
+      writeOp("mov", "$" + ((ConstantArgument)arg).getInt(), "" + tempStorage, sl);
+      break;
      case ARRAY_VARIABLE:
-      // TODO
+      ArrayVariableArgument ava = (ArrayVariableArgument)arg;
+      // Arrays can only be declared as globals in decaf
+      assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+      // Earlier steps must have preprocessed A[B[0]] => temp = B[0]; A[temp]
+      Register index = tempStorage;
+      if (ava.getIndex().getType() == ArgType.CONST_INT) {
+        
+      } else if (ava.getIndex().getType() == ArgType.VARIABLE) {
+        writeOp("mov", convertVariableLocation(((VariableArgument)arg).getLoc()), "" + index, sl);
+      } else {
+        ErrorReporting.reportError(new AsmException(sl,
+          "Attempted array access with invalid index."));
+      }
+      writeOp("mov", convertVariableLocation(ava.getLoc()) + "[" + index + "]", "" + tempStorage, sl);
+      break;
      case VARIABLE:
-      return "";
+      writeOp("mov", convertVariableLocation(((VariableArgument)arg).getLoc()), "" + tempStorage, sl);
     }
-    return "";
+    return "" + tempStorage;
   }
 
   protected String convertVariableLocation(VariableLocation loc) {
