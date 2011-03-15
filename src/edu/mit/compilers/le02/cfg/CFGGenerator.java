@@ -75,7 +75,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     exit.setBranchTarget(t);
     exit.setNext(f);
 
-    return frag.getEnter(); 
+    return frag.getEnter();
   }
 
   private SimpleCFGNode shortCircuitHelper(BoolOpNode node,
@@ -109,7 +109,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       SimpleCFGNode t, SimpleCFGNode f) {
     return shortCircuit(node.getExpr(), f, t);
   }
-
 
   @Override
   public CFGFragment visit(ClassNode node) {
@@ -195,6 +194,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     // Create dummy exit node 
     loopExit = new SimpleCFGNode(new DummyStatement());
 
+    // Evaluate the exit condition
+    CFGFragment exitFrag = node.getEnd().accept(this);
+    Argument exitVal = exitFrag.getExit().getResult();
+
     // Create a node where the iterator is incremented
     VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
     Argument loopVar = Argument.makeArgument(loc);
@@ -211,10 +214,16 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     VariableNode iterator = new VariableNode(sl, node.getInit().getLoc());
     BoolOpNode condition = new BoolOpNode(sl, iterator, node.getEnd(), BoolOp.LT);
 
-    // Create a branch node where the condition is evaluated and a node
-    SimpleCFGNode branch = shortCircuit(condition, bodyFrag.getEnter(), loopExit);
+    // Create a branch node where the condition is evaluated and connect it up
+    VariableLocation temp = makeTemp(node, DecafType.INT);
+    BasicStatement conditionSt = new OpStatement(node, AsmOp.LESS_THAN,
+        loopVar, exitVal, temp);
+    SimpleCFGNode branch = new SimpleCFGNode(st);
+    branch.setBranchTarget(bodyFrag.getEnter());
+    branch.setNext(loopExit);
 
     // Connect fragments together
+    exitFrag.getExit().setNext(initFrag.getEnter());
     initFrag.getExit().setNext(branch);
     bodyFrag.getExit().setNext(increment);
     increment.setNext(branch);
@@ -224,7 +233,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = oldExit;
 
     // Enter at the condition, exit via the dummy exit node
-    return new CFGFragment(initFrag.getEnter(), loopExit);
+    return new CFGFragment(exitFrag.getEnter(), loopExit);
   }
 
   @Override
