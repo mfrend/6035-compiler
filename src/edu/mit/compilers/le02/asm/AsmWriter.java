@@ -74,7 +74,7 @@ public class AsmWriter {
       switch (desc.getType()) {
        case INT:
        case BOOLEAN:
-        ps.println(".quad 0");
+        ps.println("  .quad 0");
         break;
        case BOOLEAN_ARRAY:
        case INT_ARRAY:
@@ -129,12 +129,19 @@ public class AsmWriter {
             // prepareArgument loads an argument from memory into R10 or R11
             // and returns the register it stored the argument in.
             // If the argument was a register to begin with, 
-            String arg1 = prepareArgument(op.getArg1(), true, sl);
-            String arg2 = prepareArgument(op.getArg2(), false, sl);
-  
+            String arg1 = "<error>";
+            if (op.getArg1() != null) {
+              arg1 = prepareArgument(op.getArg1(), true, sl);
+            }
+            String arg2 = "<error>";
+            if (op.getArg2() != null) {
+              arg2 = prepareArgument(op.getArg2(), false, sl);
+            }
+
             switch(op.getOp()) {
              case MOVE:
-              writeOp("movq", arg1, "" + resultReg, sl);
+              // TODO(lizf): clean this up once we use arg2 instead.
+              writeOp("movq", arg1, resultReg, sl);
               break;
              case ADD:
               writeOp("addq", arg1, arg2, sl);
@@ -178,19 +185,28 @@ public class AsmWriter {
               break;
              case RETURN:
               MethodDescriptor returnMethod = st.getMethod(methodName);
-              generateMethodReturn(arg1, returnMethod, sl);
+              if (op.getArg1() != null) {
+                generateMethodReturn(arg1, returnMethod, sl);
+              } else {
+                generateMethodReturn(null, returnMethod, sl);
+              }
               continue;
              case ENTER:
               MethodDescriptor enterMethod = st.getMethod(methodName);
-              generateMethodHeader(enterMethod, arg1);
+              generateMethodHeader(enterMethod,
+                "$" + ((ConstantArgument)op.getArg1()).getInt());
               continue;
              default:
               ErrorReporting.reportError(new AsmException(
                 sl, "Unknown opcode."));
               continue;
             }
-            writeOp("movq", "" + resultReg,
-              convertVariableLocation(op.getResult()), sl);
+            if (op.getResult() != null) {
+              writeOp("movq", resultReg,
+                convertVariableLocation(op.getResult()), sl);
+            } else {
+              ps.println("  /* Ignoring result assignment of conditional. */");
+            }
             if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
               writeOp("popq", "%rdx", sl);
             }
@@ -206,8 +222,36 @@ public class AsmWriter {
         }
         SourceLocation loc = node.getLastStatement().getNode().getSourceLoc();
         if (node.isBranch()) {
-          writeOp("cmpq", "%rax", "$1", loc);
-          writeOp("je", branch.getId(), loc);
+          // The last operation carried out will be a conditional.
+          // Find out what that conditional was.
+          String conditionalJump = "";
+          switch (((OpStatement)node.getLastStatement()).getOp()) {
+           case EQUAL:
+            conditionalJump = "je";
+            break;
+           case NOT_EQUAL:
+            conditionalJump = "jne";
+            break;
+           case LESS_THAN:
+            conditionalJump = "jl";
+            break;
+           case LESS_OR_EQUAL:
+            conditionalJump = "jle";
+            break;
+           case GREATER_THAN:
+            conditionalJump = "jg";
+            break;
+           case GREATER_OR_EQUAL:
+            conditionalJump = "jge";
+            break;
+           default:
+            ErrorReporting.reportError(new AsmException(loc,
+              "Unknown condition operator"));
+            ps.println(
+              "/* Dropped outbound branch to " + branch.getId() + " */");
+            continue;
+          }
+          writeOp(conditionalJump, branch.getId(), loc);
           writeOp("jmp", next.getId(), loc);
         } else if (next != null) {
           writeOp("jmp", next.getId(), loc);
@@ -223,7 +267,7 @@ public class AsmWriter {
 
   protected void processBoolean(AsmOp op, String arg1, String arg2,
       SourceLocation sl) {
-    writeOp("xorq", "" + Register.RAX, "" + Register.RAX, sl);
+    writeOp("xorq", Register.RAX, Register.RAX, sl);
     writeOp("cmpq", arg1, arg2, sl);
     String cmovOp = "";
     switch (op) {
@@ -246,7 +290,8 @@ public class AsmWriter {
       cmovOp = "cmovgeq";
       break;
     }
-    writeOp(cmovOp, "$1", "" + Register.RAX, sl);
+    writeOp("movq", "$1", Register.R10, sl);
+    writeOp(cmovOp, Register.R10, Register.RAX, sl);
   }
 
   public static Register[] argumentRegisters = {
@@ -261,10 +306,10 @@ public class AsmWriter {
   protected void generateMethodHeader(MethodDescriptor desc,
                                       String numLocals) {
     SourceLocation sl = desc.getSourceLocation();
-    writeOp("enter", numLocals, sl);
+    writeOp("enter", numLocals, "$0", sl);
 
     for (Register reg : desc.getUsedCalleeRegisters()) {
-      writeOp("pushq", "" + reg, sl); // Save registers used in method.
+      writeOp("pushq", reg, sl); // Save registers used in method.
     }
   }
 
@@ -288,7 +333,7 @@ public class AsmWriter {
     List<Register> usedRegisters = desc.getUsedCalleeRegisters();
     Collections.reverse(usedRegisters);
     for (Register reg : usedRegisters) {
-      writeOp("popq", "" + reg, sl); // Save registers used in method.
+      writeOp("popq", reg, sl); // Save registers used in method.
     }
 
     writeOp("leave", sl); // Push old base pointer.
@@ -315,7 +360,7 @@ public class AsmWriter {
       }
     }
     // Empty %rax to cope with printf vararg issue
-    writeOp("xorq", "" + Register.RAX, "" + Register.RAX, sl);
+    writeOp("xorq", Register.RAX, Register.RAX, sl);
     // Now we're ready to make the call.
     // This automatically pushes the return address; callee removes return addr
     writeOp("call", call.getMethodName(), sl);
@@ -323,18 +368,12 @@ public class AsmWriter {
     // Pop the saved usedCallerRegisters back onto the stack. (not needed yet)
 
     // Move RAX into the correct save location.
-    writeOp("movq", "" + Register.RAX,
+    writeOp("movq", Register.RAX,
       convertVariableLocation(call.getResult()), sl);
   }
 
   protected String prepareArgument(Argument arg,
       boolean first, SourceLocation sl) {
-    if (arg == null || arg.getType() == null) {
-      ErrorReporting.reportError(new AsmException(
-        SourceLocation.getSourceLocationWithoutDetails(),
-        "Encountered null arg"));
-      return "<invalidArg>";
-    }
     Register tempStorage = first ? Register.R10 : Register.R11;
     switch (arg.getType()) {
      case CONST_BOOL:
@@ -346,12 +385,12 @@ public class AsmWriter {
      case CONST_INT:
       // The immediate values in decaf cannot exceed 32 bits, so we are fine.
       writeOp("movq",
-        "$" + ((ConstantArgument)arg).getInt(), "" + tempStorage, sl);
+        "$" + ((ConstantArgument)arg).getInt(), tempStorage, sl);
       break;
      case VARIABLE:
       writeOp("movq",
         convertVariableLocation(((VariableArgument)arg).getLoc()),
-        "" + tempStorage, sl);
+        tempStorage, sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
@@ -363,19 +402,13 @@ public class AsmWriter {
       writeOp("jge", "error_handler", sl);
       writeOp("movq",
         "(" + symbol + "," + index + ", $8)",
-        "" + tempStorage, sl);
+        tempStorage, sl);
       break;
     }
     return "" + tempStorage;
   }
 
   protected String convertVariableLocation(VariableLocation loc) {
-    if (loc == null || loc.getLocationType() == null) {
-      ErrorReporting.reportError(new AsmException(
-          SourceLocation.getSourceLocationWithoutDetails(),
-          "Encountered null var"));
-      return "<invalidVar>";
-    }
     switch (loc.getLocationType()) {
      case GLOBAL:
       return "." + loc.getSymbol();
@@ -389,13 +422,43 @@ public class AsmWriter {
 
   protected void writeOp(String opcode,
                          SourceLocation loc) {
-    writeOp(opcode, "", "", loc);
+    ps.println("  " +
+        opcode +
+        " # " + getOriginalSource(loc));
+  }
+
+  protected void writeOp(String opcode,
+      Register first_operand,
+      SourceLocation loc) {
+    writeOp(opcode, "" + first_operand, loc);
   }
 
   protected void writeOp(String opcode,
                          String first_operand,
                          SourceLocation loc) {
-    writeOp(opcode, first_operand, "", loc);
+    ps.println("  " +
+        opcode + " " +
+        first_operand +
+        " # " + getOriginalSource(loc));
+  }
+
+  protected void writeOp(String opcode,
+      Register first_operand,
+      Register second_operand,
+      SourceLocation loc) {
+    writeOp(opcode, "" + first_operand, "" + second_operand, loc);
+  }
+  protected void writeOp(String opcode,
+      Register first_operand,
+      String second_operand,
+      SourceLocation loc) {
+    writeOp(opcode, "" + first_operand, second_operand, loc);
+  }
+  protected void writeOp(String opcode,
+      String first_operand,
+      Register second_operand,
+      SourceLocation loc) {
+    writeOp(opcode, first_operand, "" + second_operand, loc);
   }
 
   protected void writeOp(String opcode,
@@ -404,9 +467,9 @@ public class AsmWriter {
                          SourceLocation loc) {
     ps.println("  " +
       opcode + " " +
-      first_operand + " " +
-      second_operand + " " +
-      "# " + getOriginalSource(loc));
+      first_operand + ", " +
+      second_operand +
+      " # " + getOriginalSource(loc));
   }
 
   protected void writeLabel(String label) {

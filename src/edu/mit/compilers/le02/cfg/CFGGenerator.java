@@ -432,7 +432,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
   
   public CFGFragment visit(StringNode node) {
-    String name = ".str" + node.getValue().hashCode();
+    String name = ".str" + Math.abs(node.getValue().hashCode());
     cfg.putStringData(name, node);
     ArgumentStatement as = new ArgumentStatement(node,
                              Argument.makeArgument(new GlobalLocation(name)));
