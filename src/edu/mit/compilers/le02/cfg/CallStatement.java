@@ -26,4 +26,15 @@ public class CallStatement extends BasicStatement {
     return new ArrayList<Argument>(args);
   }
 
+
+  @Override
+  public String toString() {
+    String s = "CallStatement(" + name;
+    for (Argument a : args) {
+      s += ", " + a;
+    }
+    s += ")";
+    return s;
+  }
+
 }

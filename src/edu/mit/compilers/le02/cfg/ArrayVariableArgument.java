@@ -27,4 +27,9 @@ public class ArrayVariableArgument extends VariableArgument {
     return this.loc.equals(other.loc)
            && this.index.equals(other.index);
   }
+  
+  @Override
+  public String toString() {
+    return loc.toString() + "[" + index + "]";
+  }
 }

@@ -7,6 +7,11 @@ public class DummyStatement extends BasicStatement {
     super(null, null);
     this.type = BasicStatementType.DUMMY;
   }
+  
+  @Override
+  public String toString() {
+    return "DummyStatement";
+  }
 
 
 }

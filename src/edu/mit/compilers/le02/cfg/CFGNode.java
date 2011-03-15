@@ -14,6 +14,11 @@ public interface CFGNode {
   public CFGNode getNext();
   
   /**
+   * Get a representation of the node for a .dot file, for visualization 
+   */
+  public String getDotString();
+  
+  /**
    * Returns true if this instruction may branch.
    * @return true if this instruction may branch, false otherwise.
    */

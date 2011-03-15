@@ -26,5 +26,10 @@ public class VariableArgument extends Argument {
     VariableArgument other = (VariableArgument) o;
     return this.loc.equals(other.loc);
   }
+  
+  @Override
+  public String toString() {
+    return this.loc.toString();
+  }
 
 }

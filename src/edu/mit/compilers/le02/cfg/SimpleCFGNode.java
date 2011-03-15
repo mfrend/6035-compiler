@@ -76,5 +76,29 @@ public final class SimpleCFGNode implements CFGNode {
   public boolean hasMultipleEntrances() {
     return predecessors.size() > 1;
   }
+  
+  @Override
+  public String getDotString() {
+    if (next == null) {
+      return this.hashCode() + "[label=\"" + statement.toString() + "\"]\n";
+    }
+    
+    String me = "" + this.hashCode();
+    String nextStr = "" + next.hashCode();
+    
+    String s = me + " [label=\"" + statement.toString() + "\"]\n"
+               + me + " -> " + nextStr;
+    
+    if (!isBranch()) {
+      s += "\n";
+      return s + next.getDotString();
+    }
+    else {
+      s += " [label=\"false\"]\n";
+      String branchStr = "" + branchTarget.hashCode();
+      s += me + " -> " + branchStr + " [label=\"true\"]\n";
+      return s + next.getDotString() + branchTarget.getDotString();
+    }
+  }
 
 }

@@ -15,4 +15,8 @@ public final class ArgumentStatement extends BasicStatement {
     return arg;
   }
 
+  @Override
+  public String toString() {
+    return "ArgumentStatement(" + arg + ")";
+  }
 }

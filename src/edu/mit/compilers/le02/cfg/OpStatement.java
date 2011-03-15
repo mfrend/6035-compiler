@@ -46,4 +46,10 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
+  
+  @Override
+  public String toString() {
+    return "OpStatement(" + op + ", " + arg1 + ", " + arg2 + ")";
+  }
+
 }

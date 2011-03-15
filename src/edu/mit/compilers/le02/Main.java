@@ -17,6 +17,9 @@ import antlr.TokenStreamRecognitionException;
 import antlr.debug.misc.ASTFrame;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.AstPrettyPrinter;
+import edu.mit.compilers.le02.cfg.CFGGenerator;
+import edu.mit.compilers.le02.cfg.CFGVisualizer;
+import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.grammar.DecafParser;
 import edu.mit.compilers.le02.grammar.DecafParserTokenTypes;
 import edu.mit.compilers.le02.grammar.DecafScanner;
@@ -40,6 +43,7 @@ public class Main {
   /** Enumerates all valid return codes. */
   public enum ReturnCode {
     SUCCESS(0), SCAN_FAILED(1), PARSE_FAILED(2), SEMANTICS_FAILED(3),
+    CFG_FAILED(4),
     FILE_NOT_FOUND(126), NO_SUCH_ACTION(127);
 
     private int numericCode;
@@ -112,6 +116,11 @@ public class Main {
         retCode = ReturnCode.SEMANTICS_FAILED;
       }
       break;
+     case CFG:
+       if (!generateCFG(inputStream) || !ErrorReporting.noErrors()) {
+         retCode = ReturnCode.CFG_FAILED;
+       }
+       break;
      default:
       retCode = ReturnCode.NO_SUCH_ACTION;
       ErrorReporting.reportErrorCompat(new NoSuchMethodException(
@@ -315,6 +324,36 @@ public class Main {
 
       if (CLI.debug) {
         parent.accept(new AstPrettyPrinter());
+      }
+    } catch (ANTLRException e) {
+      ErrorReporting.reportErrorCompat(e);
+      success = false;
+    }
+    return success;
+  }
+  
+  /**
+   * Runs the parser on an input and displays any error messages found while
+   * parsing.
+   *
+   * @param inputStream The stream to read input from.
+   * @return true if parser ran without errors, false if errors found.
+   */
+  protected static boolean generateCFG(InputStream inputStream) {
+    boolean success = true;
+    try {
+      // Initialize and invoke the parser.
+      DecafParser parser = initializeParser(inputStream);
+      parser.program();
+
+      ASTNode parent = IrGenerator.generateIR(parser.getAST());
+      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      MasterChecker.checkAll(parent);
+      
+      ControlFlowGraph cfg = CFGGenerator.generateCFG(parent);
+
+      if (CLI.debug) {
+        CFGVisualizer.writeToDotFile(CLI.outfile, cfg);
       }
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);

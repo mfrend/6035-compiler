@@ -6,7 +6,6 @@ import java.util.List;
 public final class BasicBlockNode implements CFGNode {
   private String id;
   private List<BasicStatement> statements;
-  private BasicStatement conditional;
   private BasicBlockNode next;
   private BasicBlockNode branchTarget;
 
@@ -100,6 +99,28 @@ public final class BasicBlockNode implements CFGNode {
   @Override
   public boolean isBranch() {
     return this.branchTarget != null;
+  }
+  
+  @Override
+  public String getDotString() {
+    if (next == null) {
+      return "";
+    }
+    String me = id; 
+    String nextStr = next.id;
+    
+    String s = me + " -> " + nextStr;
+    
+    if (!isBranch()) {
+      s += "\n";
+      return s + next.getDotString();
+    }
+    else {
+      s += " [label=\"false\"]\n";
+      String branchStr = branchTarget.id;
+      s += me + " -> " + branchStr + " [label=\"true\"]\n";
+      return s + next.getDotString() + branchTarget.getDotString();
+    }
   }
 
 }

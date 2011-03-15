@@ -61,9 +61,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return ld.getLocation();
   }
 
-  public static void generateCFG(ASTNode root) {
+  public static ControlFlowGraph generateCFG(ASTNode root) {
     assert(root instanceof ClassNode);
     root.accept(getInstance());
+    return getInstance().cfg;
   }
 
   private SimpleCFGNode shortCircuit(ExpressionNode node,

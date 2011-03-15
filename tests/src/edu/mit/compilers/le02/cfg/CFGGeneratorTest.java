@@ -58,6 +58,8 @@ public class CFGGeneratorTest extends TestCase {
                           );
     setParents(node);
     
+    
+    
     CFGFragment frag = node.accept(CFGGenerator.getInstance());
     
     List<BasicStatement> list = getStatements(frag);
