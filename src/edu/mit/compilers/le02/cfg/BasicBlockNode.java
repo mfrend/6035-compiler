@@ -3,19 +3,17 @@ package edu.mit.compilers.le02.cfg;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class BasicBlockNode {
+public final class BasicBlockNode implements CFGNode {
   private String id;
   private List<BasicStatement> statements;
   private BasicStatement conditional;
-  private String trueBranch;
-  private String falseBranch;
-  
-  public BasicBlockNode(String id, BasicStatement cond, String trueBranch,
-                        String falseBranch) {
+  private BasicBlockNode next;
+  private BasicBlockNode branchTarget;
+
+  public BasicBlockNode(String id) {
     this.id = id;
-    this.conditional = cond;
-    this.trueBranch = trueBranch;
-    this.falseBranch = falseBranch;
+    this.next = null;
+    this.branchTarget = null;
     
     this.statements = new ArrayList<BasicStatement>();
   }
@@ -37,28 +35,51 @@ public final class BasicBlockNode {
     return list;
   }
   
-  public void setConditional(BasicStatement conditional) {
-    this.conditional = conditional;
+  public BasicStatement getLastStatement() {
+    if (statements.isEmpty()) {
+      return null;
+    }
+    
+    return statements.get(statements.size() - 1);
   }
 
   public BasicStatement getConditional() {
-    return conditional;
+    if (!isBranch()) {
+      return null;
+    }
+    
+    return getLastStatement();
   }
 
-  public void setTrueBranch(String branch) {
-    this.trueBranch = branch;
+  public void setBranchTarget(BasicBlockNode node) {
+    this.branchTarget = node;
   }
 
   public String getTrueBranch() {
-    return trueBranch;
+    return branchTarget.id;
   }
 
-  public void setFalseBranch(String branch) {
-    this.falseBranch = branch;
+  public void setNext(BasicBlockNode node) {
+    this.next = node;
   }
 
   public String getFalseBranch() {
-    return falseBranch;
+    return next.id;
+  }
+
+  @Override
+  public BasicBlockNode getBranchTarget() {
+    return branchTarget;
+  }
+
+  @Override
+  public BasicBlockNode getNext() {
+    return next;
+  }
+
+  @Override
+  public boolean isBranch() {
+    return this.branchTarget != null;
   }
 
 }
