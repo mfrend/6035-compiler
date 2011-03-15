@@ -2,12 +2,14 @@ package edu.mit.compilers.le02.symboltable;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ast.BlockNode;
+import edu.mit.compilers.le02.cfg.CallStatement;
+
 import java.util.List;
 
 public class MethodDescriptor extends TypedDescriptor {
-  BlockNode code;
-  SymbolTable symbolTable;
-  List<String> params;
+  private BlockNode code;
+  private SymbolTable symbolTable;
+  private List<String> params;
 
   public MethodDescriptor(SymbolTable parent, String id, DecafType type,
                           SymbolTable symbolTable, List<String> params,
@@ -16,7 +18,7 @@ public class MethodDescriptor extends TypedDescriptor {
 
     this.code = node;
     this.symbolTable = symbolTable;
-        this.params = params;
+    this.params = params;
   }
 
   @Override

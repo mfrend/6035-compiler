@@ -1,50 +1,49 @@
 package edu.mit.compilers.le02;
 
+import edu.mit.compilers.le02.RegisterLocation.Register;
+
+
 
 public class VariableLocation {
-	private String register;
-	private int offset;
-	private LocationType type;
-	
-	 public enum LocationType {
-		    UNDEFINED(-1), REGISTER(0), STACK(1);
+  protected LocationType type;
 
-		    private int numericCode;
+  public enum LocationType {
+    STACK,
+    REGISTER,
+    GLOBAL;
+  }
 
-		    private LocationType(int code) {
-		      numericCode = code;
-		    }
+  public LocationType getLocationType() {
+    return this.type;
+  }
+  
+  /**
+   * Convenience method to cast this VariableLocation to a StackLocation
+   * and get the stored offset.
+   * @return Offset of location on the stack
+   */
+  public int getOffset() {
+    assert this.type == LocationType.STACK;
+    return ((StackLocation) this).getOffset();
+  }
+  
+  /**
+   * Convenience method to cast this VariableLocation to a RegisterLocation
+   * and get the stored register.
+   * @return Register in which variable resides
+   */
+  public Register getRegister() {
+    assert this.type == LocationType.REGISTER;
+    return ((RegisterLocation) this).getRegister();
+  }
 
-		    public int numericCode() {
-		      return numericCode;
-		    }
-		  };
-		  
-	public VariableLocation(){
-		this.type = LocationType.UNDEFINED;
-	}
-	
-	public void setRegisterLocation(String register){
-		this.type = LocationType.REGISTER;
-		this.register = register;
-		this.offset = 0;
-	}
-	
-	public void setStackLocation(int offset){
-		this.type = LocationType.STACK;
-		this.register = null;
-		this.offset = offset;
-	}
-	
-	public LocationType getLocationType(){
-		return this.type;
-	}
-	
-	public String getRegister(){
-		return this.register;
-	}
-	
-	public int getOffset(){
-		return this.offset;
-	}
+  /**
+   * Convenience method to cast this VariableLocation to a GlobalLocation
+   * and get the symbol at which the variable is stored.
+   * @return Symbol at which the variable is stored.
+   */
+  public String getSymbol() {
+    assert this.type == LocationType.GLOBAL;
+    return ((GlobalLocation) this).getSymbol();
+  }
 }

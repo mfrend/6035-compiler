@@ -150,13 +150,11 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     SymbolTable st = node.getSymbolTable();
     
     int nextIndex = st.getLargestLocalOffset() - 8;
-    VariableLocation loc = new VariableLocation();
-    loc.setStackLocation(nextIndex);
     
     LocalDescriptor ld = new LocalDescriptor(st, Math.abs(nextIndex) + "lcltmp", 
         type);
     st.put(ld.getId(), ld, node.getSourceLoc());
-    return loc;
+    return ld.getLocation();
   }
   
   /*

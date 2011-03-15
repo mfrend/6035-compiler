@@ -18,4 +18,13 @@ public class ArrayVariableArgument extends VariableArgument {
     return index;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof ArrayVariableArgument)) return false;
+    
+    ArrayVariableArgument other = (ArrayVariableArgument) o;
+    return this.loc.equals(other.loc)
+           && this.index.equals(other.index);
+  }
 }

@@ -5,19 +5,19 @@ import edu.mit.compilers.le02.VariableLocation;
 
 public abstract class TypedDescriptor extends Descriptor {
   private DecafType type;
-  private VariableLocation location;
+  protected VariableLocation location;
 
   public TypedDescriptor(SymbolTable parent, String id, DecafType type) {
     super(parent, id);
     this.type = type;
-    this.location = new VariableLocation();
+    this.location = null;
   }
 
   public DecafType getType() {
     return type;
   }
   
-  public VariableLocation getLocation(){
+  public VariableLocation getLocation() {
 	  return this.location;
   }
 
