@@ -163,12 +163,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(AssignNode node) {
-    VariableLocation destLoc = node.getLoc().getDesc().getLocation();
+    VariableLocation dest = node.getLoc().getDesc().getLocation();
     CFGFragment frag = node.getValue().accept(this);
     Argument src = frag.getExit().getResult();
-    Argument dest = Argument.makeArgument(destLoc);
 
-    BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, dest, null);
+    BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, null, dest);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
     return frag.append(cfgNode);
   }
@@ -294,11 +293,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
 
     if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
-      Argument dest = Argument.makeArgument(loc);
       BasicStatement trueStmt = new OpStatement(node, AsmOp.MOVE,
-          Argument.makeArgument(true), dest, null);
+          Argument.makeArgument(true), null, loc);
       BasicStatement falseStmt = new OpStatement(node, AsmOp.MOVE,
-          Argument.makeArgument(false), dest, null);
+          Argument.makeArgument(false), null, loc);
       SimpleCFGNode trueNode = new SimpleCFGNode(trueStmt);
       SimpleCFGNode falseNode = new SimpleCFGNode(falseStmt);
 
