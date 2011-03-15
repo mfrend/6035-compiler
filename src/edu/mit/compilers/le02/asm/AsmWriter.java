@@ -12,7 +12,7 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
-import edu.mit.compilers.le02.ast.MethodDeclNode;
+import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -22,29 +22,55 @@ import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
-import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.tools.CLI;
 
 public class AsmWriter {
+  private SymbolTable st;
   private ControlFlowGraph cfg;
   private PrintStream ps;
 
-  public AsmWriter(ControlFlowGraph graph, PrintStream writer) {
+  public AsmWriter(ControlFlowGraph graph, SymbolTable table,
+      PrintStream writer) {
     cfg = graph;
     ps = writer;
+    st = table;
   }
 
-  public void write(PrintStream writer) {
-    writer.println("# Assembly output generated from " +
+  public void write() {
+    ps.println("# Assembly output generated from " +
       CLI.getInputFilename());
-    writer.println(".global main");
+    ps.println(".global main");
 
+    writeStrings();
+    writeGlobals();
+    writeMethods();
+  }
+
+  public void writeStrings() {
+    for (String name : cfg.getAllStringData()) {
+      ps.println(name + ":");
+      StringNode node = cfg.getStringData(name);
+      // We want the explicitly escaped version.
+      ps.println(".string " + node.toString());
+    }
+  }
+
+  public void writeGlobals() {
+    for (String globalName : cfg.getGlobals()) {
+      ps.println(globalName + ":");
+      cfg.getGlobal(globalName);
+      ps.println();
+    }
+  }
+
+  public void writeMethods() {
     for (String methodName : cfg.getMethods()) {
       BasicBlockNode node = (BasicBlockNode)cfg.getMethod(methodName);
-      writer.println("# MethodNode: " + methodName);
-      writer.println(methodName + ":");
+      ps.println("# MethodNode: " + methodName);
+      ps.println(methodName + ":");
       for (BasicStatement stmt : node.getStatements()) {
         if (stmt instanceof OpStatement) {
           // Default to saving results in R10; we can pull results from a
@@ -61,22 +87,23 @@ public class AsmWriter {
 
           switch(op.getOp()) {
            case MOVE:
-            writeOp("mov", arg1, "" + resultReg, sl);
+            writeOp("movq", arg1, "" + resultReg, sl);
             break;
            case ADD:
-            writeOp("add", arg1, arg2, sl);
+            writeOp("addq", arg1, arg2, sl);
             break;
            case SUBTRACT:
-            writeOp("sub", arg1, arg2, sl);
+            writeOp("subq", arg1, arg2, sl);
             break;
            case MULTIPLY:
-            writeOp("imul", arg1, arg2, sl);
+            writeOp("imulq", arg1, arg2, sl);
             break;
             // Result in arg2 (R11)
            case DIVIDE:
            case MODULO:
-            writeOp("mov", arg1, "%rax", sl);
-            writeOp("idiv", arg2, sl);
+            writeOp("movq", arg1, "%rax", sl);
+            writeOp("pushq", "%rdx", sl);
+            writeOp("idivq", arg2, sl);
             if (op.getOp() == AsmOp.DIVIDE) {
               // RDX is fixed to hold the quotient.
               resultReg = Register.RAX;
@@ -86,11 +113,11 @@ public class AsmWriter {
             }
             break;
            case UNARY_MINUS:
-            writeOp("neg", arg1, sl);
+            writeOp("negq", arg1, sl);
             resultReg = Register.R10;
             break;
            case NOT:
-            writeOp("xor", "$1", arg1, sl);
+            writeOp("xorq", "$1", arg1, sl);
             resultReg = Register.R10;
             break;
            case EQUAL:
@@ -99,50 +126,27 @@ public class AsmWriter {
            case LESS_OR_EQUAL:
            case GREATER_THAN:
            case GREATER_OR_EQUAL:
-            writeOp("xor", "" + Register.RAX, "" + Register.RAX, sl);
-            writeOp("cmp", arg1, arg2, sl);
-            String cmovOp = "";
-            switch (op.getOp()) {
-             case EQUAL:
-              cmovOp = "cmove";
-              break;
-             case NOT_EQUAL:
-              cmovOp = "cmovne";
-              break;
-             case LESS_THAN:
-              cmovOp = "cmovl";
-              break;
-             case LESS_OR_EQUAL:
-              cmovOp = "cmovle";
-              break;
-             case GREATER_THAN:
-              cmovOp = "cmovg";
-              break;
-             case GREATER_OR_EQUAL:
-              cmovOp = "cmovge";
-              break;
-            }
-            writeOp(cmovOp, "$1", "" + Register.RAX, sl);
+            processBoolean(op.getOp(), arg1, arg2, sl);
             resultReg = Register.RAX;
             break;
            case RETURN:
-            // This is categorically wrong. the return statement needs to
-            // provide at least the name of, if not the descriptor for,
-            // the method we're returning from; otherwise we don't know
-            // how much to pop back off.
-            MethodDeclNode method = (MethodDeclNode)stmt.getNode().getParent();
-            generateMethodReturn(arg1, method.getDescriptor(), sl);
+            MethodDescriptor returnMethod = st.getMethod(methodName);
+            generateMethodReturn(arg1, returnMethod, sl);
             break;
            case ENTER:
-            MethodDeclNode decl = (MethodDeclNode)stmt.getNode().getParent();
-            generateMethodHeader(decl.getDescriptor());
+             MethodDescriptor enterMethod = st.getMethod(methodName);
+            generateMethodHeader(enterMethod);
             break;
            default:
             ErrorReporting.reportError(new AsmException(
               sl, "Unknown opcode."));
             continue;
           }
-          writeOp("mov", "" + resultReg, convertVariableLocation(op.getResult()), sl);
+          writeOp("movq", "" + resultReg,
+            convertVariableLocation(op.getResult()), sl);
+          if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
+            writeOp("popq", "%rdx", sl);
+          }
         } else if (stmt instanceof CallStatement) {
           generateCall((CallStatement)stmt);
         } else {
@@ -153,6 +157,34 @@ public class AsmWriter {
         }
       }
     }
+  }
+
+  protected void processBoolean(AsmOp op, String arg1, String arg2,
+      SourceLocation sl) {
+    writeOp("xorq", "" + Register.RAX, "" + Register.RAX, sl);
+    writeOp("cmpq", arg1, arg2, sl);
+    String cmovOp = "";
+    switch (op) {
+     case EQUAL:
+      cmovOp = "cmoveq";
+      break;
+     case NOT_EQUAL:
+      cmovOp = "cmovneq";
+      break;
+     case LESS_THAN:
+      cmovOp = "cmovlq";
+      break;
+     case LESS_OR_EQUAL:
+      cmovOp = "cmovleq";
+      break;
+     case GREATER_THAN:
+      cmovOp = "cmovgq";
+      break;
+     case GREATER_OR_EQUAL:
+      cmovOp = "cmovgeq";
+      break;
+    }
+    writeOp(cmovOp, "$1", "" + Register.RAX, sl);
   }
 
   public static Register[] argumentRegisters = {
@@ -166,34 +198,26 @@ public class AsmWriter {
 
   protected void generateMethodHeader(MethodDescriptor desc) {
     SourceLocation sl = desc.getSourceLocation();
-    writeOp("push", "%rbp", sl); // Push old base pointer.
-    writeOp("mov", "%rsp", "%rbp", sl); // Set new base pointer.
-    // Pop any arguments from registers onto the stack.
+    writeOp("enter", "$0", sl);
     
-    int numRegisterArguments = Math.min(desc.getParams().size(), 6);
-    for (int ii = 0; ii < numRegisterArguments; ii++) {
-      writeOp("push", "" + argumentRegisters[ii], sl);
-    }
-    for (Register reg : desc.getUsedCalleeRegisters()) {
-      writeOp("push", "" + reg, sl); // Save registers used in method.
-    }
     // TODO: Allocate enough space for the method's locals.
+
+    for (Register reg : desc.getUsedCalleeRegisters()) {
+      writeOp("pushq", "" + reg, sl); // Save registers used in method.
+    }
   }
 
   protected void generateMethodReturn(String arg1, MethodDescriptor desc,
                                       SourceLocation sl) {
-    writeOp("mov", arg1, "%rax", sl); // Save result in return register
-    // TODO: Deallocate enough to remove all the locals we allocated.
+    writeOp("movq", arg1, "%rax", sl); // Save result in return register
+
     List<Register> usedRegisters = desc.getUsedCalleeRegisters();
     Collections.reverse(usedRegisters);
     for (Register reg : usedRegisters) {
-      writeOp("pop", "" + reg, sl); // Save registers used in method.
+      writeOp("popq", "" + reg, sl); // Save registers used in method.
     }
-    // Take everything off the stack. This automatically removes the
-    // arguments we pushed into place.
-    // This could also just be expressed with the leave opcode;
-    writeOp("mov", "%rbp", "%rsp", sl);
-    writeOp("pop", "%rbp", sl); // Push old base pointer.
+
+    writeOp("leave", sl); // Push old base pointer.
     // Caller cleans up arguments.
     writeOp("ret", sl);
   }
@@ -205,35 +229,21 @@ public class AsmWriter {
     // We'd instead find the parent MethodDescriptor and use
     // getUsedCallerRegisters().
 
-    // Push arguments
-    // First six go into registers, rest go on stack in right to left order
-    List<Argument> args = call.getArgs();
-    for (int ii = args.size() - 1; ii > 0; ii--) {
-      if (ii > 6) {
-        writeOp("push", prepareArgument(args.get(ii), true, sl), sl);
-      } else {
-        writeOp("mov", prepareArgument(args.get(ii), true, sl),
-                argumentRegisters[ii].toString(), sl);
-      }
-    }
-
+    // Empty %rax to cope with printf vararg issue
+    writeOp("xorq", "" + Register.RAX, "" + Register.RAX, sl);
     // Now we're ready to make the call.
     // This automatically pushes the return address; callee removes return addr
     writeOp("call", call.getMethodName(), sl);
 
-    // Clean up the call arguments pushed onto stack.
-    if (args.size() > 6) {
-      int argsToPop = (args.size() - 6);
-      writeOp("add", "$-" + (argsToPop * 8), "" + Register.RSP, sl);
-    }
-
     // Pop the saved usedCallerRegisters back onto the stack. (not needed yet)
 
     // Move RAX into the correct save location.
-    writeOp("mov", "" + Register.RAX, convertVariableLocation(call.getResult()), sl);
+    writeOp("movq", "" + Register.RAX,
+      convertVariableLocation(call.getResult()), sl);
   }
 
-  protected String prepareArgument(Argument arg, boolean first, SourceLocation sl) {
+  protected String prepareArgument(Argument arg,
+      boolean first, SourceLocation sl) {
     assert(arg != null);
     Register tempStorage = first ? Register.R10 : Register.R11;
     switch (arg.getType()) {
@@ -244,10 +254,14 @@ public class AsmWriter {
         return "$0";
       }
      case CONST_INT:
-      // It's possible for an immediate value to have >32 bits. For now,
-      // store the immediate value to a 64-bit register to be sure we don't
-      // truncate bits by accident when doing IMUL, etc.
-      writeOp("mov", "$" + ((ConstantArgument)arg).getInt(), "" + tempStorage, sl);
+      // The immediate values in decaf cannot exceed 32 bits, so we are fine.
+      writeOp("movq",
+        "$" + ((ConstantArgument)arg).getInt(), "" + tempStorage, sl);
+      break;
+     case VARIABLE:
+      writeOp("movq",
+        convertVariableLocation(((VariableArgument)arg).getLoc()),
+        "" + tempStorage, sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
@@ -255,18 +269,11 @@ public class AsmWriter {
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
       // Earlier steps must have preprocessed A[B[0]] => temp = B[0]; A[temp]
       Register index = tempStorage;
-      if (ava.getIndex().getType() == ArgType.CONST_INT) {
-        
-      } else if (ava.getIndex().getType() == ArgType.VARIABLE) {
-        writeOp("mov", convertVariableLocation(((VariableArgument)arg).getLoc()), "" + index, sl);
-      } else {
-        ErrorReporting.reportError(new AsmException(sl,
-          "Attempted array access with invalid index."));
-      }
-      writeOp("mov", convertVariableLocation(ava.getLoc()) + "[" + index + "]", "" + tempStorage, sl);
+      prepareArgument(ava.getIndex(), first, sl);
+      writeOp("movq",
+        "(" + convertVariableLocation(ava.getLoc()) + "," + index + ", $8)",
+        "" + tempStorage, sl);
       break;
-     case VARIABLE:
-      writeOp("mov", convertVariableLocation(((VariableArgument)arg).getLoc()), "" + tempStorage, sl);
     }
     return "" + tempStorage;
   }
@@ -285,32 +292,23 @@ public class AsmWriter {
 
   protected void writeOp(String opcode,
                          SourceLocation loc) {
-    writeOp(opcode, "", "", "", loc);
+    writeOp(opcode, "", "", loc);
   }
 
   protected void writeOp(String opcode,
                          String first_operand,
                          SourceLocation loc) {
-    writeOp(opcode, first_operand, "", "", loc);
-  }
-
-  protected void writeOp(String opcode,
-                         String first_operand,
-                         String output_operand,
-                         SourceLocation loc) {
-    writeOp(opcode, first_operand, "", output_operand, loc);
+    writeOp(opcode, first_operand, "", loc);
   }
 
   protected void writeOp(String opcode,
                          String first_operand,
                          String second_operand,
-                         String output_operand,
                          SourceLocation loc) {
     ps.println(
       opcode + " " +
       first_operand + " " +
       second_operand + " " +
-      output_operand +
       "# " + getOriginalSource(loc));
   }
 

@@ -108,9 +108,8 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     int ii = 1;
     for (VarDeclNode v : node.getParams()) {
       ParamDescriptor param = (ParamDescriptor) v.accept(this);
-      param.setParamIndex(ii);
       methodSymbolTable.put(v.getName(), param,
-                           v.getSourceLoc());
+                            v.getSourceLoc());
       params.add(v.getName());
       ii++;
     }

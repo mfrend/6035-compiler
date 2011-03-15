@@ -15,7 +15,7 @@ public class BasicBlockGraph {
   
   public static String nextID() {
     id++;
-    return "block" + Integer.toString(id);
+    return ".block" + Integer.toString(id);
   }
   
   public static ControlFlowGraph makeBasicBlockGraph(ControlFlowGraph cfg) {

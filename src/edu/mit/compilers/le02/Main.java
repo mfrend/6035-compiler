@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 
 import antlr.ANTLRException;
 import antlr.ASTFactory;
@@ -15,6 +16,7 @@ import antlr.DumpASTVisitor;
 import antlr.Token;
 import antlr.TokenStreamRecognitionException;
 import antlr.debug.misc.ASTFrame;
+import edu.mit.compilers.le02.asm.AsmWriter;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.AstPrettyPrinter;
 import edu.mit.compilers.le02.cfg.BasicBlockGraph;
@@ -44,7 +46,7 @@ public class Main {
   /** Enumerates all valid return codes. */
   public enum ReturnCode {
     SUCCESS(0), SCAN_FAILED(1), PARSE_FAILED(2), SEMANTICS_FAILED(3),
-    CFG_FAILED(4),
+    CFG_FAILED(4), ASM_FAILED(5),
     FILE_NOT_FOUND(126), NO_SUCH_ACTION(127);
 
     private int numericCode;
@@ -112,16 +114,21 @@ public class Main {
       }
       break;
      case INTER:
-     case DEFAULT:
       if (!generateIR(inputStream) || !ErrorReporting.noErrors()) {
         retCode = ReturnCode.SEMANTICS_FAILED;
       }
       break;
      case CFG:
-       if (!generateCFG(inputStream) || !ErrorReporting.noErrors()) {
-         retCode = ReturnCode.CFG_FAILED;
-       }
-       break;
+      if (!generateCFG(inputStream) || !ErrorReporting.noErrors()) {
+        retCode = ReturnCode.CFG_FAILED;
+      }
+      break;
+     case DEFAULT:
+     case ASSEMBLY:
+      if (!generateAsm(inputStream) || !ErrorReporting.noErrors()) {
+        retCode = ReturnCode.ASM_FAILED;
+      }
+      break;
      default:
       retCode = ReturnCode.NO_SUCH_ACTION;
       ErrorReporting.reportErrorCompat(new NoSuchMethodException(
@@ -320,7 +327,7 @@ public class Main {
       parser.program();
 
       ASTNode parent = IrGenerator.generateIR(parser.getAST());
-      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      SymbolTableGenerator.generateSymbolTable(parent);
       MasterChecker.checkAll(parent);
 
       if (CLI.debug) {
@@ -348,7 +355,7 @@ public class Main {
       parser.program();
 
       ASTNode parent = IrGenerator.generateIR(parser.getAST());
-      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      SymbolTableGenerator.generateSymbolTable(parent);
       MasterChecker.checkAll(parent);
       
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
@@ -363,6 +370,32 @@ public class Main {
 
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);
+      success = false;
+    }
+    return success;
+  }
+
+  protected static boolean generateAsm(InputStream inputStream) {
+    boolean success = true;
+    try {
+      // Initialize and invoke the parser.
+      DecafParser parser = initializeParser(inputStream);
+      parser.program();
+
+      ASTNode parent = IrGenerator.generateIR(parser.getAST());
+      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      MasterChecker.checkAll(parent);
+      
+      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      
+      AsmWriter asm = new AsmWriter(cfg, st, new PrintStream(CLI.outfile));
+      asm.write();
+    } catch (ANTLRException e) {
+      ErrorReporting.reportErrorCompat(e);
+      success = false;
+    } catch (IOException ioe) {
+      ErrorReporting.reportErrorCompat(ioe);
       success = false;
     }
     return success;
