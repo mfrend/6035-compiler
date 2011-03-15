@@ -20,7 +20,6 @@ import edu.mit.compilers.le02.ast.CallStatementNode;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.ContinueNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
-import edu.mit.compilers.le02.ast.FieldDeclNode;
 import edu.mit.compilers.le02.ast.ForNode;
 import edu.mit.compilers.le02.ast.IfNode;
 import edu.mit.compilers.le02.ast.IntNode;
@@ -123,14 +122,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(ClassNode node) {
     cfg = new ControlFlowGraph();
 
-    defaultBehavior(node);
-    return null;
-  }
-
-  @Override
-  public CFGFragment visit(FieldDeclNode node) {
-    String id = node.getName();
-    cfg.putGlobal(id, node.getSymbolTable().getField(id));
     defaultBehavior(node);
     return null;
   }
@@ -441,7 +432,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
   
   public CFGFragment visit(StringNode node) {
-    String name = "str" + node.getValue().hashCode();
+    String name = ".str" + node.getValue().hashCode();
     cfg.putStringData(name, node);
     ArgumentStatement as = new ArgumentStatement(node,
                              Argument.makeArgument(new GlobalLocation(name)));

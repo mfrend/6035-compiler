@@ -5,9 +5,17 @@ import edu.mit.compilers.le02.GlobalLocation;
 
 public class FieldDescriptor extends TypedDescriptor {
 
+  private int length;
+
   public FieldDescriptor(SymbolTable parent, String id, DecafType type) {
+    this(parent, id, type, 0);
+  }
+
+  public FieldDescriptor(SymbolTable parent, String id, DecafType type,
+      int length) {
     super(parent, id, type);
     this.location = new GlobalLocation(id);
+    this.length = length;
   }
 
   @Override
@@ -15,4 +23,7 @@ public class FieldDescriptor extends TypedDescriptor {
     return this.getType().toString();
   }
 
+  public int getLength() {
+    return length;
+  }
 }

@@ -33,7 +33,6 @@ public abstract class ASTNodeVisitor<T> {
   public T visit(CharNode node) {defaultBehavior(node); return null;}
   public T visit(ClassNode node) {defaultBehavior(node); return null;}
   public T visit(ContinueNode node) {defaultBehavior(node); return null;}
-  public T visit(FieldDeclNode node) {defaultBehavior(node); return null;}
   public T visit(ForNode node) {defaultBehavior(node); return null;}
   public T visit(IfNode node) {defaultBehavior(node); return null;}
   public T visit(IntNode node) {defaultBehavior(node); return null;}

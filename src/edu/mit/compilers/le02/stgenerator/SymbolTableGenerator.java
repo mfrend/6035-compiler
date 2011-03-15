@@ -44,7 +44,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
   /**
    * Generates an symbol table based on an input IR.
    */
-  public static SymbolTable generateSymbolTable(ASTNode root) {
+  public static ClassDescriptor generateSymbolTable(ASTNode root) {
     assert(root instanceof ClassNode);
     return getInstance().createClassST((ClassNode)root);
   }
@@ -56,7 +56,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
    * @param root The root of our AST tree
    * @return SymbolTable The expanded SymbolTable
    */
-  public SymbolTable createClassST(ClassNode root) {
+  public ClassDescriptor createClassST(ClassNode root) {
     SymbolTable st = new SymbolTable(null);
     currParent = st;
     ClassDescriptor desc = (ClassDescriptor) root.accept(this);
@@ -69,7 +69,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     // Set the parents for the AST (so they can find the symbol tables)
     ASTParentVisitor pv = new ASTParentVisitor();
     pv.visit(root);
-    return st;
+    return desc;
   }
 
   @Override
@@ -176,7 +176,8 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
 
   @Override
   public Descriptor visit(ArrayDeclNode node) {
-    return new FieldDescriptor(currParent, node.getName(), node.getType());
+    return new FieldDescriptor(currParent, node.getName(), node.getType(),
+      node.getLength());
   }
 
   @Override

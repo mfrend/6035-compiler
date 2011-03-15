@@ -266,4 +266,7 @@ public class SymbolTable {
     return output;
   }
 
+  public List<FieldDescriptor> getFields() {
+    return fields;
+  }
 }

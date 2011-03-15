@@ -32,6 +32,7 @@ import edu.mit.compilers.le02.grammar.ScanException;
 import edu.mit.compilers.le02.ir.IrGenerator;
 import edu.mit.compilers.le02.semanticchecks.MasterChecker;
 import edu.mit.compilers.le02.stgenerator.SymbolTableGenerator;
+import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.tools.CLI;
 import edu.mit.compilers.tools.CLI.Action;
@@ -383,12 +384,15 @@ public class Main {
       parser.program();
 
       ASTNode parent = IrGenerator.generateIR(parser.getAST());
-      SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
+      SymbolTable st =
+        SymbolTableGenerator.generateSymbolTable(parent).getSymbolTable();
       MasterChecker.checkAll(parent);
       
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
-      
+      for (FieldDescriptor global : st.getFields()) {
+        cfg.putGlobal("." + global.getId(), global);
+      }
       AsmWriter asm = new AsmWriter(cfg, st, new PrintStream(CLI.outfile));
       asm.write();
     } catch (ANTLRException e) {

@@ -33,12 +33,8 @@ public class SymbolTableGeneratorTest extends TestCase {
       );
 
     ErrorReporting.clearErrors();
-    SymbolTable st = SymbolTableGenerator.generateSymbolTable(ast);
+    ClassDescriptor cd =  SymbolTableGenerator.generateSymbolTable(ast);
     assertTrue(ErrorReporting.noErrors());
-
-    assertNotNull(st);
-    ClassDescriptor cd = (ClassDescriptor) st.get("Program",
-                                                  SymbolType.EITHER);
     assertNotNull(cd);
     SymbolTable fst = cd.getSymbolTable();
     assertNotNull(fst);
@@ -75,12 +71,9 @@ public class SymbolTableGeneratorTest extends TestCase {
       );
 
     ErrorReporting.clearErrors();
-    SymbolTable st = SymbolTableGenerator.generateSymbolTable(ast);
-    assertTrue(ErrorReporting.noErrors());
 
-    assertNotNull(st);
-    ClassDescriptor cd = (ClassDescriptor) st.get("Program",
-                                                  SymbolType.EITHER);
+    ClassDescriptor cd = SymbolTableGenerator.generateSymbolTable(ast);
+    assertTrue(ErrorReporting.noErrors());
     assertNotNull(cd);
     SymbolTable mst = cd.getSymbolTable();
     assertNotNull(mst);
@@ -146,12 +139,8 @@ public class SymbolTableGeneratorTest extends TestCase {
         )
       );
     ErrorReporting.clearErrors();
-    SymbolTable st = SymbolTableGenerator.generateSymbolTable(ast);
+    ClassDescriptor cd = SymbolTableGenerator.generateSymbolTable(ast);
     assertTrue(ErrorReporting.noErrors());
-
-    assertNotNull(st);
-    ClassDescriptor cd = (ClassDescriptor) st.get("Program",
-                                                  SymbolType.EITHER);
     assertNotNull(cd);
     SymbolTable mst = cd.getSymbolTable();
     assertNotNull(mst);
