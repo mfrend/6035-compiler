@@ -239,7 +239,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(BreakNode node) {
     SimpleCFGNode breakNode =
-        shortCircuit(new BooleanNode(node.getSourceLoc(), true),
+        branchNode(new BooleanNode(node.getSourceLoc(), true),
                      loopExit, null);
     return new CFGFragment(breakNode, breakNode);
   }
@@ -247,7 +247,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(ContinueNode node) {
     SimpleCFGNode continueNode =
-        shortCircuit(new BooleanNode(node.getSourceLoc(), true),
+        branchNode(new BooleanNode(node.getSourceLoc(), true),
                      increment, null);
     return new CFGFragment(continueNode, continueNode);
   }
