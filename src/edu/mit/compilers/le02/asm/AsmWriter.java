@@ -68,12 +68,16 @@ public class AsmWriter {
           switch(op.getOp()) {
            case MOVE:
             writeOp("mov", arg1, "" + resultReg, sl);
+            break;
            case ADD:
             writeOp("add", arg1, arg2, sl);
+            break;
            case SUBTRACT:
             writeOp("sub", arg1, arg2, sl);
+            break;
            case MULTIPLY:
             writeOp("imul", arg1, arg2, sl);
+            break;
             // Result in arg2 (R11)
            case DIVIDE:
            case MODULO:
@@ -86,12 +90,15 @@ public class AsmWriter {
               // RDX is fixed to hold the remainder.
               resultReg = Register.RDX;
             }
+            break;
            case UNARY_MINUS:
             writeOp("neg", arg1, sl);
             resultReg = Register.R10;
+            break;
            case NOT:
             writeOp("xor", "$1", arg1, sl);
             resultReg = Register.R10;
+            break;
            case EQUAL:
            case NOT_EQUAL:
            case LESS_THAN:
@@ -123,6 +130,7 @@ public class AsmWriter {
             }
             writeOp(cmovOp, "$1", "" + Register.RAX, sl);
             resultReg = Register.RAX;
+            break;
            case RETURN:
             // This is categorically wrong. the return statement needs to
             // provide at least the name of, if not the descriptor for,
@@ -130,6 +138,7 @@ public class AsmWriter {
             // how much to pop back off.
             MethodDeclNode method = (MethodDeclNode)stmt.getNode().getParent();
             generateMethodReturn(arg1, method.getDescriptor(), sl);
+            break;
            case METHOD_PREAMBLE:
             MethodDeclNode decl = (MethodDeclNode)stmt.getNode().getParent();
             generateMethodHeader(decl.getDescriptor());
