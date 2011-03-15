@@ -192,6 +192,7 @@ public class AsmWriter {
     writeOp("mov", "%rbp", "%rsp", sl);
     writeOp("pop", "%rbp", sl); // Push old base pointer.
     // Caller cleans up arguments.
+    writeOp("ret", sl);
   }
 
   protected void generateCall(CallStatement call) {
@@ -217,15 +218,15 @@ public class AsmWriter {
     // This needs to be genericized with simple "call.getMethodName()" to cover
     // both cases of syscalls and method calls which we now treat
     // interchangeably.
-    // This automatically pushes the return address.
+    // This automatically pushes the return address; callee removes return addr
     writeOp("call", call.getMethod().getId(), sl);
 
     // Clean up the call arguments pushed onto stack.
-    int argsToPop = 1;
     if (args.size() > 6) {
-      argsToPop += (args.size() - 6);
+      int argsToPop = (args.size() - 6);
+      writeOp("add", "$-" + (argsToPop * 8), "" + Register.RSP, sl);
     }
-    writeOp("add", "$-" + (argsToPop * 8), "" + Register.RSP, sl);
+
     // Pop the saved usedCallerRegisters back onto the stack. (not needed yet)
 
     // Move RAX into the correct save location.
@@ -280,6 +281,11 @@ public class AsmWriter {
       return loc.getOffset() + "(%rbp)";
     }
     return "";
+  }
+
+  protected void writeOp(String opcode,
+                         SourceLocation loc) {
+    writeOp(opcode, "", "", "", loc);
   }
 
   protected void writeOp(String opcode,
