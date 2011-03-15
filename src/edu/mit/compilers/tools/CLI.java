@@ -22,9 +22,10 @@ public class CLI {
    *        but you may wish to use it for your own purposes.
    * LOWIR: produce a low-level intermediate representation from input, and
    *        stop.
+   * CFG: produce an image of the control flow graph
    * ASSEMBLY: produce assembly from the input.
    */
-  public enum Action {DEFAULT, SCAN, PARSE, INTER, LOWIR, ASSEMBLY};
+  public enum Action {DEFAULT, SCAN, PARSE, INTER, LOWIR, CFG, ASSEMBLY};
 
   /**
    * Array indicating which optimizations should be performed.  If
@@ -200,6 +201,8 @@ public class CLI {
         } else if (argSansCase.equals("assembly") ||
                    argSansCase.equals("codegen")) {
           target = Action.ASSEMBLY;
+        } else if (argSansCase.equals("cfg")) {
+          target = Action.CFG;
         } else {
           target = Action.DEFAULT;
         }
@@ -235,6 +238,9 @@ public class CLI {
       break;
      case LOWIR:
       ext = ".lowir";
+      break;
+     case CFG:
+      ext = ".dot";
       break;
      case ASSEMBLY:
       ext = ".s";

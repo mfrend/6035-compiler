@@ -31,4 +31,9 @@ public class StackLocation extends VariableLocation {
     StackLocation other = (StackLocation) o;
     return this.offset == other.offset;
   }
+  
+  @Override
+  public String toString() {
+    return offset + "(%rbp)";
+  }
 }

@@ -51,6 +51,16 @@ public final class ConstantArgument extends Argument {
       return this.b == other.b;
     }
   }
+  
+  @Override
+  public String toString() {
+    if (this.isInt) {
+      return "$" + i;
+    }
+    else {
+      return "$" + b;
+    }
+  }
 
   
 }

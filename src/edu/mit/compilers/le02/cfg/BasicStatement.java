@@ -2,19 +2,36 @@ package edu.mit.compilers.le02.cfg;
 
 import java.util.List;
 
+import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 
 public abstract class BasicStatement {
   private ASTNode node;
+  protected VariableLocation result;
+  protected BasicStatementType type;
   
-  public BasicStatement(ASTNode node) {
+  public enum BasicStatementType {
+    DUMMY,
+    ARGUMENT,
+    OP,
+    CALL
+  }
+  
+  public BasicStatement(ASTNode node, VariableLocation result) {
     this.node = node;
+    this.result = result;
   }
 
   public ASTNode getNode() {
     return node;
   }
   
-  abstract public List<BasicStatement> flatten();
-
+  public VariableLocation getResult() {
+    return result;
+  }
+  
+  public BasicStatementType getType() {
+    return type;
+  }
+  
 }

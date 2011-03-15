@@ -1,57 +1,57 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
+import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 
-public final class ControlFlowGraph {
-  private Map<String, BasicBlockNode> basicBlocks;
+public class ControlFlowGraph {
+  private Map<String, CFGNode> methods;
   private Map<String, FieldDescriptor> globals;
-  private Map<String, String> stringData;
+  private Map<String, StringNode> stringData;
 
-  public ControlFlowGraph(Map<String, BasicBlockNode> basicBlocks,
-                          Map<String, FieldDescriptor> globals,
-                          Map<String, String> stringData) {
-    this.basicBlocks = basicBlocks;
-    this.globals = globals;
-    this.stringData = stringData;
+  public ControlFlowGraph() {
+    this.methods = new HashMap<String, CFGNode>();
+    this.globals = new HashMap<String, FieldDescriptor>();
+    this.stringData = new HashMap<String, StringNode>();
   }
 
-  public BasicBlockNode getBasicBlock(String id) {
-    return basicBlocks.get(id);
+  public CFGNode getMethod(String id) {
+    return methods.get(id);
   }
-
-  public void putBasicBlock(String id, BasicBlockNode node) {
-    basicBlocks.put(id, node);
+  
+  public List<String> getMethods() {
+    return new ArrayList<String>(methods.keySet());
   }
-
-  public Iterator<Entry<String, BasicBlockNode>> getBasicBlocks() {
-    return basicBlocks.entrySet().iterator();
+  
+  public void putMethod(String id, CFGNode node) {
+    methods.put(id, node);
   }
 
   public FieldDescriptor getGlobal(String id) {
     return globals.get(id);
   }
 
+  public List<String> getGlobals() {
+    return new ArrayList<String>(globals.keySet());
+  }
+
   public void putGlobal(String id, FieldDescriptor desc) {
     globals.put(id, desc);
   }
 
-  public Iterator<Entry<String, FieldDescriptor>> getGlobals() {
-    return globals.entrySet().iterator();
-  }
-
-  public String getStringData(String id) {
+  public StringNode getStringData(String id) {
     return stringData.get(id);
   }
 
-  public void putStringData(String id, String data) {
-    stringData.put(id, data);
+  public List<String> getAllStringData() {
+    return new ArrayList<String>(stringData.keySet());
   }
 
-  public Iterator<Entry<String, String>> getStrings() {
-    return stringData.entrySet().iterator();
+  public void putStringData(String id, StringNode data) {
+    stringData.put(id, data);
   }
 }

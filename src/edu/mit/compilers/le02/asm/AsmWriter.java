@@ -5,9 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.RegisterLocation.Register;
@@ -23,7 +21,6 @@ import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
-import edu.mit.compilers.le02.cfg.SyscallStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
@@ -44,13 +41,10 @@ public class AsmWriter {
       CLI.getInputFilename());
     writer.println(".global main");
 
-    Iterator<Entry<String, BasicBlockNode>> blockIter = cfg.getBasicBlocks();
-    while (blockIter.hasNext()) {
-      Entry<String, BasicBlockNode> entry = blockIter.next();
-      String blockName = entry.getKey();
-      BasicBlockNode node = entry.getValue();
-      writer.println("# BlockNode: " + blockName);
-      writer.println(blockName + ":");
+    for (String methodName : cfg.getMethods()) {
+      BasicBlockNode node = (BasicBlockNode)cfg.getMethod(methodName);
+      writer.println("# MethodNode: " + methodName);
+      writer.println(methodName + ":");
       for (BasicStatement stmt : node.getStatements()) {
         if (stmt instanceof OpStatement) {
           // Default to saving results in R10; we can pull results from a
@@ -139,7 +133,7 @@ public class AsmWriter {
             MethodDeclNode method = (MethodDeclNode)stmt.getNode().getParent();
             generateMethodReturn(arg1, method.getDescriptor(), sl);
             break;
-           case METHOD_PREAMBLE:
+           case ENTER:
             MethodDeclNode decl = (MethodDeclNode)stmt.getNode().getParent();
             generateMethodHeader(decl.getDescriptor());
             break;
@@ -224,11 +218,8 @@ public class AsmWriter {
     }
 
     // Now we're ready to make the call.
-    // This needs to be genericized with simple "call.getMethodName()" to cover
-    // both cases of syscalls and method calls which we now treat
-    // interchangeably.
     // This automatically pushes the return address; callee removes return addr
-    writeOp("call", call.getMethod().getId(), sl);
+    writeOp("call", call.getMethodName(), sl);
 
     // Clean up the call arguments pushed onto stack.
     if (args.size() > 6) {

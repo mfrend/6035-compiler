@@ -1,15 +1,11 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.util.Collections;
-import java.util.List;
-
-import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.ast.ASTNode;
 
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
   private Argument arg1, arg2;
-  private VariableLocation result;
   
   public enum AsmOp {
     MOVE,
@@ -27,16 +23,16 @@ public final class OpStatement extends BasicStatement {
     GREATER_OR_EQUAL,
     NOT,
     RETURN,
-    METHOD_PREAMBLE,
+    ENTER,
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
                      VariableLocation result) {
-    super(node);
+    super(node, result);
     this.op = op;
     this.arg1 = arg1;
     this.arg2 = arg2;
-    this.result = result;
+    this.type = BasicStatementType.OP;
   }
   
   public AsmOp getOp() {
@@ -50,15 +46,14 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
-
-  public VariableLocation getResult() {
-    return result;
-  }
-
-  @Override
-  public List<BasicStatement> flatten() {
-    return Collections.singletonList((BasicStatement) this);
-  }
-
   
+  @Override
+  public String toString() {
+    String s = "OpStatement(" + op + ", " + arg1 + ", " + arg2 + ")";
+    if (result != null) {
+      s += ": " + result;
+    }
+    return s;
+  }
+
 }
