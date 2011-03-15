@@ -56,6 +56,9 @@ public final class SimpleCFGNode implements CFGNode {
   
   public void setNext(SimpleCFGNode node) {
     if (next != null) {
+      if (statement.type == BasicStatementType.JUMP) {
+        return;
+      }
       next.predecessors.remove(this);
     }
     next = node;

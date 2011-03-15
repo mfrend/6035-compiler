@@ -238,17 +238,15 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(BreakNode node) {
-    SimpleCFGNode breakNode =
-        branchNode(new BooleanNode(node.getSourceLoc(), true),
-                     loopExit, null);
+    SimpleCFGNode breakNode = new SimpleCFGNode(new JumpStatement(node));
+    breakNode.setNext(loopExit);
     return new CFGFragment(breakNode, breakNode);
   }
 
   @Override
   public CFGFragment visit(ContinueNode node) {
-    SimpleCFGNode continueNode =
-        branchNode(new BooleanNode(node.getSourceLoc(), true),
-                     increment, null);
+    SimpleCFGNode continueNode = new SimpleCFGNode(new JumpStatement(node));
+    continueNode.setNext(increment);
     return new CFGFragment(continueNode, continueNode);
   }
 
@@ -445,7 +443,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
   
   public CFGFragment visit(StringNode node) {
-    String name = ".str" + node.getValue().hashCode();
+    String name = ".str" + Math.abs(node.getValue().hashCode());
     cfg.putStringData(name, node);
     ArgumentStatement as = new ArgumentStatement(node,
                              Argument.makeArgument(new GlobalLocation(name)));
