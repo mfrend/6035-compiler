@@ -6,7 +6,11 @@ import java.util.List;
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
+<<<<<<< HEAD
 import edu.mit.compilers.le02.GlobalLocation;
+=======
+import edu.mit.compilers.le02.SourceLocation;
+>>>>>>> skishore-forloop
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -15,8 +19,13 @@ import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
 import edu.mit.compilers.le02.ast.BooleanNode;
+<<<<<<< HEAD
 import edu.mit.compilers.le02.ast.CallStatementNode;
+=======
+import edu.mit.compilers.le02.ast.BreakNode;
+>>>>>>> skishore-forloop
 import edu.mit.compilers.le02.ast.ClassNode;
+import edu.mit.compilers.le02.ast.ContinueNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.FieldDeclNode;
 import edu.mit.compilers.le02.ast.ForNode;
@@ -41,9 +50,8 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private static CFGGenerator instance = null;
-
   private ControlFlowGraph cfg;
-
+  private SimpleCFGNode increment, loopExit;
 
   public static CFGGenerator getInstance() {
     if (instance == null) {
@@ -83,7 +91,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     exit.setBranchTarget(t);
     exit.setNext(f);
 
-    return frag.getEnter(); 
+    return frag.getEnter();
   }
 
   private SimpleCFGNode shortCircuitHelper(BoolOpNode node,
@@ -117,7 +125,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       SimpleCFGNode t, SimpleCFGNode f) {
     return shortCircuit(node.getExpr(), f, t);
   }
-
 
   @Override
   public CFGFragment visit(ClassNode node) {
@@ -153,9 +160,12 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
       if (fragment == null) {
         fragment = curr;
+      } else {
+        fragment = fragment.link(curr); 
       }
-      else {
-        fragment = fragment.link(curr);
+
+      if ((s instanceof BreakNode) || (s instanceof ContinueNode)) {
+        break;
       }
     }
 
@@ -193,51 +203,57 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(ForNode node) {
+    // Save increment and exit nodes of any outer for loop
+    SimpleCFGNode oldIncrement = increment;
+    SimpleCFGNode oldExit = loopExit;
+
     // Create dummy exit node 
-    SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+    loopExit = new SimpleCFGNode(new DummyStatement());
 
-    // This is probably how you want to get the loop variable and end variable
-    /*
-      VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
-      Argument loopVar = Argument.makeArgument(loc);
-      Argument endVar = endValue.getExit().getResult();
-     */
+    // Evaluate the exit condition
+    CFGFragment exitFrag = node.getEnd().accept(this);
+    Argument exitVal = exitFrag.getExit().getResult();
 
+    // Create a node where the iterator is incremented
+    VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
+    Argument loopVar = Argument.makeArgument(loc);
+    BasicStatement st = new OpStatement(node, AsmOp.ADD,
+        loopVar, new ConstantArgument(1), loc);
+    increment = new SimpleCFGNode(st);
 
-    /* ==== DEAD CODE ==== 
-      CFGFragment init = node.getInit().accept(this);
-      CFGFragment body = node.getBody().accept(this);
-      CFGFragment endValue = node.getEnd().accept(this);
+    // Compute fragments of the for loop's control flow graph
+    CFGFragment initFrag = node.getInit().accept(this);
+    CFGFragment bodyFrag = node.getBody().accept(this);
 
-      VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
-      Argument loopVar = Argument.makeArgument(loc);
-      Argument endVar = endValue.getExit().getResult();
+    // Create a branch node where the condition is evaluated and connect it up
+    BasicStatement conditionStatement = new OpStatement(node, AsmOp.LESS_THAN,
+        loopVar, exitVal, null);
+    SimpleCFGNode branch = new SimpleCFGNode(conditionStatement);
+    branch.setBranchTarget(bodyFrag.getEnter());
+    branch.setNext(loopExit);
 
-      BasicStatement condition = new OpStatement(null, AsmOp.GREATER_OR_EQUAL, 
-                                                 loopVar, endVar, null);
-      SimpleCFGNode condNode = new SimpleCFGNode(condition);
-      condNode.setBranchTarget(exit);
-      condNode.setNext(body.getEnter());
-      body.setNext
+    // Connect fragments together
+    exitFrag.getExit().setNext(initFrag.getEnter());
+    initFrag.getExit().setNext(branch);
+    bodyFrag.getExit().setNext(increment);
+    increment.setNext(branch);
 
-      String loopID = nextID();
-      String postLoopID = nextID();
+    // Restore increment and exit nodes of any outer for loop
+    increment = oldIncrement;
+    loopExit = oldExit;
 
-      curNode.setTrueBranch(loopID);
+    // Enter at the condition, exit via the dummy exit node
+    return new CFGFragment(exitFrag.getEnter(), loopExit);
+  }
 
-      curNode = new BasicBlockNode(loopID, null, null, null);
-      node.getBody().accept(this);
+  @Override
+  public CFGFragment visit(BreakNode node) {
+    return new CFGFragment(loopExit, loopExit);
+  }
 
-      // TODO: Create a BoolOpNode which expresses the for loop condition
-      VariableLocation temp = makeTemp(node.getBody(), DecafType.BOOLEAN);
-      BasicStatement condition = new OpStatement(null, AsmOp.LESS_THAN, loopVar, endVar, temp);
-      curNode.setConditional(condition);
-      curNode.setTrueBranch(loopID);
-      curNode.setFalseBranch(postLoopID);
-
-      curNode = new BasicBlockNode(postLoopID, null, null, null);
-     */
-    return null;
+  @Override
+  public CFGFragment visit(ContinueNode node) {
+    return new CFGFragment(increment, increment);
   }
 
   @Override
