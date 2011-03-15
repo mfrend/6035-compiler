@@ -16,6 +16,7 @@ public interface CFGNode {
   /**
    * Get a representation of the node for a .dot file, for visualization 
    */
+  public void prepDotString();
   public String getDotString();
   
   /**

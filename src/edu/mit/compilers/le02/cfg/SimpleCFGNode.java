@@ -6,6 +6,7 @@ import java.util.Set;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 
 public final class SimpleCFGNode implements CFGNode {
+  private static Set<CFGNode> visited = new HashSet<CFGNode>();
   private Set<CFGNode> predecessors;
   private SimpleCFGNode next;
   private SimpleCFGNode branchTarget;
@@ -77,11 +78,27 @@ public final class SimpleCFGNode implements CFGNode {
     return predecessors.size() > 1;
   }
   
+
+  public static void resetVisited() { 
+    visited.clear();
+  }
+  
+  @Override
+  public void prepDotString() { 
+    visited.clear();
+  }
+
   @Override
   public String getDotString() {
+    if (visited.contains(this)) {
+      return "";
+    }
+    
     if (next == null) {
       return this.hashCode() + "[label=\"" + statement.toString() + "\"]\n";
     }
+    
+    visited.add(this);
     
     String me = "" + this.hashCode();
     String nextStr = "" + next.hashCode();

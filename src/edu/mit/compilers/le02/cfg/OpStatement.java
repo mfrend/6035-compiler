@@ -49,7 +49,11 @@ public final class OpStatement extends BasicStatement {
   
   @Override
   public String toString() {
-    return "OpStatement(" + op + ", " + arg1 + ", " + arg2 + ")";
+    String s = "OpStatement(" + op + ", " + arg1 + ", " + arg2 + ")";
+    if (result != null) {
+      s += ": " + result;
+    }
+    return s;
   }
 
 }

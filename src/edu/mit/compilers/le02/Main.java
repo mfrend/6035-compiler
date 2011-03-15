@@ -17,6 +17,7 @@ import antlr.TokenStreamRecognitionException;
 import antlr.debug.misc.ASTFrame;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.AstPrettyPrinter;
+import edu.mit.compilers.le02.cfg.BasicBlockGraph;
 import edu.mit.compilers.le02.cfg.CFGGenerator;
 import edu.mit.compilers.le02.cfg.CFGVisualizer;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
@@ -350,11 +351,16 @@ public class Main {
       SymbolTable st = SymbolTableGenerator.generateSymbolTable(parent);
       MasterChecker.checkAll(parent);
       
-      ControlFlowGraph cfg = CFGGenerator.generateCFG(parent);
-
+      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      
       if (CLI.debug) {
-        CFGVisualizer.writeToDotFile(CLI.outfile, cfg);
+        CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
       }
+      else {
+        CFGVisualizer.writeToDotFile(CLI.outfile, cfg, false);
+      }
+
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);
       success = false;

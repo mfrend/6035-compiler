@@ -1,19 +1,26 @@
 package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class BasicBlockNode implements CFGNode {
+  private static Set<CFGNode> visited = new HashSet<CFGNode>();
+  private Set<BasicBlockNode> predecessors;
+  private String method;
   private String id;
   private List<BasicStatement> statements;
   private BasicBlockNode next;
   private BasicBlockNode branchTarget;
 
-  public BasicBlockNode(String id) {
+  public BasicBlockNode(String id, String method) {
     this.id = id;
+    this.method = method;
     this.next = null;
     this.branchTarget = null;
     
+    this.predecessors = new HashSet<BasicBlockNode>();
     this.statements = new ArrayList<BasicStatement>();
   }
 
@@ -31,6 +38,20 @@ public final class BasicBlockNode implements CFGNode {
   
   public void addStatement(BasicStatement statement) {
     this.statements.add(statement);
+  }
+  
+  public void removeFromCFG() {
+    assert (statements.isEmpty());
+    assert (branchTarget == null);
+    for (BasicBlockNode n : predecessors) {
+      if (this == n.next) {
+        n.next = this.next;
+      }
+      else {
+        assert (this == n.branchTarget);
+        n.branchTarget = this.next;
+      }
+    }
   }
 
   public List<BasicStatement> getStatements() {
@@ -71,7 +92,12 @@ public final class BasicBlockNode implements CFGNode {
   }
 
   public void setBranchTarget(BasicBlockNode node) {
-    this.branchTarget = node;
+    if (branchTarget != null) {
+      branchTarget.predecessors.remove(this);
+    }
+    
+    branchTarget = node;
+    branchTarget.predecessors.add(this);
   }
 
   public String getTrueBranch() {
@@ -79,7 +105,12 @@ public final class BasicBlockNode implements CFGNode {
   }
 
   public void setNext(BasicBlockNode node) {
-    this.next = node;
+    if (next != null) {
+      next.predecessors.remove(this);
+    }
+    
+    next = node;
+    next.predecessors.add(this);
   }
 
   public String getFalseBranch() {
@@ -102,14 +133,27 @@ public final class BasicBlockNode implements CFGNode {
   }
   
   @Override
+  public void prepDotString() {
+    BasicBlockNode.resetVisited();
+  }
+  
+  @Override
   public String getDotString() {
-    if (next == null) {
+    if (visited.contains(this)) {
       return "";
     }
+    
+    if (next == null) {
+      return id + " " + getDotStringLabel() + "\n";
+    }
+    
+    visited.add(this);
+    
     String me = id; 
     String nextStr = next.id;
     
-    String s = me + " -> " + nextStr;
+    String s = me + " " + getDotStringLabel() + "\n"
+               + me + " -> " + nextStr;
     
     if (!isBranch()) {
       s += "\n";
@@ -121,6 +165,25 @@ public final class BasicBlockNode implements CFGNode {
       s += me + " -> " + branchStr + " [label=\"true\"]\n";
       return s + next.getDotString() + branchTarget.getDotString();
     }
+  }
+  
+  public static void resetVisited() {
+    visited.clear();
+  }
+  
+  private String getDotStringLabel() {
+    String s = "[shape=none, margin=0, label=<<TABLE BORDER=\"0\" "
+               + "CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">";
+    s += "<TR><TD><B>" + id + "</B></TD></TR>";
+    for (BasicStatement st : statements) {
+      s += "<TR><TD>" + st + "</TD></TR>";
+    }
+    s += "</TABLE>>]";
+    return s;
+  }
+  
+  public String getMethod() {
+    return method;
   }
 
 }

@@ -35,12 +35,20 @@ public class ControlFlowGraph {
     return globals.get(id);
   }
 
+  public List<String> getGlobals() {
+    return new ArrayList<String>(globals.keySet());
+  }
+
   public void putGlobal(String id, FieldDescriptor desc) {
     globals.put(id, desc);
   }
   
   public StringNode getStringData(String id) {
     return stringData.get(id);
+  }
+
+  public List<String> getAllStringData() {
+    return new ArrayList<String>(stringData.keySet());
   }
 
   public void putStringData(String id, StringNode data) {

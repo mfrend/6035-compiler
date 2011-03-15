@@ -6,11 +6,7 @@ import java.util.List;
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
-<<<<<<< HEAD
 import edu.mit.compilers.le02.GlobalLocation;
-=======
-import edu.mit.compilers.le02.SourceLocation;
->>>>>>> skishore-forloop
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -19,11 +15,8 @@ import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
 import edu.mit.compilers.le02.ast.BooleanNode;
-<<<<<<< HEAD
-import edu.mit.compilers.le02.ast.CallStatementNode;
-=======
 import edu.mit.compilers.le02.ast.BreakNode;
->>>>>>> skishore-forloop
+import edu.mit.compilers.le02.ast.CallStatementNode;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.ContinueNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
@@ -208,7 +201,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SimpleCFGNode oldExit = loopExit;
 
     // Create dummy exit node 
-    loopExit = new SimpleCFGNode(new DummyStatement());
+    SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+    loopExit = exit;
 
     // Evaluate the exit condition
     CFGFragment exitFrag = node.getEnd().accept(this);
@@ -243,7 +237,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = oldExit;
 
     // Enter at the condition, exit via the dummy exit node
-    return new CFGFragment(exitFrag.getEnter(), loopExit);
+    return new CFGFragment(exitFrag.getEnter(), exit);
   }
 
   @Override
@@ -398,7 +392,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CallStatement s = new CallStatement(node, node.getFuncName().getValue(), 
                                         args, loc);
 
-    return frag.append(new SimpleCFGNode(s));
+    SimpleCFGNode cn = new SimpleCFGNode(s);
+    if (frag == null) {
+      return new CFGFragment(cn, cn);
+    }
+    return frag.append(cn);
   }
 
 

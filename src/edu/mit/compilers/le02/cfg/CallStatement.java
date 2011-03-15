@@ -34,6 +34,10 @@ public class CallStatement extends BasicStatement {
       s += ", " + a;
     }
     s += ")";
+    
+    if (result != null) {
+      s += ": " + result;
+    }
     return s;
   }
 
