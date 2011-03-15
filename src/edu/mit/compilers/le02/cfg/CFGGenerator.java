@@ -210,9 +210,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment bodyFrag = node.getBody().accept(this);
 
     // Create a branch node where the condition is evaluated and connect it up
-    VariableLocation temp = makeTemp(node, DecafType.INT);
     BasicStatement conditionStatement = new OpStatement(node, AsmOp.LESS_THAN,
-        loopVar, exitVal, temp);
+        loopVar, exitVal, null);
     SimpleCFGNode branch = new SimpleCFGNode(conditionStatement);
     branch.setBranchTarget(bodyFrag.getEnter());
     branch.setNext(loopExit);
