@@ -154,13 +154,25 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(AssignNode node) {
-    VariableLocation dest = node.getLoc().getDesc().getLocation();
+    CFGFragment destFrag = node.getLoc().accept(this);
+    Argument destArg = destFrag.getExit().getResult();
+    assert (destArg instanceof VariableArgument);
+    
+    
+    
+    VariableLocation dest = ((VariableArgument) destArg).getLoc();
+    
     CFGFragment frag = node.getValue().accept(this);
     Argument src = frag.getExit().getResult();
 
+    // XXX: This should actually be
+    // BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, destArg, null or temp);
     BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, null, dest);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
-    return frag.append(cfgNode);
+    
+    // Assumption: value to assign is evaluated, then location to assign to
+    //             is evaluated, then assignment is performed
+    return frag.link(destFrag).append(cfgNode);
   }
 
   @Override
@@ -191,8 +203,12 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = exit;
 
     // Evaluate the exit condition
+    VariableLocation exitLoc = makeTemp(node, DecafType.BOOLEAN);
     CFGFragment exitFrag = node.getEnd().accept(this);
     Argument exitVal = exitFrag.getExit().getResult();
+    BasicStatement exitStatement = new OpStatement(node, AsmOp.MOVE,
+        exitVal, null, exitLoc);
+    exitFrag = exitFrag.append(new SimpleCFGNode(exitStatement));
 
     // Create a node where the iterator is incremented
     VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
@@ -207,7 +223,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
     // Create a branch node where the condition is evaluated and connect it up
     BasicStatement conditionStatement = new OpStatement(node, AsmOp.LESS_THAN,
-        loopVar, exitVal, null);
+        loopVar, Argument.makeArgument(exitLoc), null);
     SimpleCFGNode branch = new SimpleCFGNode(conditionStatement);
     branch.setBranchTarget(bodyFrag.getEnter());
     branch.setNext(loopExit);
@@ -228,17 +244,15 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(BreakNode node) {
-    SimpleCFGNode breakNode =
-        branchNode(new BooleanNode(node.getSourceLoc(), true),
-                     loopExit, null);
+    SimpleCFGNode breakNode = new SimpleCFGNode(new JumpStatement(node));
+    breakNode.setNext(loopExit);
     return new CFGFragment(breakNode, breakNode);
   }
 
   @Override
   public CFGFragment visit(ContinueNode node) {
-    SimpleCFGNode continueNode =
-        branchNode(new BooleanNode(node.getSourceLoc(), true),
-                     increment, null);
+    SimpleCFGNode continueNode = new SimpleCFGNode(new JumpStatement(node));
+    continueNode.setNext(increment);
     return new CFGFragment(continueNode, continueNode);
   }
 
@@ -411,10 +425,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
   public CFGFragment visit(ArrayLocationNode node) {
-    Argument a = node.getIndex().accept(this).getExit().getResult();
-    ArgumentStatement as = new ArgumentStatement(node, a);
+    CFGFragment indexFrag = node.getIndex().accept(this);
+    Argument index = indexFrag.getExit().getResult();
+    Argument array = Argument.makeArgument(new GlobalLocation(node.getName()), 
+                                           index);
+    ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
-    return new CFGFragment(cfgNode, cfgNode);
+    return indexFrag.append(cfgNode);
   }
 
   public CFGFragment visit(BooleanNode node) {

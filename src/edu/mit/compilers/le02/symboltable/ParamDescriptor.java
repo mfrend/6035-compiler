@@ -16,15 +16,15 @@ public class ParamDescriptor extends TypedDescriptor {
   private static Register[] arguments = {RDI, RSI, RDX, RCX, R8, R9};
 
   public ParamDescriptor(SymbolTable parent, String id, DecafType type) {
-    super(parent, id, type);
-    
-    int num = parent.getNumParams();
-    if (num < 6) {
-      this.location = new RegisterLocation(arguments[num]);
-    }
-    else {
-      this.location = new StackLocation((num - 6) * 8 + 16);
+    super(parent, id, type); 
+  }
+
+  public void setIndex(int i) {
+    if (i < 6) {
+      this.location = new RegisterLocation(arguments[i]);
+    } else {
+      this.location = new StackLocation((i - 6) * 8 + 16);
     }
   }
-  
+
 }

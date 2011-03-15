@@ -7,6 +7,7 @@ public class ArrayVariableArgument extends VariableArgument {
 
   public ArrayVariableArgument(VariableLocation loc, Argument index) {
     super(loc);
+    this.index = index;
   }
 
   @Override

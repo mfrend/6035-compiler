@@ -99,6 +99,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
   @Override
   public Descriptor visit(MethodDeclNode node) {
     SymbolTable parent = currParent;
+    int i = 0;
 
     // Create and fill paramSymbolTable
     SymbolTable methodSymbolTable = new SymbolTable(parent);
@@ -107,9 +108,11 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     isParam = true;
     int ii = 1;
     for (VarDeclNode v : node.getParams()) {
-      ParamDescriptor param = (ParamDescriptor) v.accept(this);
-      methodSymbolTable.put(v.getName(), param,
-                            v.getSourceLoc());
+      ParamDescriptor param = (ParamDescriptor)v.accept(this);
+      param.setIndex(i);
+      i++;
+
+      methodSymbolTable.put(v.getName(), param, v.getSourceLoc());
       params.add(v.getName());
       ii++;
     }
