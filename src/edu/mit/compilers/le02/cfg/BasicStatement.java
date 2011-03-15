@@ -14,7 +14,8 @@ public abstract class BasicStatement {
     DUMMY,
     ARGUMENT,
     OP,
-    CALL
+    CALL,
+    JUMP
   }
   
   public BasicStatement(ASTNode node, VariableLocation result) {
