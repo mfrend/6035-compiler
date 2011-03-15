@@ -1,28 +1,27 @@
 package edu.mit.compilers.le02.cfg;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 
-public final class ControlFlowGraph {
-  private Map<String, BasicBlockNode> basicBlocks;
+public class ControlFlowGraph {
+  private Map<String, CFGNode> methods;
   private Map<String, FieldDescriptor> globals;
   private Map<String, String> stringData;
 
-  public ControlFlowGraph(Map<String, BasicBlockNode> basicBlocks,
-                          Map<String, FieldDescriptor> globals,
-                          Map<String, String> stringData) {
-    this.basicBlocks = basicBlocks;
-    this.globals = globals;
-    this.stringData = stringData;
+  public ControlFlowGraph() {
+    this.methods = new HashMap<String, CFGNode>();
+    this.globals = new HashMap<String, FieldDescriptor>();
+    this.stringData = new HashMap<String, String>();
   }
 
-  public BasicBlockNode getBasicBlock(String id) {
-    return basicBlocks.get(id);
+  public CFGNode getMethod(String id) {
+    return methods.get(id);
   }
   
-  public void putBasicBlock(String id, BasicBlockNode node) {
-    basicBlocks.put(id, node);
+  public void putMethod(String id, CFGNode node) {
+    methods.put(id, node);
   }
 
   public FieldDescriptor getGlobal(String id) {
@@ -36,7 +35,6 @@ public final class ControlFlowGraph {
   public String getStringData(String id) {
     return stringData.get(id);
   }
-  
 
   public void putStringData(String id, String data) {
     stringData.put(id, data);

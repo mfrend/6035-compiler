@@ -11,14 +11,13 @@ import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 public final class CallStatement extends BasicStatement {
   private MethodDescriptor method;
   private List<Argument> args;
-  private VariableLocation result;
 
   public CallStatement(ExpressionNode expr, MethodDescriptor method,
                        List<Argument> args, VariableLocation result) {
-    super(expr);
+    super(expr, result);
     this.method = method;
     this.args = args;
-    this.result = result;
+    this.type = BasicStatementType.CALL;
   }
 
   public MethodDescriptor getMethod() {
@@ -31,11 +30,6 @@ public final class CallStatement extends BasicStatement {
 
   public VariableLocation getResult() {
     return result;
-  }
-  
-  @Override
-  public List<BasicStatement> flatten() {
-    return Collections.singletonList((BasicStatement) this);
   }
 
 }

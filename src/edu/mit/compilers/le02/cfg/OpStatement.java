@@ -9,7 +9,6 @@ import edu.mit.compilers.le02.VariableLocation;
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
   private Argument arg1, arg2;
-  private VariableLocation result;
   
   public enum AsmOp {
     MOVE,
@@ -31,11 +30,11 @@ public final class OpStatement extends BasicStatement {
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
                      VariableLocation result) {
-    super(node);
+    super(node, result);
     this.op = op;
     this.arg1 = arg1;
     this.arg2 = arg2;
-    this.result = result;
+    this.type = BasicStatementType.OP;
   }
   
   public AsmOp getOp() {
@@ -49,15 +48,5 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
-
-  public VariableLocation getResult() {
-    return result;
-  }
-
-  @Override
-  public List<BasicStatement> flatten() {
-    return Collections.singletonList((BasicStatement) this);
-  }
-
   
 }
