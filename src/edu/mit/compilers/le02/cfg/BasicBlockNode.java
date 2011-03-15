@@ -26,6 +26,10 @@ public final class BasicBlockNode implements CFGNode {
     this.statements = statements;
   }
 
+  public void prependStatement(BasicStatement statement) {
+    this.statements.add(0, statement);
+  }
+  
   public void addStatement(BasicStatement statement) {
     this.statements.add(statement);
   }
@@ -43,6 +47,22 @@ public final class BasicBlockNode implements CFGNode {
     return statements.get(statements.size() - 1);
   }
 
+  /**
+   * @return Most negative local offset in this basic block.
+   */
+  public int largestLocalOffset() {
+    int min = 0;
+    int curr;
+    for (BasicStatement s : statements) { 
+      curr = s.getNode().getSymbolTable().getLargestLocalOffset();
+      if (curr < min) {
+        min = curr;
+      }
+    }
+    
+    return min;
+  }
+  
   public BasicStatement getConditional() {
     if (!isBranch()) {
       return null;

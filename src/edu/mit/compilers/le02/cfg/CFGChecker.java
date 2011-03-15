@@ -10,6 +10,8 @@ public class CFGChecker {
    * 1. All nodes are connected to only one method head
    * 2. All basic block conditionals are boolean values
    * 3. All basic blocks that don't jump anywhere end in return
+   * 4. Only OpStatements and CallStatements
+   * 5. All method heads have an ENTER OpStatement as their first statement
    */
   public static void checkBasicBlockCFG(ControlFlowGraph cfg) {
     

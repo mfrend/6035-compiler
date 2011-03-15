@@ -1,10 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.util.Collections;
-import java.util.List;
-
-import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.ast.ASTNode;
 
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
@@ -25,7 +22,8 @@ public final class OpStatement extends BasicStatement {
     GREATER_THAN,
     GREATER_OR_EQUAL,
     NOT,
-    RETURN
+    RETURN,
+    ENTER
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
@@ -48,5 +46,4 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
-  
 }
