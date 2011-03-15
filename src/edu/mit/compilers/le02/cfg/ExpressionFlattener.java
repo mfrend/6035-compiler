@@ -6,6 +6,7 @@ import java.util.List;
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
+import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -22,6 +23,9 @@ import edu.mit.compilers.le02.ast.MinusNode;
 import edu.mit.compilers.le02.ast.NotNode;
 import edu.mit.compilers.le02.ast.ReturnNode;
 import edu.mit.compilers.le02.ast.ScalarLocationNode;
+import edu.mit.compilers.le02.ast.StringNode;
+import edu.mit.compilers.le02.ast.SyscallArgNode;
+import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
@@ -160,6 +164,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   /*
    * Statement Visiting Methods
    */
+  @Override
   public Argument visit(AssignNode node) {
     VariableLocation destLoc = node.getLoc().getDesc().getLocation();
     Argument dest = Argument.makeArgument(destLoc);
@@ -169,11 +174,13 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return null;
   }
   
+  @Override
   public Argument visit(CallStatementNode node) {
     node.getCall().accept(this);
     return null;
   }
 
+  @Override
   public Argument visit(ReturnNode node) {
     Argument arg1 = null;
     if (node.hasValue()) {
@@ -187,6 +194,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   /*
    * Expression Visiting Methods
    */  
+  @Override
   public Argument visit(BoolOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
@@ -198,6 +206,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return Argument.makeArgument(loc);
   }
   
+  @Override
   public Argument visit(MathOpNode node) {
     Argument arg1 = node.getLeft().accept(this);
     Argument arg2 = node.getRight().accept(this);
@@ -209,6 +218,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return Argument.makeArgument(loc);
   }
   
+  @Override
   public Argument visit(NotNode node) {
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
     
@@ -218,6 +228,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return Argument.makeArgument(loc);
   }
   
+  @Override
   public Argument visit(MinusNode node) {
     VariableLocation loc = makeTemp(node, DecafType.INT);
     
@@ -226,7 +237,35 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     statements.add(s);
     return Argument.makeArgument(loc);
   }
-  
+
+  @Override
+  public Argument visit(SystemCallNode node) {
+    VariableLocation loc = makeTemp(node, node.getType());
+    List<Argument> args = new ArrayList<Argument>();
+    for (SyscallArgNode arg : node.getArgs()) {
+      args.add(arg.accept(this));
+    }
+    SyscallStatement s = new SyscallStatement(node, args, loc);
+    statements.add(s);
+
+    return Argument.makeArgument(loc);
+  }
+
+  @Override
+  public Argument visit(SyscallArgNode node) {
+    ASTNode arg = node.getChildren().get(0);
+    if (arg instanceof ExpressionNode) {
+      ExpressionNode expr = (ExpressionNode)arg;
+      VariableLocation loc = makeTemp(expr, expr.getType());
+      return Argument.makeArgument(loc);
+    } else {
+      StringNode str = (StringNode)arg;
+      return Argument.makeArgument(
+        new GlobalLocation("str" + str.getValue().hashCode()));
+    }
+  }
+
+  @Override
   public Argument visit(MethodCallNode node) {
     VariableLocation loc = makeTemp(node, node.getType());
     
@@ -241,6 +280,7 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     return Argument.makeArgument(loc);
   }
   
+  @Override
   public Argument visit(VariableNode node) {
     return node.getLoc().accept(this);
   }
@@ -248,19 +288,23 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   /*
    * Location and Constant Visiting Methods 
    */
+  @Override
   public Argument visit(ScalarLocationNode node) {
     return Argument.makeArgument(node.getDesc().getLocation());
   }
   
+  @Override
   public Argument visit(ArrayLocationNode node) {
     Argument a = node.getIndex().accept(this);
     return Argument.makeArgument(node.getDesc().getLocation(), a);
   }
   
+  @Override
   public Argument visit(BooleanNode node) {
     return Argument.makeArgument(node.getValue());
   }
   
+  @Override
   public Argument visit(IntNode node) {
     return Argument.makeArgument(node.getValue());
   }

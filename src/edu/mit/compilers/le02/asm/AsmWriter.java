@@ -23,6 +23,7 @@ import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.SyscallStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
@@ -51,12 +52,10 @@ public class AsmWriter {
       writer.println("# BlockNode: " + blockName);
       writer.println(blockName + ":");
       for (BasicStatement stmt : node.getStatements()) {
-        if (stmt instanceof CallStatement) {
-          generateCall((CallStatement)stmt);
-        } else if (stmt instanceof OpStatement) {
+        if (stmt instanceof OpStatement) {
           // Default to saving results in R10; we can pull results from a
           // different register if the CPU spec mandates it.
-          Register resultReg = Register.R10;
+          Register resultReg = Register.R11;
           OpStatement op = (OpStatement)stmt;
           SourceLocation sl = stmt.getNode().getSourceLoc();
 
@@ -75,7 +74,7 @@ public class AsmWriter {
             writeOp("sub", arg1, arg2, sl);
            case MULTIPLY:
             writeOp("imul", arg1, arg2, sl);
-            // TODO: actually do this correctly using fixed registers.
+            // Result in arg2 (R11)
            case DIVIDE:
            case MODULO:
             writeOp("mov", arg1, "%rax", sl);
@@ -89,25 +88,46 @@ public class AsmWriter {
             }
            case UNARY_MINUS:
             writeOp("neg", arg1, sl);
+            resultReg = Register.R10;
            case NOT:
             writeOp("xor", "$1", arg1, sl);
+            resultReg = Register.R10;
            case EQUAL:
-            // TODO: write comparison boilerplate that reads flags
-            writeOp("add", arg1, arg2, sl);
            case NOT_EQUAL:
-            writeOp("add", arg1, arg2, sl);
            case LESS_THAN:
-            writeOp("add", arg1, arg2, sl);
            case LESS_OR_EQUAL:
-            writeOp("add", arg1, arg2, sl);
            case GREATER_THAN:
-            writeOp("add", arg1, arg2, sl);
            case GREATER_OR_EQUAL:
-            writeOp("add", arg1, arg2, sl);
+            writeOp("xor", "" + Register.RAX, "" + Register.RAX, sl);
+            writeOp("cmp", arg1, arg2, sl);
+            String cmovOp = "";
+            switch (op.getOp()) {
+             case EQUAL:
+              cmovOp = "cmove";
+              break;
+             case NOT_EQUAL:
+              cmovOp = "cmovne";
+              break;
+             case LESS_THAN:
+              cmovOp = "cmovl";
+              break;
+             case LESS_OR_EQUAL:
+              cmovOp = "cmovle";
+              break;
+             case GREATER_THAN:
+              cmovOp = "cmovg";
+              break;
+             case GREATER_OR_EQUAL:
+              cmovOp = "cmovge";
+              break;
+            }
+            writeOp(cmovOp, "$1", "" + Register.RAX, sl);
+            resultReg = Register.RAX;
            case RETURN:
             // This is categorically wrong. the return statement needs to
             // provide at least the name of, if not the descriptor for,
-            // the method we're returning from.
+            // the method we're returning from; otherwise we don't know
+            // how much to pop back off.
             MethodDeclNode method = (MethodDeclNode)stmt.getNode().getParent();
             generateMethodReturn(arg1, method.getDescriptor(), sl);
            case METHOD_PREAMBLE:
@@ -127,6 +147,8 @@ public class AsmWriter {
            case GLOBAL:
             writeOp("mov", "" + resultReg, op.getResult().getSymbol(), sl);
           }
+        } else if (stmt instanceof CallStatement) {
+          generateCall((CallStatement)stmt);
         } else {
           // We have an UnexpandedStatement that made it to ASM generation.
           ErrorReporting.reportError(new AsmException(
@@ -198,7 +220,23 @@ public class AsmWriter {
       }
     }
 
+    // Now we're ready to make the call.
+    // This needs to be genericized with simple "call.getMethodName()" to cover
+    // both cases of syscalls and method calls which we now treat
+    // interchangeably.
+    // This automatically pushes the return address.
     writeOp("call", call.getMethod().getId(), sl);
+
+    // Clean up the call arguments pushed onto stack.
+    int argsToPop = 1;
+    if (args.size() > 6) {
+      argsToPop += (args.size() - 6);
+    }
+    writeOp("add", "$-" + (argsToPop * 8), "" + Register.RSP, sl);
+    // Pop the saved usedCallerRegisters back onto the stack. (not needed yet)
+
+    // Move RAX into the correct save location.
+    writeOp("mov", "" + Register.RAX, convertVariableLocation(call.getResult()), sl);
   }
 
   protected String prepareArgument(Argument arg, boolean first, SourceLocation sl) {
@@ -240,6 +278,14 @@ public class AsmWriter {
   }
 
   protected String convertVariableLocation(VariableLocation loc) {
+    switch (loc.getLocationType()) {
+     case GLOBAL:
+      return loc.getSymbol();
+     case REGISTER:
+      return "" + loc.getRegister();
+     case STACK:
+      return loc.getOffset() + "(%rbp)";
+    }
     return "";
   }
 
