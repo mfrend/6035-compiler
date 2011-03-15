@@ -1,8 +1,12 @@
 package edu.mit.compilers.le02.cfg;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
+import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -11,6 +15,7 @@ import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
 import edu.mit.compilers.le02.ast.BooleanNode;
+import edu.mit.compilers.le02.ast.CallStatementNode;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.FieldDeclNode;
@@ -18,12 +23,16 @@ import edu.mit.compilers.le02.ast.ForNode;
 import edu.mit.compilers.le02.ast.IfNode;
 import edu.mit.compilers.le02.ast.IntNode;
 import edu.mit.compilers.le02.ast.MathOpNode;
+import edu.mit.compilers.le02.ast.MethodCallNode;
 import edu.mit.compilers.le02.ast.MethodDeclNode;
 import edu.mit.compilers.le02.ast.MinusNode;
 import edu.mit.compilers.le02.ast.NotNode;
 import edu.mit.compilers.le02.ast.ReturnNode;
 import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.ast.StatementNode;
+import edu.mit.compilers.le02.ast.StringNode;
+import edu.mit.compilers.le02.ast.SyscallArgNode;
+import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
 import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
@@ -193,7 +202,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       Argument endVar = endValue.getExit().getResult();
      */
 
-    
+
     /* ==== DEAD CODE ==== 
       CFGFragment init = node.getInit().accept(this);
       CFGFragment body = node.getBody().accept(this);
@@ -261,21 +270,9 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(enter, exit);
   }
 
-  /* TODO: Create visit methods for MethodCallNodes and SystemCallNodes
-       Leaving a method written by dkoh here for now
-    public Argument visit(MethodCallNode node) {
-        VariableLocation loc = makeTemp(node, node.getType());
-
-        List<Argument> args = new ArrayList<Argument>();
-        for (ExpressionNode n : node.getArgs()) {
-            args.add(n.accept(this));
-        }
-
-        CallStatement s = new CallStatement(node, node.getDesc(), args, loc);
-        curNode.addStatement(s);
-
-        return Argument.makeArgument(loc);
-    }*/
+  public CFGFragment visit(CallStatementNode node) {
+    return node.getCall().accept(this);
+  }
 
   /*
    * Expression visit methods
@@ -344,6 +341,52 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag.append(new SimpleCFGNode(s));
   }
 
+  public CFGFragment visit(MethodCallNode node) {
+    VariableLocation loc = makeTemp(node, node.getType());
+
+    CFGFragment frag = null;
+    List<Argument> args = new ArrayList<Argument>();
+    for (ExpressionNode n : node.getArgs()) {
+      if (frag == null) {
+        frag = n.accept(this);
+      }
+      else {
+        frag = frag.link(n.accept(this));
+      }
+      args.add(frag.getExit().getResult());
+    }
+
+    CallStatement s = new CallStatement(node, 
+                                        node.getDesc().getId(), args, loc);
+
+    return frag.append(new SimpleCFGNode(s));
+  }
+  
+
+  public CFGFragment visit(SystemCallNode node) {
+    VariableLocation loc = makeTemp(node, node.getType());
+
+    CFGFragment frag = null;
+    List<Argument> args = new ArrayList<Argument>();
+    for (SyscallArgNode n : node.getArgs()) {
+      if (frag == null) {
+        frag = n.accept(this);
+      }
+      else {
+        frag = frag.link(n.accept(this));
+      }
+      args.add(frag.getExit().getResult());
+    }
+
+    CallStatement s = new CallStatement(node, node.getFuncName().getValue(), 
+                                        args, loc);
+
+    return frag.append(new SimpleCFGNode(s));
+  }
+
+
+  
+  
   /*
    * Location and Constant visit methods 
    */
@@ -378,6 +421,21 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
     return new CFGFragment(cfgNode, cfgNode);
   }
+  
+  public CFGFragment visit(StringNode node) {
+    String name = "str" + node.getValue().hashCode();
+    cfg.putStringData(name, node);
+    ArgumentStatement as = new ArgumentStatement(node,
+                             Argument.makeArgument(new GlobalLocation(name)));
+    SimpleCFGNode cfgNode = new SimpleCFGNode(as);
+    return new CFGFragment(cfgNode, cfgNode);
+  }
+
+  public CFGFragment visit(SyscallArgNode node) {
+    return node.getChildren().get(0).accept(this);
+  }
+  
+
 
   /*
    * Utility methods

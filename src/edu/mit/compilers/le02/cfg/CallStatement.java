@@ -1,35 +1,29 @@
 package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ExpressionNode;
-import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 
-public final class CallStatement extends BasicStatement {
-  private MethodDescriptor method;
+public class CallStatement extends BasicStatement {
   private List<Argument> args;
+  private String name;
 
-  public CallStatement(ExpressionNode expr, MethodDescriptor method,
-                       List<Argument> args, VariableLocation result) {
+  public CallStatement(ExpressionNode expr, String name, List<Argument> args, 
+                       VariableLocation result) {
     super(expr, result);
-    this.method = method;
+    this.name = name;
     this.args = args;
     this.type = BasicStatementType.CALL;
   }
 
-  public MethodDescriptor getMethod() {
-    return method;
+  public String getMethodName() {
+    return name;
   }
 
   public List<Argument> getArgs() {
     return new ArrayList<Argument>(args);
-  }
-
-  public VariableLocation getResult() {
-    return result;
   }
 
 }

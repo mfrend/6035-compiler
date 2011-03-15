@@ -5,17 +5,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 
 public class ControlFlowGraph {
   private Map<String, CFGNode> methods;
   private Map<String, FieldDescriptor> globals;
-  private Map<String, String> stringData;
+  private Map<String, StringNode> stringData;
 
   public ControlFlowGraph() {
     this.methods = new HashMap<String, CFGNode>();
     this.globals = new HashMap<String, FieldDescriptor>();
-    this.stringData = new HashMap<String, String>();
+    this.stringData = new HashMap<String, StringNode>();
   }
 
   public CFGNode getMethod(String id) {
@@ -38,11 +39,11 @@ public class ControlFlowGraph {
     globals.put(id, desc);
   }
   
-  public String getStringData(String id) {
+  public StringNode getStringData(String id) {
     return stringData.get(id);
   }
 
-  public void putStringData(String id, String data) {
+  public void putStringData(String id, StringNode data) {
     stringData.put(id, data);
   }
 
