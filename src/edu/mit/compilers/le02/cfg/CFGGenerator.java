@@ -68,15 +68,15 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return getInstance().cfg;
   }
 
-  private SimpleCFGNode shortCircuit(ExpressionNode node,
+  private SimpleCFGNode branchNode(ExpressionNode node,
       SimpleCFGNode t, SimpleCFGNode f) {
 
     if (node instanceof BoolOpNode) {
-      return shortCircuitHelper((BoolOpNode) node, t, f);
+      return branchNodeHelper((BoolOpNode) node, t, f);
     }
 
     if (node instanceof NotNode) {
-      return shortCircuitHelper((NotNode) node, t, f);
+      return branchNodeHelper((NotNode) node, t, f);
     }
 
     CFGFragment frag = node.accept(this);
@@ -87,7 +87,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag.getEnter();
   }
 
-  private SimpleCFGNode shortCircuitHelper(BoolOpNode node,
+  private SimpleCFGNode branchNodeHelper(BoolOpNode node,
       SimpleCFGNode t, SimpleCFGNode f) {
     if ((node.getOp() != BoolOp.AND) && (node.getOp() != BoolOp.OR)) {
       CFGFragment frag = node.accept(this);
@@ -101,22 +101,22 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     boolean isAnd = (node.getOp() == BoolOp.AND); 
 
     // Short circuit right side
-    SimpleCFGNode b2 = shortCircuit(node.getRight(), t, f);
+    SimpleCFGNode b2 = branchNode(node.getRight(), t, f);
     SimpleCFGNode b1;
 
     if (isAnd) {
-      b1 = shortCircuit(node.getLeft(), b2, f);
+      b1 = branchNode(node.getLeft(), b2, f);
     }
     else {
-      b1 = shortCircuit(node.getLeft(), t, b2);
+      b1 = branchNode(node.getLeft(), t, b2);
     }
 
     return b1;
   }
 
-  private SimpleCFGNode shortCircuitHelper(NotNode node,
+  private SimpleCFGNode branchNodeHelper(NotNode node,
       SimpleCFGNode t, SimpleCFGNode f) {
-    return shortCircuit(node.getExpr(), f, t);
+    return branchNode(node.getExpr(), f, t);
   }
 
   @Override
@@ -155,10 +155,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         fragment = curr;
       } else {
         fragment = fragment.link(curr); 
-      }
-
-      if ((s instanceof BreakNode) || (s instanceof ContinueNode)) {
-        break;
       }
     }
 
@@ -242,12 +238,18 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(BreakNode node) {
-    return new CFGFragment(loopExit, loopExit);
+    SimpleCFGNode breakNode =
+        branchNode(new BooleanNode(node.getSourceLoc(), true),
+                     loopExit, null);
+    return new CFGFragment(breakNode, breakNode);
   }
 
   @Override
   public CFGFragment visit(ContinueNode node) {
-    return new CFGFragment(increment, increment);
+    SimpleCFGNode continueNode =
+        branchNode(new BooleanNode(node.getSourceLoc(), true),
+                     increment, null);
+    return new CFGFragment(continueNode, continueNode);
   }
 
   @Override
@@ -273,7 +275,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     trueFrag.getExit().setNext(exit);
 
     // Short circuit the condition
-    SimpleCFGNode enter = shortCircuit(node.getCondition(),
+    SimpleCFGNode enter = branchNode(node.getCondition(),
         trueFrag.getEnter(), 
         falseFrag.getEnter());
 
@@ -300,7 +302,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       trueNode.setNext(exit);
       falseNode.setNext(exit);
 
-      SimpleCFGNode enter = shortCircuit(node, trueNode, falseNode);
+      SimpleCFGNode enter = branchNode(node, trueNode, falseNode);
       return new CFGFragment(enter, exit);
     }
 

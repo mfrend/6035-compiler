@@ -31,12 +31,13 @@ public final class SimpleCFGNode implements CFGNode {
   }
   
   public void setBranchTarget(SimpleCFGNode node) {
-    if (this.branchTarget != null) {
-      this.branchTarget.predecessors.remove(this);
+    if (branchTarget != null) {
+      branchTarget.predecessors.remove(this);
     }
-    
     branchTarget = node;
-    branchTarget.predecessors.add(this);
+    if (branchTarget != null) {
+      branchTarget.predecessors.add(this);
+    }
   }
 
   @Override
@@ -58,7 +59,9 @@ public final class SimpleCFGNode implements CFGNode {
       next.predecessors.remove(this);
     }
     next = node;
-    node.predecessors.add(this);
+    if (next != null) {
+      next.predecessors.add(this);
+    }
   }
 
   @Override

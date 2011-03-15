@@ -57,8 +57,10 @@ public final class ConstantArgument extends Argument {
     if (this.isInt) {
       return "$" + i;
     }
-    else {
-      return "$" + b;
+    else if (b) {
+      return "$1";
+    } else {
+      return "$0";
     }
   }
 

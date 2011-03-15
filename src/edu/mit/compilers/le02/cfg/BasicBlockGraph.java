@@ -14,13 +14,14 @@ public class BasicBlockGraph {
                                    new HashMap<SimpleCFGNode, BasicBlockNode>();
   
   public static String nextID() {
-    return "block" + Integer.toString(id++);
+    id++;
+    return "block" + Integer.toString(id);
   }
   
   public static ControlFlowGraph makeBasicBlockGraph(ControlFlowGraph cfg) {
     ControlFlowGraph newCFG = new ControlFlowGraph();
 
-    id = 0;
+    id = -1;
     for (String methodName : cfg.getMethods()) {
       CFGNode node = cfg.getMethod(methodName);
       assert (node instanceof SimpleCFGNode);
