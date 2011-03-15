@@ -77,6 +77,7 @@ public class BasicBlockGraph {
     switch (st.getType()) {
       case DUMMY:
       case ARGUMENT:
+      case JUMP:
         break;
       case OP:
       case CALL:
