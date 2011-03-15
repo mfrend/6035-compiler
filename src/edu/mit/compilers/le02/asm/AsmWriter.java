@@ -139,14 +139,7 @@ public class AsmWriter {
               sl, "Unknown opcode."));
             continue;
           }
-          switch (op.getResult().getLocationType()) {
-           case REGISTER:
-            continue;
-           case STACK:
-            writeOp("mov", "" + resultReg, op.getResult().getOffset() + "(%ebp)", sl);
-           case GLOBAL:
-            writeOp("mov", "" + resultReg, op.getResult().getSymbol(), sl);
-          }
+          writeOp("mov", "" + resultReg, convertVariableLocation(op.getResult()), sl);
         } else if (stmt instanceof CallStatement) {
           generateCall((CallStatement)stmt);
         } else {
