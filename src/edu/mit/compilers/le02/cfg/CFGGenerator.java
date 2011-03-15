@@ -156,10 +156,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       } else {
         fragment = fragment.link(curr); 
       }
-
-      if ((s instanceof BreakNode) || (s instanceof ContinueNode)) {
-        break;
-      }
     }
 
     return fragment;
@@ -242,12 +238,18 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(BreakNode node) {
-    return new CFGFragment(loopExit, loopExit);
+    SimpleCFGNode breakNode =
+        shortCircuit(new BooleanNode(node.getSourceLoc(), true),
+                     loopExit, null);
+    return new CFGFragment(breakNode, breakNode);
   }
 
   @Override
   public CFGFragment visit(ContinueNode node) {
-    return new CFGFragment(increment, increment);
+    SimpleCFGNode continueNode =
+        shortCircuit(new BooleanNode(node.getSourceLoc(), true),
+                     increment, null);
+    return new CFGFragment(continueNode, continueNode);
   }
 
   @Override
