@@ -143,14 +143,15 @@ public final class BasicBlockNode implements CFGNode {
       return "";
     }
     
+    String me = id.replace(".", ""); 
+    
     if (next == null) {
-      return id + " " + getDotStringLabel() + "\n";
+      return me + " " + getDotStringLabel() + "\n";
     }
     
     visited.add(this);
     
-    String me = id; 
-    String nextStr = next.id;
+    String nextStr = next.id.replace(".", "");
     
     String s = me + " " + getDotStringLabel() + "\n"
                + me + " -> " + nextStr;
@@ -161,7 +162,7 @@ public final class BasicBlockNode implements CFGNode {
     }
     else {
       s += " [label=\"false\"]\n";
-      String branchStr = branchTarget.id;
+      String branchStr = branchTarget.id.replace(".", "");
       s += me + " -> " + branchStr + " [label=\"true\"]\n";
       return s + next.getDotString() + branchTarget.getDotString();
     }
@@ -174,7 +175,7 @@ public final class BasicBlockNode implements CFGNode {
   private String getDotStringLabel() {
     String s = "[shape=none, margin=0, label=<<TABLE BORDER=\"0\" "
                + "CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">";
-    s += "<TR><TD><B>" + id + "</B></TD></TR>";
+    s += "<TR><TD><B>" + id.replace(".", "") + "</B></TD></TR>";
     for (BasicStatement st : statements) {
       s += "<TR><TD>" + st + "</TD></TR>";
     }

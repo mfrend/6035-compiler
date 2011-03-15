@@ -158,16 +158,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     Argument destArg = destFrag.getExit().getResult();
     assert (destArg instanceof VariableArgument);
     
-    
-    
-    VariableLocation dest = ((VariableArgument) destArg).getLoc();
-    
     CFGFragment frag = node.getValue().accept(this);
     Argument src = frag.getExit().getResult();
 
-    // XXX: This should actually be
-    // BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, destArg, null or temp);
-    BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, null, dest);
+    BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, destArg, null);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
     
     // Assumption: value to assign is evaluated, then location to assign to
@@ -207,7 +201,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment exitFrag = node.getEnd().accept(this);
     Argument exitVal = exitFrag.getExit().getResult();
     BasicStatement exitStatement = new OpStatement(node, AsmOp.MOVE,
-        exitVal, null, exitLoc);
+        exitVal, Argument.makeArgument(exitLoc), null);
     exitFrag = exitFrag.append(new SimpleCFGNode(exitStatement));
 
     // Create a node where the iterator is incremented
@@ -301,9 +295,9 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
     if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
       BasicStatement trueStmt = new OpStatement(node, AsmOp.MOVE,
-          Argument.makeArgument(true), null, loc);
+          Argument.makeArgument(true), Argument.makeArgument(loc), null);
       BasicStatement falseStmt = new OpStatement(node, AsmOp.MOVE,
-          Argument.makeArgument(false), null, loc);
+          Argument.makeArgument(false), Argument.makeArgument(loc), null);
       SimpleCFGNode trueNode = new SimpleCFGNode(trueStmt);
       SimpleCFGNode falseNode = new SimpleCFGNode(falseStmt);
 

@@ -134,8 +134,9 @@ public class AsmWriter {
   
             switch(op.getOp()) {
              case MOVE:
-              writeOp("movq", arg1, "" + resultReg, sl);
-              break;
+              writeOp("movq", arg1, arg2, sl);
+              // Continue here because we don't need to move result again
+              continue;
              case ADD:
               writeOp("addq", arg1, arg2, sl);
               break;
