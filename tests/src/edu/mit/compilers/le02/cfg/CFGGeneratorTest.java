@@ -1,6 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -14,7 +15,7 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.stgenerator.ASTParentVisitor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 
-public class ExpressionFlattenerTest extends TestCase {
+public class CFGGeneratorTest extends TestCase {
   private SymbolTable symbolTable;
   private ASTNode root;
   
@@ -22,8 +23,30 @@ public class ExpressionFlattenerTest extends TestCase {
     symbolTable = new SymbolTable(null);
     root = new MockASTRoot(null, symbolTable);
   }
+  
+  /**
+   * Convert a linear fragment of nodes into a list of statements
+   */
+  private List<BasicStatement> getStatements(CFGFragment frag) {
+    List<BasicStatement> list = new ArrayList<BasicStatement>();
+    SimpleCFGNode node = frag.getEnter();
+    while (node != frag.getExit().getNext()) {
+      switch (node.getStatement().getType()) {
+        case OP:
+        case CALL:
+          list.add(node.getStatement());
+          break;
+        default:
+          break;
+      }
 
-  public void testFlattenStatement() {
+      node = node.getNext();
+    } 
+    
+    return list;
+  }
+
+  public void testExpressionFlattening() {
     ExpressionNode node = new MathOpNode(null,
                             new MathOpNode(null,
                               new IntNode(null, 1),
@@ -35,9 +58,9 @@ public class ExpressionFlattenerTest extends TestCase {
                           );
     setParents(node);
     
-    UnexpandedStatement us = new UnexpandedStatement(node);
+    CFGFragment frag = node.accept(CFGGenerator.getInstance());
     
-    List<BasicStatement> list = ExpressionFlattener.flatten(us);
+    List<BasicStatement> list = getStatements(frag);
     assertEquals(2, list.size());
     
     BasicStatement bs = list.get(0);

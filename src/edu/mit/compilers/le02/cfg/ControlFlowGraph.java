@@ -1,6 +1,8 @@
 package edu.mit.compilers.le02.cfg;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
@@ -18,6 +20,10 @@ public class ControlFlowGraph {
 
   public CFGNode getMethod(String id) {
     return methods.get(id);
+  }
+  
+  public List<String> getMethods() {
+    return new ArrayList<String>(methods.keySet());
   }
   
   public void putMethod(String id, CFGNode node) {

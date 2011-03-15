@@ -57,9 +57,11 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
   /*
    * Static Helper Methods
    */
+  /*
   public static List<BasicStatement> flatten(UnexpandedStatement us) {
     return getInstance().flattenStatement(us);
   }
+  */
   
   public static void flattenCFG(ControlFlowGraph cfg) {
     // TODO: iterate all basic blocks adn call flattenStatements(bb)
@@ -74,31 +76,33 @@ public final class ExpressionFlattener extends ASTNodeVisitor<Argument> {
     ArrayList<BasicStatement> newStatementList = new ArrayList<BasicStatement>();
     List<BasicStatement> statementList = bb.getStatements();
     for (BasicStatement bs : statementList) {
-      newStatementList.addAll(bs.flatten());
+      //newStatementList.addAll(bs.flatten());
     }
     
     BasicStatement cond = bb.getConditional();
     if (cond != null) {
-      List<BasicStatement> condStatements = cond.flatten();
+      //List<BasicStatement> condStatements = cond.flatten();
       
       // Make the result of the flattened conditional 
       // the new conditional statement
-      BasicStatement last = condStatements.remove(condStatements.size() - 1);
-      bb.setConditional(last);
+      //BasicStatement last = condStatements.remove(condStatements.size() - 1);
+      //bb.setConditional(last);
       
       // Add the rest of the flattened conditional 
       // to the end of the basic block
-      newStatementList.addAll(condStatements);
+      //newStatementList.addAll(condStatements);
     }
     
     bb.setStatements(newStatementList);
   }
 
+  /*
   public List<BasicStatement> flattenStatement(UnexpandedStatement us) {
     statements = new ArrayList<BasicStatement>();
     us.getNode().accept(this);
     return statements;
   }
+  */
   
 
   /*

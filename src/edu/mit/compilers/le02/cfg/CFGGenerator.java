@@ -33,22 +33,14 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private static CFGGenerator instance = null;
 
-  private static BasicBlockNode curNode, blockBegin, blockEnd;
-  private static int id;
-
   private ControlFlowGraph cfg;
 
 
   public static CFGGenerator getInstance() {
     if (instance == null) {
       instance = new CFGGenerator();
-      id = 0;
     }
     return instance;
-  }
-
-  public static String nextID() {
-    return Integer.toString(id++);
   }
 
   private VariableLocation makeTemp(ASTNode node, DecafType type) {
@@ -194,7 +186,15 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     // Create dummy exit node 
     SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
 
+    // This is probably how you want to get the loop variable and end variable
     /*
+      VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
+      Argument loopVar = Argument.makeArgument(loc);
+      Argument endVar = endValue.getExit().getResult();
+     */
+
+    
+    /* ==== DEAD CODE ==== 
       CFGFragment init = node.getInit().accept(this);
       CFGFragment body = node.getBody().accept(this);
       CFGFragment endValue = node.getEnd().accept(this);
@@ -226,70 +226,39 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       curNode.setFalseBranch(postLoopID);
 
       curNode = new BasicBlockNode(postLoopID, null, null, null);
-
-        return null;
-    }
-
-    @Override
-    public CFGFragment visit(IfNode node) {        
-      // Create dummy exit node 
-      SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
-
-      // Calculate sub-expressions
-      CFGFragment trueFrag = node.getThenBlock().accept(this);
-      CFGFragment falseFrag = null;
-      if (node.hasElse()) {
-        falseFrag = node.getElseBlock().accept(this);
-
-        // Set false fragment to point to dummy exit
-        falseFrag.getExit().setNext(exit);
-      }
-      else {
-        // Make dummy false fragment
-        falseFrag = new CFGFragment(exit, exit);  
-      }
-
-      // Point true fragment at dummy exit
-      trueFrag.getExit().setNext(exit);
-
-      // Short circuit the condition
-      SimpleCFGNode enter = shortCircuit(node.getCondition(),
-                                         trueFrag.getEnter(), 
-                                         falseFrag.getEnter());
-
-      // Enter at the condition, exit via the dummy exit node
-      return new CFGFragment(enter, exit);
-
-      // XXX: Leaving commented code here for now because I will still need some
-      //      of it to convert simple CFG to bb CFG
-        /*
-        String thenID = nextID();
-        String elseID = null;
-        if (node.hasElse()) {
-            elseID = nextID();
-        }
-        String postIfID = nextID();
-
-        VariableLocation temp = makeTemp(node, DecafType.BOOLEAN);
-        BasicStatement condition = new OpStatement(null, AsmOp.EQUAL,
-                node.getCondition().accept(this), new ConstantArgument(true), temp);
-        curNode.setConditional(condition);
-        curNode.setTrueBranch(thenID);
-        curNode.setFalseBranch(elseID);
-
-        curNode = new BasicBlockNode(thenID, null, null, null);
-        node.getThenBlock().accept(this);
-        curNode.setTrueBranch(postIfID);
-
-        if (node.hasElse()) {
-            curNode = new BasicBlockNode(elseID, null, null, null);
-            node.getElseBlock().accept(this);
-            curNode.setTrueBranch(postIfID);
-        }
-
-        curNode = new BasicBlockNode(postIfID, null, null, null);
      */
     return null;
+  }
+
+  @Override
+  public CFGFragment visit(IfNode node) {        
+    // Create dummy exit node 
+    SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+
+    // Calculate sub-expressions
+    CFGFragment trueFrag = node.getThenBlock().accept(this);
+    CFGFragment falseFrag = null;
+    if (node.hasElse()) {
+      falseFrag = node.getElseBlock().accept(this);
+
+      // Set false fragment to point to dummy exit
+      falseFrag.getExit().setNext(exit);
+    }
+    else {
+      // Make dummy false fragment
+      falseFrag = new CFGFragment(exit, exit);  
+    }
+
+    // Point true fragment at dummy exit
+    trueFrag.getExit().setNext(exit);
+
+    // Short circuit the condition
+    SimpleCFGNode enter = shortCircuit(node.getCondition(),
+        trueFrag.getEnter(), 
+        falseFrag.getEnter());
+
+    // Enter at the condition, exit via the dummy exit node
+    return new CFGFragment(enter, exit);
   }
 
   /* TODO: Create visit methods for MethodCallNodes and SystemCallNodes
@@ -322,7 +291,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
       trueNode.setNext(exit);
       falseNode.setNext(exit);
-      
+
       SimpleCFGNode enter = shortCircuit(node, trueNode, falseNode);
       return new CFGFragment(enter, exit);
     }
@@ -413,44 +382,44 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   /*
    * Utility methods
    */
-   private AsmOp getAsmOp(MathOpNode node) {
-     switch(node.getOp()) {
-     case ADD:
-       return AsmOp.ADD;
-     case SUBTRACT:
-       return AsmOp.SUBTRACT;
-     case MULTIPLY:
-       return AsmOp.MULTIPLY;
-     case DIVIDE:
-       return AsmOp.DIVIDE;
-     case MODULO:
-       return AsmOp.MODULO;
-     default:
-       ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
-           "MathOp " + node.getOp() + " cannot be converted into an AsmOp."));
-       return null;
-     }
-   }
+  private AsmOp getAsmOp(MathOpNode node) {
+    switch(node.getOp()) {
+    case ADD:
+      return AsmOp.ADD;
+    case SUBTRACT:
+      return AsmOp.SUBTRACT;
+    case MULTIPLY:
+      return AsmOp.MULTIPLY;
+    case DIVIDE:
+      return AsmOp.DIVIDE;
+    case MODULO:
+      return AsmOp.MODULO;
+    default:
+      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+          "MathOp " + node.getOp() + " cannot be converted into an AsmOp."));
+      return null;
+    }
+  }
 
-   private AsmOp getAsmOp(BoolOpNode node) {
-     switch(node.getOp()) {
-     case LE:
-       return AsmOp.LESS_OR_EQUAL;
-     case LT:
-       return AsmOp.LESS_THAN;
-     case GE:
-       return AsmOp.GREATER_OR_EQUAL;
-     case GT:
-       return AsmOp.GREATER_THAN;
-     case EQ:
-       return AsmOp.EQUAL;
-     case NEQ:
-       return AsmOp.NOT_EQUAL;
-     default:
-       ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
-           "BoolOp " + node.getOp() + " cannot be converted into an AsmOp."));
-       return null;
-     }
-   }
+  private AsmOp getAsmOp(BoolOpNode node) {
+    switch(node.getOp()) {
+    case LE:
+      return AsmOp.LESS_OR_EQUAL;
+    case LT:
+      return AsmOp.LESS_THAN;
+    case GE:
+      return AsmOp.GREATER_OR_EQUAL;
+    case GT:
+      return AsmOp.GREATER_THAN;
+    case EQ:
+      return AsmOp.EQUAL;
+    case NEQ:
+      return AsmOp.NOT_EQUAL;
+    default:
+      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+          "BoolOp " + node.getOp() + " cannot be converted into an AsmOp."));
+      return null;
+    }
+  }
 }
 

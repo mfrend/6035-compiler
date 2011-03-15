@@ -25,7 +25,7 @@ public final class SimpleCFGNode implements CFGNode {
   }
 
   @Override
-  public CFGNode getBranchTarget() {
+  public SimpleCFGNode getBranchTarget() {
     return branchTarget;
   }
   
@@ -40,11 +40,15 @@ public final class SimpleCFGNode implements CFGNode {
 
   @Override
   public BasicStatement getConditional() {
+    if (!isBranch()) {
+      return null;
+    }
+    
     return statement;
   }
 
   @Override
-  public CFGNode getNext() {
+  public SimpleCFGNode getNext() {
     return next;
   }
   
@@ -60,9 +64,17 @@ public final class SimpleCFGNode implements CFGNode {
   public boolean isBranch() {
     return branchTarget != null;
   }
+
+  public BasicStatement getStatement() {
+    return statement;
+  }
   
   public Argument getResult() {
     return result;
+  }
+  
+  public boolean hasMultipleEntrances() {
+    return predecessors.size() > 1;
   }
 
 }
