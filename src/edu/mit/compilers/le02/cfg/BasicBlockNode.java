@@ -46,10 +46,10 @@ public final class BasicBlockNode implements CFGNode {
     for (BasicBlockNode n : predecessors) {
       if (this == n.next) {
         n.next = this.next;
-      }
-      else {
-        assert (this == n.branchTarget);
+      } else if (this == n.branchTarget) {
         n.branchTarget = this.next;
+      } else {
+        assert(false);
       }
     }
   }
