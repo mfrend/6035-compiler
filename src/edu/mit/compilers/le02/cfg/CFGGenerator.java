@@ -209,16 +209,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment initFrag = node.getInit().accept(this);
     CFGFragment bodyFrag = node.getBody().accept(this);
 
-    // Construct the expression which is the condition for exiting the loop
-    SourceLocation sl = node.getSourceLoc();
-    VariableNode iterator = new VariableNode(sl, node.getInit().getLoc());
-    BoolOpNode condition = new BoolOpNode(sl, iterator, node.getEnd(), BoolOp.LT);
-
     // Create a branch node where the condition is evaluated and connect it up
     VariableLocation temp = makeTemp(node, DecafType.INT);
-    BasicStatement conditionSt = new OpStatement(node, AsmOp.LESS_THAN,
+    BasicStatement conditionStatement = new OpStatement(node, AsmOp.LESS_THAN,
         loopVar, exitVal, temp);
-    SimpleCFGNode branch = new SimpleCFGNode(st);
+    SimpleCFGNode branch = new SimpleCFGNode(conditionStatement);
     branch.setBranchTarget(bodyFrag.getEnter());
     branch.setNext(loopExit);
 
