@@ -13,6 +13,8 @@ import edu.mit.compilers.le02.stgenerator.SymbolTableException;
 
 public class SymbolTable {
   private SymbolTable parent;
+  private List<SymbolTable> children;
+
   private Map<String, Descriptor> table;
   private List<LocalDescriptor> locals;
   private List<ParamDescriptor> params;
@@ -27,6 +29,11 @@ public class SymbolTable {
 
   public SymbolTable(SymbolTable parent) {
     this.parent = parent;
+    children = new ArrayList<SymbolTable>();
+    if (parent != null) {
+      parent.registerChild(this);
+    }
+
     this.table = new HashMap<String, Descriptor>();
     
     this.locals = new ArrayList<LocalDescriptor>();
@@ -225,6 +232,34 @@ public class SymbolTable {
   }
 
   /**
+   * Finds a stack offset which does not conflict with any local at a parent or
+   * child of the current scope
+   */
+  public int getNonconflictingOffset() {
+    int offset = 0;
+
+    SymbolTable st = getParent();
+    while (st != null) {
+      offset = Math.min(offset, st.getLargestLocalOffset());
+      st = st.getParent();
+    }
+    offset = Math.min(offset, this.getChildOffsetBound());
+
+    return offset - 8;
+  }
+
+  public int getChildOffsetBound() {
+    int offset = 0;
+
+    offset = Math.min(offset, getLargestLocalOffset());
+    for (SymbolTable child : children) {
+      offset = Math.min(offset, child.getChildOffsetBound());
+    }
+
+    return offset;
+  }
+
+  /**
    * Checks if this symbol table or any ancestor contains the query id
    *
    * @param id The id to be searched for
@@ -252,6 +287,10 @@ public class SymbolTable {
     }
 
     return table.size() + parent.size();
+  }
+
+  public void registerChild(SymbolTable child) {
+    children.add(child);
   }
 
   @Override

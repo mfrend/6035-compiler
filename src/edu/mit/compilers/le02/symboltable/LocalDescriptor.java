@@ -9,4 +9,9 @@ public class LocalDescriptor extends TypedDescriptor {
     super(parent, id, type);
     this.location = new StackLocation(parent.getLargestLocalOffset() - 8);
   }
+
+  public LocalDescriptor(SymbolTable parent, String id, DecafType type, int offset) {
+    super(parent, id, type);
+    this.location = new StackLocation(offset);
+  }
 }

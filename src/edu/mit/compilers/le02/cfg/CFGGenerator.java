@@ -54,9 +54,9 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   private VariableLocation makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
-    int nextIndex = st.getLargestLocalOffset() - 8;
+    int offset = st.getNonconflictingOffset();
 
-    LocalDescriptor ld = new LocalDescriptor(st, Math.abs(nextIndex) + "lcltmp", type);
+    LocalDescriptor ld = new LocalDescriptor(st, Math.abs(offset) + "lcltmp", type, offset);
     st.put(ld.getId(), ld, node.getSourceLoc());
     return ld.getLocation();
   }
@@ -201,7 +201,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = exit;
 
     // Evaluate the exit condition
-    VariableLocation exitLoc = makeTemp(node, DecafType.BOOLEAN);
+    VariableLocation exitLoc = makeTemp(node.getBody(), DecafType.BOOLEAN);
     CFGFragment exitFrag = node.getEnd().accept(this);
     Argument exitVal = exitFrag.getExit().getResult();
     BasicStatement exitStatement = new OpStatement(node, AsmOp.MOVE,
