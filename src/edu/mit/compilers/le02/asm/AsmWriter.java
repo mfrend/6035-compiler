@@ -325,8 +325,8 @@ public class AsmWriter {
 
   protected void generateImmediateExit(String error, SourceLocation sl) {
     ps.println("/* " + error + " at " + sl + " */");
-    writeOp("movq", "$1", "%rax", sl);
-    writeOp("xorq", "%rbx", "%rbx", sl);
+    writeOp("movq", "$1", Register.RAX, sl);
+    writeOp("xorq", Register.RBX, Register.RBX, sl);
     writeOp("int", "$0x80", sl);
   }
 
@@ -337,7 +337,10 @@ public class AsmWriter {
       return;
     }
     if (arg1 != null) {
-      writeOp("movq", arg1, "%rax", sl); // Save result in return register
+      writeOp("movq", arg1, Register.RAX, sl); // Save result in return register
+    } else {
+      // Clear %rax to prevent confusion and non-zero exit codes.
+      writeOp("xorq", Register.RAX, Register.RAX, sl);
     }
 
     List<Register> usedRegisters = desc.getUsedCalleeRegisters();
