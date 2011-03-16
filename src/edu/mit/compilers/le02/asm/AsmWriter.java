@@ -54,9 +54,10 @@ public class AsmWriter {
     writeStrings();
     writeGlobals();
     writeMethods();
-    ps.println("error_handler:");
-    generateImmediateExit("Unspecified runtime error",
-      SourceLocation.getSourceLocationWithoutDetails());
+    ps.println("array_oob_error_handler:");
+    generateImmediateExit("aoob_msg");
+    ps.println("nonvoid_noreturn_error_handler:");
+    generateImmediateExit("nonvoid_noreturn_msg");
   }
 
   public void writeStrings() {
@@ -73,7 +74,12 @@ public class AsmWriter {
     }
     ps.println(".aoob_msg:");
     ps.println(
-      "  .string \"*** RUNTIME ERROR ***: Array out of Bounds access in method \\\"%s\\\"\"");
+      "  .string \"*** RUNTIME ERROR ***: " +
+      "Array out of Bounds access in method \\\"%s\\\"\\n\"");
+    ps.println(".nonvoid_noreturn_msg:");
+    ps.println(
+        "  .string \"*** RUNTIME ERROR ***: " +
+        "No return value from non-void method \\\"%s\\\"\\n\"");
   }
 
   public void writeGlobals() {
@@ -366,21 +372,22 @@ public class AsmWriter {
     desc.markRegisterUsed(Register.R12);
   }
 
-  protected void generateImmediateExit(String error, SourceLocation sl) {
-    ps.println("/* " + error + " at " + sl + " */");
+  protected void generateImmediateExit(String errmsg_label) {
+    SourceLocation sl = SourceLocation.getSourceLocationWithoutDetails();
     writeOp("xorq", Register.RAX, Register.RAX, sl);
     writeOp("movq", Register.R12, Register.RSI, sl);
-    writeOp("movq", "$.aoob_msg", Register.RDI, sl);
+    writeOp("movq", "$." + errmsg_label, Register.RDI, sl);
     writeOp("call", "printf", sl);
-    writeOp("movq", "$1", Register.RAX, sl);
-    writeOp("xorq", Register.RBX, Register.RBX, sl);
-    writeOp("int", "$0x80", sl);
+    writeOp("xorq", Register.RAX, Register.RAX, sl);
+    writeOp("xorq", Register.RDI, Register.RDI, sl);
+    writeOp("call", "exit", sl);
   }
 
   protected void generateMethodReturn(String arg1, MethodDescriptor desc,
                                       SourceLocation sl) {
     if (desc.getType() != DecafType.VOID && arg1 == null) {
-      generateImmediateExit("No value returned from non-void function", sl);
+      writeOp("movq", "$." + desc.getId() + "_name", Register.R12, sl);
+      writeOp("jle", "nonvoid_noreturn_error_handler", sl);
       return;
     }
     if (arg1 != null) {
@@ -473,7 +480,7 @@ public class AsmWriter {
       String index = prepareArgument(ava.getIndex(), first, methodName, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
       writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
-      writeOp("jle", "error_handler", sl);
+      writeOp("jle", "array_oob_error_handler", sl);
       writeOp("movq", "$" + symbol, Register.R12, sl);
       writeOp("movq",
         "(" + Register.R12 + ", " + index + ", 8)",
@@ -499,7 +506,7 @@ public class AsmWriter {
       String index = prepareArgument(ava.getIndex(), true, methodName, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
       writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
-      writeOp("jle", "error_handler", sl);
+      writeOp("jle", "array_oob_error_handler", sl);
       writeOp("movq", "$" + symbol, Register.R12, sl);
       writeOp("movq", Register.R11,
         "(" + Register.R12 + ", " + index + ", 8)", sl);
