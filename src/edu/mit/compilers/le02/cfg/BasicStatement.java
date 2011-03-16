@@ -1,7 +1,5 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.util.List;
-
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 

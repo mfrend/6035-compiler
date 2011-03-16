@@ -1,6 +1,5 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 

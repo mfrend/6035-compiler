@@ -137,15 +137,17 @@ public class AsmWriter {
               arg1 = prepareArgument(op.getArg1(), true, sl);
             }
             String arg2 = "<error>";
-            if (op.getArg2() != null) {
+            if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
               arg2 = prepareArgument(op.getArg2(), false, sl);
             }
 
             switch(op.getOp()) {
              case MOVE:
-              // TODO(lizf): clean this up once we use arg2 instead.
-              writeOp("movq", arg1, resultReg, sl);
-              break;
+              arg2 = "" + Register.R11;
+              writeOp("movq", arg1, arg2, sl);
+              writeToArgument(op.getArg2(), sl);
+              // Continue here because we don't need to move result again
+              continue;
              case ADD:
               writeOp("addq", arg1, arg2, sl);
               break;
@@ -220,7 +222,7 @@ public class AsmWriter {
           } else {
             // We have a DummyStatement that made it to ASM generation.
             ErrorReporting.reportError(new AsmException(
-              sl, "UnexpandedStatement found at codegen time."));
+              sl, "Low level statement found at codegen time."));
           }
         }
         SourceLocation loc = SourceLocation.getSourceLocationWithoutDetails();
@@ -414,6 +416,28 @@ public class AsmWriter {
       break;
     }
     return "" + tempStorage;
+  }
+
+  protected void writeToArgument(Argument arg, SourceLocation sl) {
+    switch (arg.getType()) {
+     case VARIABLE:
+      writeOp("movq",
+        Register.R11,
+        convertVariableLocation(((VariableArgument)arg).getLoc()), sl);
+      break;
+     case ARRAY_VARIABLE:
+      ArrayVariableArgument ava = (ArrayVariableArgument)arg;
+      // Arrays can only be declared as globals in decaf
+      assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+      String symbol = "." + ava.getLoc().getSymbol();
+      String index = prepareArgument(ava.getIndex(), true, sl);
+      writeOp("cmpq", index, symbol + "_size", sl);
+      writeOp("jge", "error_handler", sl);
+      writeOp("mov", symbol, Register.RAX, sl);
+      writeOp("movq", Register.R11,
+        "(" + Register.RAX + ", " + index + ", 8)", sl);
+      break;
+    }
   }
 
   protected String convertVariableLocation(VariableLocation loc) {

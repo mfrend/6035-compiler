@@ -49,9 +49,19 @@ public final class OpStatement extends BasicStatement {
   
   @Override
   public String toString() {
-    String s = "OpStatement(" + op + ", " + arg1 + ", " + arg2 + ")";
+    String s = "OpStatement(" + op;
+    if (arg1 != null) {
+      s += ", " + arg1;
+    }
+    if (arg2 != null && op != AsmOp.MOVE) {
+      s += ", " + arg2;
+    }
+    s += ")";
     if (result != null) {
       s += ": " + result;
+    }
+    if (op == AsmOp.MOVE) {
+      s += ": " + arg2;
     }
     return s;
   }
