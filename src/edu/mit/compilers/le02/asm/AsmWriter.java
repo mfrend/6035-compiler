@@ -152,7 +152,8 @@ public class AsmWriter {
               writeOp("addq", arg1, arg2, sl);
               break;
              case SUBTRACT:
-              writeOp("subq", arg1, arg2, sl);
+              writeOp("subq", arg2, arg1, sl);
+              resultReg = Register.R10;
               break;
              case MULTIPLY:
               writeOp("imulq", arg1, arg2, sl);
@@ -277,7 +278,7 @@ public class AsmWriter {
   protected void processBoolean(AsmOp op, String arg1, String arg2,
       SourceLocation sl) {
     writeOp("xorq", Register.RAX, Register.RAX, sl);
-    writeOp("cmpq", arg1, arg2, sl);
+    writeOp("cmpq", arg2, arg1, sl);
     String cmovOp = "";
     switch (op) {
      case EQUAL:
