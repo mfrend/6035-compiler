@@ -81,6 +81,7 @@ public class BasicBlockGraph {
         break;
       case OP:
       case CALL:
+      case NOP:
         node.addStatement(st);
         break;
       default:
