@@ -148,7 +148,8 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     body.accept(this);
     int offset = body.getSymbolTable().getNonconflictingOffset();
     body.getSymbolTable().put(
-      name, new LocalDescriptor(currParent, name, DecafType.INT, offset),
+      name, new LocalDescriptor(body.getSymbolTable(), name,
+                                DecafType.INT, offset),
       node.getInit().getLoc().getSourceLoc());
     return null;
   }
@@ -191,7 +192,8 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
       return new ParamDescriptor(currParent, node.getName(), node.getType());
     }
     else {
-      return new LocalDescriptor(currParent, node.getName(), node.getType());
+      return new LocalDescriptor(currParent, node.getName(), node.getType(),
+                                 currParent.getNonconflictingOffset());
     }
   }
 }

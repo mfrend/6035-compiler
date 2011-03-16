@@ -208,32 +208,13 @@ public class SymbolTable {
     
     // Return minimum because the local offsets are negative
     return Collections.min(locals, c).getLocation().getOffset();
-  }
-  
-  /**
-   * Finds the most negative local offset of all the locals in the symbol table.
-   *
-   * @return The most negative local offset, or 0 if there are no locals in the
-   * table.
-   */
-  public int getLargestLocalOffset() {
-    if (locals.size() == 0) {
-      return 0;
-    }
-    
-    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
-      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
-        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
-      }
-    };
-    
-    // Return minimum because the local offsets are negative
-    return Collections.min(locals, c).getLocation().getOffset();
-  }
+  } 
 
   /**
    * Finds a stack offset which does not conflict with any local at a parent or
    * child of the current scope
+   *
+   * @return An offset which does not conflict with other locals on the stack.
    */
   public int getNonconflictingOffset() {
     int offset = 0;
@@ -248,6 +229,12 @@ public class SymbolTable {
     return offset - 8;
   }
 
+  /**
+   * Finds the most negative local offset of all the locals in the symbol table 
+   * or its children. This method is a helper method for getNonconflictingOffset.
+   *
+   * @return The most negative offset of any local at or below the current scope.
+   */
   public int getChildOffsetBound() {
     int offset = 0;
 
@@ -257,6 +244,28 @@ public class SymbolTable {
     }
 
     return offset;
+  }
+
+  /**
+   * Finds the most negative local offset of all the locals in the symbol table.
+   * This method is a helper method for getNonconflictingOffset.
+   *
+   * @return The most negative local offset, or 0 if there are no locals in the
+   * table.
+   */
+  private int getLargestLocalOffset() {
+    if (locals.size() == 0) {
+      return 0;
+    }
+    
+    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
+      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
+        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
+      }
+    };
+    
+    // Return minimum because the local offsets are negative
+    return Collections.min(locals, c).getLocation().getOffset();
   }
 
   /**
