@@ -146,8 +146,9 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     String name = node.getInit().getLoc().getName();
 
     body.accept(this);
+    int offset = body.getSymbolTable().getNonconflictingOffset();
     body.getSymbolTable().put(
-      name, new LocalDescriptor(currParent, name, DecafType.INT),
+      name, new LocalDescriptor(currParent, name, DecafType.INT, offset),
       node.getInit().getLoc().getSourceLoc());
     return null;
   }
