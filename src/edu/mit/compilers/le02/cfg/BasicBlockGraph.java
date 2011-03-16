@@ -120,41 +120,20 @@ public class BasicBlockGraph {
 
     visited.put(start, currBB);
     
-    if (currNode == null) {
-      BasicStatement st = currBB.getLastStatement();
-      
-      // Insert return if it is not there.
-      if (st == null
-          ||st.getType() != BasicStatementType.OP
-          || ((OpStatement) st).getOp() != AsmOp.RETURN) {
-        
-        // If parent is null here, it means that this method contains a single basic block
-        ASTNode node = null;
-        if (parent != null) {
-          node = parent.getLastStatement().getNode();
-        }
-        if (st != null) {
-          node = st.getNode();
-        }
-        
-        currBB.addStatement(new OpStatement(node, AsmOp.RETURN, 
-                                            null, null, null));        
+    if (currNode != null) {
+      // There are still more statements in this method
+      addStatement(currBB, currNode.getStatement());
+
+      if (currNode.isBranch()) {
+        BasicBlockNode branchTarget = makeBasicBlock(nextID(), 
+                                                     currNode.getBranchTarget(),
+                                                     currBB);
+        currBB.setBranchTarget(branchTarget);
       }
-      return currBB;
-    }
-    
-    // If we are here, that means there is still another statement.
-    addStatement(currBB, currNode.getStatement());
 
-    if (currNode.isBranch()) {
-      BasicBlockNode branchTarget = makeBasicBlock(nextID(), 
-                                                   currNode.getBranchTarget(),
-                                                   currBB);
-      currBB.setBranchTarget(branchTarget);
+      BasicBlockNode next = makeBasicBlock(nextID(), currNode.getNext(), currBB);
+      currBB.setNext(next);
     }
-
-    BasicBlockNode next = makeBasicBlock(nextID(), currNode.getNext(), currBB);
-    currBB.setNext(next);
     return currBB;
   }
 
