@@ -430,7 +430,7 @@ public class AsmWriter {
     }
 
     // Pop the saved usedCallerRegisters back onto the stack.
-    Collections.reverse(args);
+    Collections.reverse(usedRegisters);
     for (Register r : usedRegisters) {
       writeOp("popq", r, sl);
     }
