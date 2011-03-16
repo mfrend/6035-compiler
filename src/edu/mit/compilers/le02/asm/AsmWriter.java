@@ -66,6 +66,13 @@ public class AsmWriter {
       // We want the explicitly escaped version.
       ps.println("  .string " + node.toString());
     }
+    for (String methodName : cfg.getMethods()) {
+      ps.println("." + methodName + "_name:");
+      ps.println("  .string \"" + methodName + "\"");
+    }
+    ps.println(".aoob_msg:");
+    ps.println(
+      "  .string \"*** RUNTIME ERROR ***: Array out of Bounds access in method \\\"%s\\\"\"");
   }
 
   public void writeGlobals() {
@@ -95,6 +102,7 @@ public class AsmWriter {
     ps.println(".section .rodata");
     for (String methodName : cfg.getMethods()) {
       BasicBlockNode methodNode = (BasicBlockNode)cfg.getMethod(methodName);
+      MethodDescriptor thisMethod = st.getMethod(methodName);
 
       List<BasicBlockNode> nodesToProcess = new ArrayList<BasicBlockNode>();
       Set<BasicBlockNode> processed = new HashSet<BasicBlockNode>();
@@ -134,18 +142,18 @@ public class AsmWriter {
             // into R10 or R11 and returns the reg it stored the argument in.
             String arg1 = "<error>";
             if (op.getArg1() != null) {
-              arg1 = prepareArgument(op.getArg1(), true, sl);
+              arg1 = prepareArgument(op.getArg1(), true, methodName, sl);
             }
             String arg2 = "<error>";
             if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
-              arg2 = prepareArgument(op.getArg2(), false, sl);
+              arg2 = prepareArgument(op.getArg2(), false, methodName, sl);
             }
 
             switch(op.getOp()) {
              case MOVE:
               arg2 = "" + Register.R11;
               writeOp("movq", arg1, arg2, sl);
-              writeToArgument(op.getArg2(), sl);
+              writeToArgument(op.getArg2(), methodName, sl);
               // Continue here because we don't need to move result again
               continue;
              case ADD:
@@ -190,16 +198,14 @@ public class AsmWriter {
               resultReg = Register.RAX;
               break;
              case RETURN:
-              MethodDescriptor returnMethod = st.getMethod(methodName);
               if (op.getArg1() != null) {
-                generateMethodReturn(arg1, returnMethod, sl);
+                generateMethodReturn(arg1, thisMethod, sl);
               } else {
-                generateMethodReturn(null, returnMethod, sl);
+                generateMethodReturn(null, thisMethod, sl);
               }
               continue;
              case ENTER:
-              MethodDescriptor enterMethod = st.getMethod(methodName);
-              generateMethodHeader(enterMethod,
+              generateMethodHeader(thisMethod,
                 "$" + ((ConstantArgument)op.getArg1()).getInt());
               continue;
              default:
@@ -217,7 +223,7 @@ public class AsmWriter {
               writeOp("popq", "%rdx", sl);
             }
           } else if (stmt instanceof CallStatement) {
-            generateCall((CallStatement)stmt);
+            generateCall((CallStatement)stmt, thisMethod);
           } else if (stmt instanceof NOPStatement) {
             // This is a nop; ignore it and continue onwards.
             continue;
@@ -330,10 +336,18 @@ public class AsmWriter {
     for (Register reg : desc.getUsedCalleeRegisters()) {
       writeOp("pushq", reg, sl); // Save registers used in method.
     }
+    for (int ii = 0; ii < Math.min(desc.getParams().size(), 6); ii++) {
+      desc.markRegisterUsed(argumentRegisters[ii]);
+    }
+    desc.markRegisterUsed(Register.R12);
   }
 
   protected void generateImmediateExit(String error, SourceLocation sl) {
     ps.println("/* " + error + " at " + sl + " */");
+    writeOp("xorq", Register.RAX, Register.RAX, sl);
+    writeOp("movq", Register.R12, Register.RSI, sl);
+    writeOp("movq", "$.aoob_msg", Register.RDI, sl);
+    writeOp("call", "printf", sl);
     writeOp("movq", "$1", Register.RAX, sl);
     writeOp("xorq", Register.RBX, Register.RBX, sl);
     writeOp("int", "$0x80", sl);
@@ -363,21 +377,25 @@ public class AsmWriter {
     writeOp("ret", sl);
   }
 
-  protected void generateCall(CallStatement call) {
+  protected void generateCall(CallStatement call,
+      MethodDescriptor thisMethod) {
     SourceLocation sl = call.getNode().getSourceLoc();
     // Push variables we need to save. for now, we can assume none need saving.
     // because we are not using registers at all, but this won't fly in future
     // We'd instead find the parent MethodDescriptor and use
-    // getUsedCallerRegisters().
+    List<Register> usedRegisters = thisMethod.getUsedCallerRegisters();
+    for (Register r : usedRegisters) {
+      writeOp("pushq", r, sl);
+    }
 
     // Push arguments
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
       if (ii >= 6) {
-        writeOp("pushq", prepareArgument(args.get(ii), true, sl), sl);
+        writeOp("pushq", prepareArgument(args.get(ii), true, thisMethod.getId(), sl), sl);
       } else {
-        writeOp("movq", prepareArgument(args.get(ii), true, sl),
+        writeOp("movq", prepareArgument(args.get(ii), true, thisMethod.getId(), sl),
                 argumentRegisters[ii].toString(), sl);
       }
     }
@@ -387,7 +405,16 @@ public class AsmWriter {
     // This automatically pushes the return address; callee removes return addr
     writeOp("call", call.getMethodName(), sl);
 
-    // Pop the saved usedCallerRegisters back onto the stack. (not needed yet)
+    // Pop arguments back off the stack.
+    if (args.size() > 6) {
+      writeOp("addq", "$" + (args.size() - 6) * 8, Register.RSP, sl);
+    }
+
+    // Pop the saved usedCallerRegisters back onto the stack.
+    Collections.reverse(args);
+    for (Register r : usedRegisters) {
+      writeOp("popq", r, sl);
+    }
 
     // Move RAX into the correct save location.
     writeOp("movq", Register.RAX,
@@ -395,7 +422,7 @@ public class AsmWriter {
   }
 
   protected String prepareArgument(Argument arg,
-      boolean first, SourceLocation sl) {
+      boolean first, String methodName, SourceLocation sl) {
     Register tempStorage = first ? Register.R10 : Register.R11;
     switch (arg.getType()) {
      case CONST_BOOL:
@@ -419,19 +446,21 @@ public class AsmWriter {
       // Arrays can only be declared as globals in decaf
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
       String symbol = "." + ava.getLoc().getSymbol();
-      String index = prepareArgument(ava.getIndex(), first, sl);
+      String index = prepareArgument(ava.getIndex(), first, methodName, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
+      writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
       writeOp("jle", "error_handler", sl);
-      writeOp("mov", "$" + symbol, Register.RAX, sl);
+      writeOp("movq", "$" + symbol, Register.R12, sl);
       writeOp("movq",
-        "(" + Register.RAX + ", " + index + ", 8)",
+        "(" + Register.R12 + ", " + index + ", 8)",
         tempStorage, sl);
       break;
     }
     return "" + tempStorage;
   }
 
-  protected void writeToArgument(Argument arg, SourceLocation sl) {
+  protected void writeToArgument(Argument arg, String methodName,
+      SourceLocation sl) {
     switch (arg.getType()) {
      case VARIABLE:
       writeOp("movq",
@@ -443,12 +472,13 @@ public class AsmWriter {
       // Arrays can only be declared as globals in decaf
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
       String symbol = "." + ava.getLoc().getSymbol();
-      String index = prepareArgument(ava.getIndex(), true, sl);
+      String index = prepareArgument(ava.getIndex(), true, methodName, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
+      writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
       writeOp("jle", "error_handler", sl);
-      writeOp("mov", "$" + symbol, Register.RAX, sl);
+      writeOp("movq", "$" + symbol, Register.R12, sl);
       writeOp("movq", Register.R11,
-        "(" + Register.RAX + ", " + index + ", 8)", sl);
+        "(" + Register.R12 + ", " + index + ", 8)", sl);
       break;
     }
   }
