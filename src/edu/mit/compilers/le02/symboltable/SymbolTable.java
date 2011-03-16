@@ -248,12 +248,13 @@ public class SymbolTable {
 
   /**
    * Finds the most negative local offset of all the locals in the symbol table.
-   * This method is a helper method for getNonconflictingOffset.
+   * This method is a helper method for getNonconflictingOffset, and is also used
+   * to calculate the amount of stack space required for a method.
    *
    * @return The most negative local offset, or 0 if there are no locals in the
    * table.
    */
-  private int getLargestLocalOffset() {
+  public int getLargestLocalOffset() {
     if (locals.size() == 0) {
       return 0;
     }
