@@ -128,9 +128,11 @@ public class BasicBlockGraph {
           ||st.getType() != BasicStatementType.OP
           || ((OpStatement) st).getOp() != AsmOp.RETURN) {
         
-        // If parent is null here, it means that our original cfg was empty.
-        assert (parent != null);
-        ASTNode node = parent.getLastStatement().getNode();
+        // If parent is null here, it means that this method contains a single basic block
+        ASTNode node = null;
+        if (parent != null) {
+          node = parent.getLastStatement().getNode();
+        }
         if (st != null) {
           node = st.getNode();
         }
