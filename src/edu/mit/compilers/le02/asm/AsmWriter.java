@@ -18,13 +18,13 @@ import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.cfg.Argument;
-import edu.mit.compilers.le02.cfg.ArgumentStatement;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.ControlFlowGraph;
+import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
@@ -218,6 +218,9 @@ public class AsmWriter {
             }
           } else if (stmt instanceof CallStatement) {
             generateCall((CallStatement)stmt);
+          } else if (stmt instanceof NOPStatement) {
+            // This is a nop; ignore it and continue onwards.
+            continue;
           } else {
             // We have a DummyStatement or ArgumentStatement that made it to
             // ASM generation.
@@ -262,11 +265,17 @@ public class AsmWriter {
             continue;
           }
           writeOp(conditionalJump, branch.getId(), loc);
-          writeOp("jmp", next.getId(), loc);
+          if (next != null) {
+            writeOp("jmp", next.getId(), loc);
+          } else {
+            // insert an implicit return.
+            MethodDescriptor returnMethod = st.getMethod(methodName);
+            generateMethodReturn(null, returnMethod, loc);
+          }
         } else if (next != null) {
           writeOp("jmp", next.getId(), loc);
-        } else if (node.getLastStatement() instanceof OpStatement &&
-            ((OpStatement)node.getLastStatement()).getOp() != AsmOp.RETURN) {
+        } else if (!(node.getLastStatement() instanceof OpStatement &&
+            ((OpStatement)node.getLastStatement()).getOp() == AsmOp.RETURN)) {
           // insert an implicit return.
           MethodDescriptor returnMethod = st.getMethod(methodName);
           generateMethodReturn(null, returnMethod, loc);
