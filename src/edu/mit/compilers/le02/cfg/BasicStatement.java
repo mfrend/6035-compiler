@@ -13,6 +13,7 @@ public abstract class BasicStatement {
     ARGUMENT,
     OP,
     CALL,
+    NOP,
     JUMP
   }
   

@@ -148,6 +148,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         fragment = fragment.link(curr); 
       }
     }
+    if (node.getStatements().size() == 0) {
+      SimpleCFGNode nop = new SimpleCFGNode(new NOPStatement(node));
+      fragment = new CFGFragment(nop, nop);
+    }
 
     return fragment;
   }
