@@ -7,7 +7,9 @@ import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
+import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayLocationNode;
@@ -78,7 +80,18 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       return branchNodeHelper((NotNode) node, t, f);
     }
 
-    CFGFragment frag = node.accept(this);
+    CFGFragment frag;
+    if (node instanceof VariableNode) {
+      frag = node.accept(this);
+      Argument src = frag.getExit().getResult();
+      BasicStatement st = new OpStatement(node, AsmOp.MOVE, src,
+        Argument.makeArgument(new RegisterLocation(Register.R11)), null);
+      SimpleCFGNode cfgNode = new SimpleCFGNode(st);
+      frag = frag.append(cfgNode);
+    } else {
+      frag = node.accept(this);
+    }
+
     SimpleCFGNode exit = frag.getExit();
     exit.setBranchTarget(t);
     exit.setNext(f);

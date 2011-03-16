@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.ast.ASTNode;
-import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 
 public class BasicBlockGraph {
@@ -75,20 +73,19 @@ public class BasicBlockGraph {
   
   private static void addStatement(BasicBlockNode node, BasicStatement st) {
     switch (st.getType()) {
-      case DUMMY:
-      case ARGUMENT:
-      case JUMP:
-        break;
-      case OP:
-      case CALL:
-      case NOP:
-        node.addStatement(st);
-        break;
-      default:
-        ErrorReporting.reportErrorCompat(
-            new Exception("Unexpected statement type " 
-                + st.getType()));
-        break;
+     case DUMMY:
+     case JUMP:
+     case ARGUMENT:
+      break;
+     case OP:
+     case CALL:
+     case NOP:
+      node.addStatement(st);
+      break;
+     default:
+      ErrorReporting.reportErrorCompat(
+        new Exception("Unexpected statement type " + st.getType()));
+      break;
     }
   }
   public static BasicBlockNode makeBasicBlocks(String id, SimpleCFGNode start) {
@@ -114,9 +111,9 @@ public class BasicBlockGraph {
     
     while (currNode != null
            && !currNode.isBranch() && !currNode.hasMultipleEntrances()) {
-      
+      SimpleCFGNode nextNode = currNode.getNext();
       addStatement(currBB, currNode.getStatement());
-      currNode = currNode.getNext();
+      currNode = nextNode;
     }
 
     visited.put(start, currBB);

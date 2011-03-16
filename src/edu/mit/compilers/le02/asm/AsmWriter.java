@@ -231,7 +231,7 @@ public class AsmWriter {
             // We have a DummyStatement or ArgumentStatement that made it to
             // ASM generation.
             ErrorReporting.reportError(new AsmException(
-              sl, "Low level statement found at codegen time."));
+              sl, "Low level statement found at codegen time"));
             continue;
           }
         }
@@ -245,6 +245,7 @@ public class AsmWriter {
           // Find out what that conditional was.
           if (node.getConditional() instanceof OpStatement) {
             String conditionalJump = "";
+            Register resultRegister = null;
             OpStatement condition = (OpStatement)node.getConditional();
             switch (condition.getOp()) {
              case EQUAL:
@@ -265,21 +266,23 @@ public class AsmWriter {
              case GREATER_OR_EQUAL:
               conditionalJump = "jge";
               break;
+             case NOT:
+              resultRegister = Register.R10;
+              break;
+             case MOVE:
+              resultRegister = Register.R11;
+              break;
              default:
-              if (condition.getResult() != null) {
-                // This is wrong.
-                writeOp("movq", "$1", Register.R12, loc);
-                writeOp("cmpq", Register.R12, Register.R11, loc);
-                writeOp("je", branch.getId(), loc);
-              } else {
-                // This is wrong.
-                writeOp("movq", "$1", Register.R12, loc);
-                writeOp("cmpq", Register.R12, Register.R11, loc);
-                writeOp("je", branch.getId(), loc);
-              }
+               ErrorReporting.reportError(new AsmException(
+                 loc, "Bad opcode for conditional"));
+               continue;
             }
             if (conditionalJump != "") {
               writeOp(conditionalJump, branch.getId(), loc);
+            } else {
+              writeOp("movq", "$1", Register.R12, loc);
+              writeOp("cmpq", Register.R12, resultRegister, loc);
+              writeOp("je", branch.getId(), loc);
             }
           } else {
             // We just came back from a call.
