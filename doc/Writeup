@@ -1,0 +1,69 @@
+=Assembly Code Generation=
+
+==Division of work==
+We used GitHub to organize our work and required a code review for each commit before it was merged; thus, at least two members of the group understand each line of code in detail and the entire group understands the overall design.  Maria augmented the descriptors in the existing AST with memory location information, with collaboration from David.  Shaunak generated a control flow graph for If, For, Break, Continue, and short circuited expressions, with collaboration from David.  David also expanded all remaining expressions into basic statements.  Liz then translated the low-level IR into assembly code.  Liz also wrote the GCC-calling infrastructure and the end to end testing infrastructure. Maria drafted the writeup, with collaboration from Shaunak.  All members of the team worked on debugging, testing, and polishing the final product.
+
+==Clarification/addition/assumptions==
+We went slightly beyond the scope of the project by assigning register locations to the first six arguments of a function.  While this should be contained in the optimization, we decided that we would rather not choose a memory layout convention which we knew we would want to change.  
+
+We made an assumption regarding the following statement:
+A[function()]=B[function()]
+Due to the fact that it is not clear which side should be evaluated first, we assume that the right side will always be evaluated first.
+
+==Overview of design, analysis of alternatives, and design decisions==	 	
+We split the code generation phase of the project into three large parts: conversion of our high-level IR into a control flow graph (CFG), generation of assembly code, and development of an end-to-end testing infrastructure.
+
+We build a flattened control-flow graph from our intermediate representation in a single pass. 
+Each node in this graph has a pointer to the next node, and if it is a branching node, it has a pointer to a branch target. If there are two edges out of the node, then we jump to the branch target if the last operation evaluated to 0. In addition, each node of this graph contains one of the following types of statements:
+an argument load, an assembly op, a call, a jump, a dummy statement, or a NOP
+A NOP is used whenever a method, if, or for block is empty. These statements are passed to assembly generation. Dummy statements are only used to build the graph structure; they are not included in the basic block graph. Constructing the basic block graph is done in a second pass by compressing any edges from nodes of out-degree 1 to nodes of in-degree 1.
+
+The CFG structure consists of a map of label names to basic blocks, a map of string names to strings, and a list of global fields. The entry point is defined as being the basic block named “main”. To generate this CFG, generic visitor classes designed for the semantic checker were used. Descriptors were first augmented in our existing AST to include memory information. Once symbol tables were generated, locations were then assigned to each TypedDescriptor. Then, expressions in the AST were flattened into basic statements. All If, For, Break, and Continue and short circuited expressions were associated with a control flow graph, respresented by a single control flow element. Finally, all remaining expressions were expanded into basic statements.
+
+This CFG structure was then converted into assembly code by traversing each method’s control flow, adding any previously unseen basic blocks to the list of blocks to convert, and converting the (arg1 arg2 dest) statements of one block at a time into at&t syntax asm code.
+
+ Regarding our stack design, we decided that used registers should reside below the locals as it is easy to calculate the positions of locals on the stack when they are created, before we’ve determined which registers we’ll be using.  We calculate the position of locals be pre-allocating them as we generate our CFG.  We use the standard stack frame layout, as follows:
++------------------------+
+| ... previous frame ... |
++------------------------+
+|      argument ...      |
++------------------------+
+|      argument 9        |
++------------------------+
+|      argument 8        | 	24(%rbp)
++------------------------+
+|      argument 7        | 	16(%rbp)
++------------------------+
+|      return addr       | 	8(%rbp)
++------------------------+
+|      Old %rbp          | <- %rbp
++------------------------+
+|      local 1           | 	-8(%rbp)
++------------------------+
+|      local 2           | 	-16(%rbp)
++------------------------+
+|      . . .             |
++------------------------+
+|      local N           |
++------------------------+
+|      used register 1   |
++------------------------+
+|      used register 2   |
++------------------------+
+|      used register 3   |
++------------------------+
+|      used register 4   | <- %rsp 		
++------------------------+
+
+Finally, an end-to-end testing infrastructure was implemented to help us more easily spot bugs during the optimization process. This consists of consistency checkers for both the AST and the CFG, along with a number of unit tests.
+
+==Implementation issues==
+Our choice of using local positioning vs. argument positioning could effect us in the future due to the fact that it will limit the number of registers available to us for general use.
+
+==Commented source code==
+See the README file for an index of what components are located in which
+packages, and the individual source files for commented code.
+
+==Known problems==
+Please see https://github.com/lizthegrey/6035-compiler/issues for an
+up-to-date list of known issues.
