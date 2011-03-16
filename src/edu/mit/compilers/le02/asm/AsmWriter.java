@@ -59,6 +59,7 @@ public class AsmWriter {
   }
 
   public void writeStrings() {
+    ps.println(".section .rodata");
     for (String name : cfg.getAllStringData()) {
       ps.println(name + ":");
       StringNode node = cfg.getStringData(name);
@@ -68,6 +69,7 @@ public class AsmWriter {
   }
 
   public void writeGlobals() {
+    ps.println(".data");
     for (String globalName : cfg.getGlobals()) {
       ps.println(globalName + ":");
       FieldDescriptor desc = cfg.getGlobal(globalName);
@@ -89,6 +91,7 @@ public class AsmWriter {
   }
 
   public void writeMethods() {
+    ps.println(".section .rodata");
     for (String methodName : cfg.getMethods()) {
       BasicBlockNode methodNode = (BasicBlockNode)cfg.getMethod(methodName);
 
@@ -220,7 +223,11 @@ public class AsmWriter {
               sl, "UnexpandedStatement found at codegen time."));
           }
         }
-        SourceLocation loc = node.getLastStatement().getNode().getSourceLoc();
+        SourceLocation loc = SourceLocation.getSourceLocationWithoutDetails();
+        if (node.getLastStatement() != null &&
+            node.getLastStatement().getNode() != null) {
+          loc = node.getLastStatement().getNode().getSourceLoc();
+        }
         if (node.isBranch()) {
           // The last operation carried out will be a conditional.
           // Find out what that conditional was.
@@ -351,7 +358,7 @@ public class AsmWriter {
     // Push arguments
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
-    for (int ii = args.size() - 1; ii > 0; ii--) {
+    for (int ii = args.size() - 1; ii >= 0; ii--) {
       if (ii > 6) {
         writeOp("pushq", prepareArgument(args.get(ii), true, sl), sl);
       } else {
@@ -396,12 +403,13 @@ public class AsmWriter {
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
-      String symbol = ava.getLoc().getSymbol();
+      String symbol = "." + ava.getLoc().getSymbol();
       String index = prepareArgument(ava.getIndex(), first, sl);
-      writeOp("cmpq", index, symbol + "_length", sl);
+      writeOp("cmpq", index, symbol + "_size", sl);
       writeOp("jge", "error_handler", sl);
+      writeOp("mov", symbol, Register.RAX, sl);
       writeOp("movq",
-        "(" + symbol + "," + index + ", $8)",
+        "(" + Register.RAX + ", " + index + ", 8)",
         tempStorage, sl);
       break;
     }
@@ -411,7 +419,11 @@ public class AsmWriter {
   protected String convertVariableLocation(VariableLocation loc) {
     switch (loc.getLocationType()) {
      case GLOBAL:
-      return "." + loc.getSymbol();
+      if (loc.getSymbol().startsWith(".str")) {
+        return "$" + loc.getSymbol();
+      } else {
+        return "." + loc.getSymbol();
+      }
      case REGISTER:
       return "" + loc.getRegister();
      case STACK:
