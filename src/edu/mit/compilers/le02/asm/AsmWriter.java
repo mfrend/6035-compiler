@@ -362,7 +362,7 @@ public class AsmWriter {
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
-      if (ii > 6) {
+      if (ii >= 6) {
         writeOp("pushq", prepareArgument(args.get(ii), true, sl), sl);
       } else {
         writeOp("movq", prepareArgument(args.get(ii), true, sl),
