@@ -15,6 +15,7 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.StackLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.cfg.Argument;
@@ -206,7 +207,7 @@ public class AsmWriter {
               continue;
              case ENTER:
               generateMethodHeader(thisMethod,
-                "$" + ((ConstantArgument)op.getArg1()).getInt());
+                ((ConstantArgument)op.getArg1()).getInt());
               continue;
              default:
               ErrorReporting.reportError(new AsmException(
@@ -348,9 +349,13 @@ public class AsmWriter {
   };
 
   protected void generateMethodHeader(MethodDescriptor desc,
-                                      String numLocals) {
+                                      int numLocals) {
     SourceLocation sl = desc.getSourceLocation();
-    writeOp("enter", numLocals, "$0", sl);
+    writeOp("enter", "$" + numLocals, "$0", sl);
+    for (int ii = -8; ii >= -(numLocals + 8); ii -= 8) {
+      writeOp("movq", "$0", convertVariableLocation(
+        new StackLocation(ii)), sl);
+    }
 
     for (Register reg : desc.getUsedCalleeRegisters()) {
       writeOp("pushq", reg, sl); // Save registers used in method.
