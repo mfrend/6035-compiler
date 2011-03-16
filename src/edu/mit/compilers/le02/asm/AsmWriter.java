@@ -409,8 +409,8 @@ public class AsmWriter {
       String symbol = "." + ava.getLoc().getSymbol();
       String index = prepareArgument(ava.getIndex(), first, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
-      writeOp("jge", "error_handler", sl);
-      writeOp("mov", symbol, Register.RAX, sl);
+      writeOp("jle", "error_handler", sl);
+      writeOp("mov", "$" + symbol, Register.RAX, sl);
       writeOp("movq",
         "(" + Register.RAX + ", " + index + ", 8)",
         tempStorage, sl);
@@ -433,8 +433,8 @@ public class AsmWriter {
       String symbol = "." + ava.getLoc().getSymbol();
       String index = prepareArgument(ava.getIndex(), true, sl);
       writeOp("cmpq", index, symbol + "_size", sl);
-      writeOp("jge", "error_handler", sl);
-      writeOp("mov", symbol, Register.RAX, sl);
+      writeOp("jle", "error_handler", sl);
+      writeOp("mov", "$" + symbol, Register.RAX, sl);
       writeOp("movq", Register.R11,
         "(" + Register.RAX + ", " + index + ", 8)", sl);
       break;
