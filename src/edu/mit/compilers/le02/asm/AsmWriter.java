@@ -243,34 +243,50 @@ public class AsmWriter {
         if (node.isBranch()) {
           // The last operation carried out will be a conditional.
           // Find out what that conditional was.
-          String conditionalJump = "";
-          switch (((OpStatement)node.getConditional()).getOp()) {
-           case EQUAL:
-            conditionalJump = "je";
-            break;
-           case NOT_EQUAL:
-            conditionalJump = "jne";
-            break;
-           case LESS_THAN:
-            conditionalJump = "jl";
-            break;
-           case LESS_OR_EQUAL:
-            conditionalJump = "jle";
-            break;
-           case GREATER_THAN:
-            conditionalJump = "jg";
-            break;
-           case GREATER_OR_EQUAL:
-            conditionalJump = "jge";
-            break;
-           default:
-            ErrorReporting.reportError(new AsmException(loc,
-              "Unknown condition operator"));
-            ps.println(
-              "/* Dropped outbound branch to " + branch.getId() + " */");
-            continue;
+          if (node.getConditional() instanceof OpStatement) {
+            String conditionalJump = "";
+            OpStatement condition = (OpStatement)node.getConditional();
+            switch (condition.getOp()) {
+             case EQUAL:
+              conditionalJump = "je";
+              break;
+             case NOT_EQUAL:
+              conditionalJump = "jne";
+              break;
+             case LESS_THAN:
+              conditionalJump = "jl";
+              break;
+             case LESS_OR_EQUAL:
+              conditionalJump = "jle";
+              break;
+             case GREATER_THAN:
+              conditionalJump = "jg";
+              break;
+             case GREATER_OR_EQUAL:
+              conditionalJump = "jge";
+              break;
+             default:
+              if (condition.getResult() != null) {
+                // This is wrong.
+                writeOp("movq", "$1", Register.R12, loc);
+                writeOp("cmpq", Register.R12, Register.R11, loc);
+                writeOp("je", branch.getId(), loc);
+              } else {
+                // This is wrong.
+                writeOp("movq", "$1", Register.R12, loc);
+                writeOp("cmpq", Register.R12, Register.R11, loc);
+                writeOp("je", branch.getId(), loc);
+              }
+            }
+            if (conditionalJump != "") {
+              writeOp(conditionalJump, branch.getId(), loc);
+            }
+          } else {
+            // We just came back from a call.
+            writeOp("movq", "$1", Register.R12, loc);
+            writeOp("cmpq", Register.R12, Register.RAX, loc);
+            writeOp("je", branch.getId(), loc);
           }
-          writeOp(conditionalJump, branch.getId(), loc);
           if (next != null) {
             writeOp("jmp", next.getId(), loc);
           } else {
