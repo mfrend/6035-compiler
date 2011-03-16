@@ -9,34 +9,36 @@ fail=0
 
 for file in `dirname $0`/input/*.dcf; do
   asm=`tempfile --suffix=.s`
-  echo $file
+  msg=""
   if runcompiler $file $asm; then
     binary=`tempfile`
     if gcc -o $binary -L `dirname $0`/lib -l6035 $asm; then
       output=`tempfile`
       if $binary > $output; then
-        if ! diff -u $output `dirname $0`/output/`basename $file`.out; then
-          echo "File $file output mismatch.";
-          fail=1
-        else
-          echo "SUCCESS!";
+        diffout=`tempfile`
+        if ! diff -u $output `dirname $0`/output/`basename $file`.out > $diffout; then
+          msg="File $file output mismatch.";
         fi
       else
-        cat $output
-        echo "Program failed to run.";
-        fail=1
+        msg="Program failed to run.";
       fi
-      rm $output;
     else
-      echo "Program failed to assemble.";
-      fail=1
+      msg="Program failed to assemble.";
     fi
-    rm $binary;
   else
-    echo "Program failed to generate assembly.";
-    fail=1
+    msg="Program failed to generate assembly.";
   fi
-  rm $asm;
+  if [ ! -z "$msg" ]; then
+    fail=1
+    echo $file
+    if [ ! -z "$diffout" ]; then
+      cat $diffout
+    elif [ ! -z "$output" ]; then
+      cat $output
+    fi
+    echo $msg
+  fi
+  rm -f $diffout $output $binary $asm;
 done
 
 exit $fail;
