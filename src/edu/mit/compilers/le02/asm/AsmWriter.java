@@ -69,8 +69,8 @@ public class AsmWriter {
   }
 
   public void writeGlobals() {
-    ps.println(".data");
     for (String globalName : cfg.getGlobals()) {
+      ps.println(".bss");
       ps.println(globalName + ":");
       FieldDescriptor desc = cfg.getGlobal(globalName);
       switch (desc.getType()) {
@@ -84,6 +84,7 @@ public class AsmWriter {
         ps.println("  .rept " + size);
         ps.println("  .quad 0");
         ps.println("  .endr");
+        ps.println(".section .rodata");
         ps.println(globalName + "_size:");
         ps.println("  .quad " + size);
       }
@@ -129,9 +130,8 @@ public class AsmWriter {
             Register resultReg = Register.R11;
             OpStatement op = (OpStatement)stmt;
 
-            // prepareArgument loads an argument from memory into R10 or R11
-            // and returns the register it stored the argument in.
-            // If the argument was a register to begin with, 
+            // prepareArgument loads an argument from memory/another register
+            // into R10 or R11 and returns the reg it stored the argument in.
             String arg1 = "<error>";
             if (op.getArg1() != null) {
               arg1 = prepareArgument(op.getArg1(), true, sl);
@@ -218,12 +218,12 @@ public class AsmWriter {
             }
           } else if (stmt instanceof CallStatement) {
             generateCall((CallStatement)stmt);
-          } else if (stmt instanceof ArgumentStatement) {
-            // do nothing, we already account for this above.
           } else {
-            // We have a DummyStatement that made it to ASM generation.
+            // We have a DummyStatement or ArgumentStatement that made it to
+            // ASM generation.
             ErrorReporting.reportError(new AsmException(
               sl, "Low level statement found at codegen time."));
+            continue;
           }
         }
         SourceLocation loc = SourceLocation.getSourceLocationWithoutDetails();
@@ -235,7 +235,7 @@ public class AsmWriter {
           // The last operation carried out will be a conditional.
           // Find out what that conditional was.
           String conditionalJump = "";
-          switch (((OpStatement)node.getLastStatement()).getOp()) {
+          switch (((OpStatement)node.getConditional()).getOp()) {
            case EQUAL:
             conditionalJump = "je";
             break;
