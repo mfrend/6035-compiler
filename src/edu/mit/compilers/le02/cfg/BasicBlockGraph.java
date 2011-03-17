@@ -9,7 +9,7 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 public class BasicBlockGraph {
   private static int id;
   private static Map<SimpleCFGNode, BasicBlockNode> visited =
-                                   new HashMap<SimpleCFGNode, BasicBlockNode>();
+    new HashMap<SimpleCFGNode, BasicBlockNode>();
 
   public static String nextID() {
     id++;
@@ -88,7 +88,8 @@ public class BasicBlockGraph {
       break;
     }
   }
-  public static BasicBlockNode makeBasicBlocks(String id, SimpleCFGNode start) {
+  public static BasicBlockNode makeBasicBlocks(String id,
+                                               SimpleCFGNode start) {
     return makeBasicBlock(id, start, null);
   }
 
@@ -123,13 +124,13 @@ public class BasicBlockGraph {
       addStatement(currBB, currNode.getStatement());
 
       if (currNode.isBranch()) {
-        BasicBlockNode branchTarget = makeBasicBlock(nextID(),
-                                                     currNode.getBranchTarget(),
-                                                     currBB);
+        BasicBlockNode branchTarget =
+          makeBasicBlock(nextID(), currNode.getBranchTarget(), currBB);
         currBB.setBranchTarget(branchTarget);
       }
 
-      BasicBlockNode next = makeBasicBlock(nextID(), currNode.getNext(), currBB);
+      BasicBlockNode next =
+        makeBasicBlock(nextID(), currNode.getNext(), currBB);
       currBB.setNext(next);
     }
     return currBB;

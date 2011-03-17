@@ -5,7 +5,9 @@ import java.io.IOException;
 
 public class CFGVisualizer {
 
-  public static void writeToDotFile(String filename, ControlFlowGraph cfg, boolean isLow) {
+  public static void writeToDotFile(String filename,
+                                    ControlFlowGraph cfg,
+                                    boolean isLow) {
     try {
       FileWriter outfile = new FileWriter(filename);
       outfile.write(makeDotFile(cfg, isLow));

@@ -424,9 +424,12 @@ public class AsmWriter {
     List<Argument> args = call.getArgs();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
       if (ii >= 6) {
-        writeOp("pushq", prepareArgument(args.get(ii), true, thisMethod.getId(), sl), sl);
+        writeOp("pushq",
+                prepareArgument(args.get(ii),true, thisMethod.getId(), sl),
+                sl);
       } else {
-        writeOp("movq", prepareArgument(args.get(ii), true, thisMethod.getId(), sl),
+        writeOp("movq",
+                prepareArgument(args.get(ii), true, thisMethod.getId(), sl),
                 argumentRegisters[ii].toString(), sl);
       }
     }

@@ -58,7 +58,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SymbolTable st = node.getSymbolTable();
     int offset = st.getNonconflictingOffset();
 
-    LocalDescriptor ld = new LocalDescriptor(st, Math.abs(offset) + "lcltmp", type, offset);
+    LocalDescriptor ld =
+      new LocalDescriptor(st, Math.abs(offset) + "lcltmp", type, offset);
     st.put(ld.getId(), ld, node.getSourceLoc());
     return ld.getLocation();
   }

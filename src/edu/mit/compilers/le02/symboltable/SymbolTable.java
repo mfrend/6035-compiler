@@ -57,21 +57,25 @@ public class SymbolTable {
     }
   }
 
-  public boolean put(String id, ClassDescriptor descriptor, SourceLocation sl) {
+  public boolean put(String id, ClassDescriptor descriptor,
+      SourceLocation sl) {
     return this.putHelper(id, descriptor, sl);
   }
 
-  public boolean put(String id, LocalDescriptor descriptor, SourceLocation sl) {
+  public boolean put(String id, LocalDescriptor descriptor,
+      SourceLocation sl) {
     this.locals.add(descriptor);
     return this.putHelper(id, descriptor, sl);
   }
 
-  public boolean put(String id, ParamDescriptor descriptor, SourceLocation sl) {
+  public boolean put(String id, ParamDescriptor descriptor,
+      SourceLocation sl) {
     this.params.add(descriptor);
     return this.putHelper(id, descriptor, sl);
   }
 
-  public boolean put(String id, FieldDescriptor descriptor, SourceLocation sl) {
+  public boolean put(String id, FieldDescriptor descriptor,
+      SourceLocation sl) {
     this.fields.add(descriptor);
     return this.putHelper(id, descriptor, sl);
   }
@@ -231,9 +235,10 @@ public class SymbolTable {
 
   /**
    * Finds the most negative local offset of all the locals in the symbol table
-   * or its children. This method is a helper method for getNonconflictingOffset.
+   * or its children.
+   * This method is a helper method for getNonconflictingOffset.
    *
-   * @return The most negative offset of any local at or below the current scope.
+   * @return The most negative offset of any local at/below the current scope.
    */
   public int getChildOffsetBound() {
     int offset = 0;
@@ -247,9 +252,9 @@ public class SymbolTable {
   }
 
   /**
-   * Finds the most negative local offset of all the locals in the symbol table.
-   * This method is a helper method for getNonconflictingOffset, and is also used
-   * to calculate the amount of stack space required for a method.
+   * Finds the most negative local offset of all the locals in the symbol table
+   * This method is a helper method for getNonconflictingOffset, and is also
+   * used to calculate the amount of stack space required for a method.
    *
    * @return The most negative local offset, or 0 if there are no locals in the
    * table.
