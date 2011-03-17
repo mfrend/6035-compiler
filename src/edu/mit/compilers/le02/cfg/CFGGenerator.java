@@ -299,6 +299,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(enter, exit);
   }
 
+  @Override
   public CFGFragment visit(CallStatementNode node) {
     return node.getCall().accept(this);
   }
@@ -306,6 +307,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   /*
    * Expression visit methods
    */
+  @Override
   public CFGFragment visit(BoolOpNode node) {
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
 
@@ -338,6 +340,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return leftFrag.link(rightFrag).append(new SimpleCFGNode(st));
   }
 
+  @Override
   public CFGFragment visit(MathOpNode node) {
     CFGFragment frag1 = node.getLeft().accept(this);
     CFGFragment frag2 = node.getRight().accept(this);
@@ -351,6 +354,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag1.link(frag2).append(new SimpleCFGNode(s));
   }
 
+  @Override
   public CFGFragment visit(NotNode node) {
     CFGFragment frag = node.getExpr().accept(this);
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
@@ -362,6 +366,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
 
+  @Override
   public CFGFragment visit(MinusNode node) {
     CFGFragment frag = node.getExpr().accept(this);
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
@@ -372,6 +377,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag.append(new SimpleCFGNode(s));
   }
 
+  @Override
   public CFGFragment visit(MethodCallNode node) {
     VariableLocation loc = makeTemp(node, node.getType());
 
@@ -399,6 +405,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
 
+  @Override
   public CFGFragment visit(SystemCallNode node) {
     VariableLocation loc = makeTemp(node, node.getType());
 
@@ -430,10 +437,12 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   /*
    * Location and Constant visit methods
    */
+  @Override
   public CFGFragment visit(VariableNode node) {
     return node.getLoc().accept(this);
   }
 
+  @Override
   public CFGFragment visit(ScalarLocationNode node) {
     Argument arg = Argument.makeArgument(node.getDesc().getLocation());
     ArgumentStatement as = new ArgumentStatement(node, arg);
@@ -441,6 +450,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(cfgNode, cfgNode);
   }
 
+  @Override
   public CFGFragment visit(ArrayLocationNode node) {
     CFGFragment indexFrag = node.getIndex().accept(this);
     Argument index = indexFrag.getExit().getResult();
@@ -451,6 +461,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return indexFrag.append(cfgNode);
   }
 
+  @Override
   public CFGFragment visit(BooleanNode node) {
     Argument arg = Argument.makeArgument(node.getValue());
     ArgumentStatement as = new ArgumentStatement(node, arg);
@@ -458,6 +469,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(cfgNode, cfgNode);
   }
 
+  @Override
   public CFGFragment visit(IntNode node) {
     Argument arg = Argument.makeArgument(node.getValue());
     ArgumentStatement as = new ArgumentStatement(node, arg);
@@ -465,6 +477,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(cfgNode, cfgNode);
   }
 
+  @Override
   public CFGFragment visit(StringNode node) {
     String name = ".str" + Math.abs(node.getValue().hashCode());
     cfg.putStringData(name, node);
@@ -474,6 +487,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return new CFGFragment(cfgNode, cfgNode);
   }
 
+  @Override
   public CFGFragment visit(SyscallArgNode node) {
     return node.getChildren().get(0).accept(this);
   }
