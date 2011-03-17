@@ -128,6 +128,9 @@ variables that were not explicitly loaded in the CFG; we added code to convert
 references to conditionals without computation of the value of the conditional
 to actual loads of the conditional so that conditional branch could proceed.
 
+During attempting to debug why error reporting wasn't working, Liz discovered
+that printf requires its format string to end in \n. This was counterintuitive.
+
 Finally, method calls were problematic - we failed to correctly initialize
 variables allocated from the stack, causing sporadic errors. We also
 accidentally reversed the wrong list of registers when computing the order in
