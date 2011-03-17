@@ -73,7 +73,6 @@ public class BasicBlockGraph {
 
   private static void addStatement(BasicBlockNode node, BasicStatement st) {
     switch (st.getType()) {
-     case DUMMY:
      case JUMP:
      case ARGUMENT:
       break;

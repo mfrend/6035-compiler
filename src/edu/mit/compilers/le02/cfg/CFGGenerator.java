@@ -211,7 +211,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SimpleCFGNode oldExit = loopExit;
 
     // Create dummy exit node
-    SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+    SimpleCFGNode exit = new SimpleCFGNode(new NOPStatement(node));
     loopExit = exit;
 
     // Evaluate the exit condition
@@ -271,7 +271,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(IfNode node) {
     // Create dummy exit node
-    SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+    SimpleCFGNode exit = new SimpleCFGNode(new NOPStatement(node));
 
     // Calculate sub-expressions
     CFGFragment trueFrag = node.getThenBlock().accept(this);
@@ -317,7 +317,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       SimpleCFGNode trueNode = new SimpleCFGNode(trueStmt);
       SimpleCFGNode falseNode = new SimpleCFGNode(falseStmt);
 
-      SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
+      SimpleCFGNode exit = new SimpleCFGNode(new NOPStatement(node));
       trueNode.setNext(exit);
       falseNode.setNext(exit);
 
