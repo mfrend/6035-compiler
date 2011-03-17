@@ -22,11 +22,11 @@ public class ControlFlowGraph {
   public CFGNode getMethod(String id) {
     return methods.get(id);
   }
-  
+
   public List<String> getMethods() {
     return new ArrayList<String>(methods.keySet());
   }
-  
+
   public void putMethod(String id, CFGNode node) {
     methods.put(id, node);
   }

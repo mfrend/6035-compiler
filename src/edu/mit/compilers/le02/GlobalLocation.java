@@ -18,11 +18,11 @@ public class GlobalLocation extends VariableLocation {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof GlobalLocation)) return false;
-    
+
     GlobalLocation other = (GlobalLocation) o;
     return this.symbol.equals(other.symbol);
   }
-  
+
   @Override
   public String toString() {
     return symbol;

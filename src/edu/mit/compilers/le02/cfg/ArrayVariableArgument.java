@@ -23,12 +23,12 @@ public class ArrayVariableArgument extends VariableArgument {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof ArrayVariableArgument)) return false;
-    
+
     ArrayVariableArgument other = (ArrayVariableArgument) o;
     return this.loc.equals(other.loc)
            && this.index.equals(other.index);
   }
-  
+
   @Override
   public String toString() {
     return loc.toString() + "[" + index + "]";

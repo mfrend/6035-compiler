@@ -17,16 +17,16 @@ public class VariableArgument extends Argument {
   public VariableLocation getLoc() {
     return loc;
   }
-  
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof VariableArgument)) return false;
-    
+
     VariableArgument other = (VariableArgument) o;
     return this.loc.equals(other.loc);
   }
-  
+
   @Override
   public String toString() {
     return this.loc.toString();

@@ -12,11 +12,11 @@ import edu.mit.compilers.le02.StackLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 
 public class ParamDescriptor extends TypedDescriptor {
-  
+
   private static Register[] arguments = {RDI, RSI, RDX, RCX, R8, R9};
 
   public ParamDescriptor(SymbolTable parent, String id, DecafType type) {
-    super(parent, id, type); 
+    super(parent, id, type);
   }
 
   public void setIndex(int i) {

@@ -35,12 +35,12 @@ public class SymbolTable {
     }
 
     this.table = new HashMap<String, Descriptor>();
-    
+
     this.locals = new ArrayList<LocalDescriptor>();
     this.params = new ArrayList<ParamDescriptor>();
     this.fields = new ArrayList<FieldDescriptor>();
     this.methods = new ArrayList<MethodDescriptor>();
-    
+
     if (this.parent != null) {
       if (this.parent.locals != null) {
         this.locals.addAll(this.parent.locals);
@@ -60,7 +60,7 @@ public class SymbolTable {
   public boolean put(String id, ClassDescriptor descriptor, SourceLocation sl) {
     return this.putHelper(id, descriptor, sl);
   }
-  
+
   public boolean put(String id, LocalDescriptor descriptor, SourceLocation sl) {
     this.locals.add(descriptor);
     return this.putHelper(id, descriptor, sl);
@@ -76,12 +76,12 @@ public class SymbolTable {
     return this.putHelper(id, descriptor, sl);
   }
 
-  public boolean put(String id, 
+  public boolean put(String id,
                      MethodDescriptor descriptor, SourceLocation sl) {
     this.methods.add(descriptor);
     return this.putHelper(id, descriptor, sl);
   }
-  
+
   /**
    * Add a new entry to the symbol table. Verify that it does not already
    * exist in this table or any ancestor
@@ -90,7 +90,7 @@ public class SymbolTable {
    * @param descriptor The descriptor of the new entry
    * @return True if entry was successful
    */
-  private boolean putHelper(String id, 
+  private boolean putHelper(String id,
                             Descriptor descriptor, SourceLocation sl) {
     if (table.containsKey(id)) {
       ErrorReporting.reportError(
@@ -189,7 +189,7 @@ public class SymbolTable {
   public MethodDescriptor getMethod(String id) {
     return (MethodDescriptor) get(id, SymbolType.METHOD);
   }
-  
+
   /**
    * Returns the number of parameters in the symbol table.
    *
@@ -199,16 +199,16 @@ public class SymbolTable {
     if (locals.size() == 0) {
       return 0;
     }
-    
+
     Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
       public int compare(LocalDescriptor d1, LocalDescriptor d2) {
         return d1.getLocation().getOffset() - d2.getLocation().getOffset();
       }
     };
-    
+
     // Return minimum because the local offsets are negative
     return Collections.min(locals, c).getLocation().getOffset();
-  } 
+  }
 
   /**
    * Finds a stack offset which does not conflict with any local at a parent or
@@ -230,7 +230,7 @@ public class SymbolTable {
   }
 
   /**
-   * Finds the most negative local offset of all the locals in the symbol table 
+   * Finds the most negative local offset of all the locals in the symbol table
    * or its children. This method is a helper method for getNonconflictingOffset.
    *
    * @return The most negative offset of any local at or below the current scope.
@@ -258,13 +258,13 @@ public class SymbolTable {
     if (locals.size() == 0) {
       return 0;
     }
-    
+
     Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
       public int compare(LocalDescriptor d1, LocalDescriptor d2) {
         return d1.getLocation().getOffset() - d2.getLocation().getOffset();
       }
     };
-    
+
     // Return minimum because the local offsets are negative
     return Collections.min(locals, c).getLocation().getOffset();
   }

@@ -6,7 +6,7 @@ import edu.mit.compilers.le02.ast.ASTNode;
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
   private Argument arg1, arg2;
-  
+
   public enum AsmOp {
     MOVE,
     ADD,
@@ -34,7 +34,7 @@ public final class OpStatement extends BasicStatement {
     this.arg2 = arg2;
     this.type = BasicStatementType.OP;
   }
-  
+
   public AsmOp getOp() {
     return op;
   }
@@ -46,7 +46,7 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
-  
+
   @Override
   public String toString() {
     String s = "OpStatement(" + op;

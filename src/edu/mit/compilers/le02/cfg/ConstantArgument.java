@@ -5,7 +5,7 @@ public final class ConstantArgument extends Argument {
   private int i;
   private boolean b;
   private boolean isInt;
-  
+
   public ConstantArgument(int i) {
     this.i = i;
     this.isInt = true;
@@ -38,12 +38,12 @@ public final class ConstantArgument extends Argument {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof ConstantArgument)) return false;
-    
+
     ConstantArgument other = (ConstantArgument) o;
     if (this.isInt != other.isInt) {
       return false;
     }
-    
+
     if (this.isInt) {
       return this.i == other.i;
     }
@@ -51,7 +51,7 @@ public final class ConstantArgument extends Argument {
       return this.b == other.b;
     }
   }
-  
+
   @Override
   public String toString() {
     if (this.isInt) {
@@ -64,5 +64,5 @@ public final class ConstantArgument extends Argument {
     }
   }
 
-  
+
 }

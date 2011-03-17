@@ -16,7 +16,7 @@ public class VariableLocation {
   public LocationType getLocationType() {
     return this.type;
   }
-  
+
   /**
    * Convenience method to cast this VariableLocation to a StackLocation
    * and get the stored offset.
@@ -26,7 +26,7 @@ public class VariableLocation {
     assert this.type == LocationType.STACK;
     return ((StackLocation) this).getOffset();
   }
-  
+
   /**
    * Convenience method to cast this VariableLocation to a RegisterLocation
    * and get the stored register.

@@ -8,14 +8,14 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 
 public class BasicBlockGraph {
   private static int id;
-  private static Map<SimpleCFGNode, BasicBlockNode> visited = 
+  private static Map<SimpleCFGNode, BasicBlockNode> visited =
                                    new HashMap<SimpleCFGNode, BasicBlockNode>();
-  
+
   public static String nextID() {
     id++;
     return ".block" + Integer.toString(id);
   }
-  
+
   public static ControlFlowGraph makeBasicBlockGraph(ControlFlowGraph cfg) {
     ControlFlowGraph newCFG = new ControlFlowGraph();
 
@@ -24,16 +24,16 @@ public class BasicBlockGraph {
       CFGNode node = cfg.getMethod(methodName);
       assert (node instanceof SimpleCFGNode);
       SimpleCFGNode enter = (SimpleCFGNode) node;
-      
+
       visited.clear();
       BasicBlockNode methodEnter = makeBasicBlocks(methodName, enter);
-      
+
       for (BasicBlockNode n : visited.values()) {
         if (n.getStatements().isEmpty()) {
           n.removeFromCFG();
         }
       }
-      
+
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();
       // TODO: Find a suitable source location to put in here
@@ -41,11 +41,11 @@ public class BasicBlockGraph {
                                 Argument.makeArgument(localOffset),
                                 null, null);
       methodEnter.prependStatement(enterStmt);
-      
-      
+
+
       newCFG.putMethod(methodName, methodEnter);
     }
-    
+
     for (String name : cfg.getGlobals()) {
       newCFG.putGlobal(name, cfg.getGlobal(name));
     }
@@ -53,10 +53,10 @@ public class BasicBlockGraph {
     for (String name : cfg.getAllStringData()) {
       newCFG.putStringData(name, cfg.getStringData(name));
     }
-   
+
     return newCFG;
   }
-  
+
   public static int getLargestLocalOffset() {
 
     int min = 0;
@@ -67,10 +67,10 @@ public class BasicBlockGraph {
         min = curr;
       }
     }
-    
+
     return min;
   }
-  
+
   private static void addStatement(BasicBlockNode node, BasicStatement st) {
     switch (st.getType()) {
      case DUMMY:
@@ -91,7 +91,7 @@ public class BasicBlockGraph {
   public static BasicBlockNode makeBasicBlocks(String id, SimpleCFGNode start) {
     return makeBasicBlock(id, start, null);
   }
-  
+
   public static BasicBlockNode makeBasicBlock(String id, SimpleCFGNode start,
                                               BasicBlockNode parent) {
     BasicBlockNode currBB;
@@ -101,14 +101,14 @@ public class BasicBlockGraph {
     else {
       currBB = new BasicBlockNode(id, parent.getMethod());
     }
-    
+
     SimpleCFGNode currNode = start;
-    
+
     if (visited.containsKey(start)) {
       return visited.get(start);
     }
-   
-    
+
+
     while (currNode != null
            && !currNode.isBranch() && !currNode.hasMultipleEntrances()) {
       SimpleCFGNode nextNode = currNode.getNext();
@@ -117,13 +117,13 @@ public class BasicBlockGraph {
     }
 
     visited.put(start, currBB);
-    
+
     if (currNode != null) {
       // There are still more statements in this method
       addStatement(currBB, currNode.getStatement());
 
       if (currNode.isBranch()) {
-        BasicBlockNode branchTarget = makeBasicBlock(nextID(), 
+        BasicBlockNode branchTarget = makeBasicBlock(nextID(),
                                                      currNode.getBranchTarget(),
                                                      currBB);
         currBB.setBranchTarget(branchTarget);

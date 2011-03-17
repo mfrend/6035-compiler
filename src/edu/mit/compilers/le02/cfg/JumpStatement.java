@@ -7,7 +7,7 @@ public final class JumpStatement extends BasicStatement {
     super(node, null);
     this.type = BasicStatementType.JUMP;
   }
-  
+
   @Override
   public String toString() {
     return "JumpStatement";

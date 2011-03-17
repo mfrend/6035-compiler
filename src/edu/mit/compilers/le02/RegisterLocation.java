@@ -24,7 +24,7 @@ public class RegisterLocation extends VariableLocation{
     R14,
     R15,
     RIP;
-    
+
     @Override
     public String toString() {
       return "%" + this.name().toLowerCase();
@@ -39,16 +39,16 @@ public class RegisterLocation extends VariableLocation{
   public Register getRegister(){
     return this.reg;
   }
-  
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof RegisterLocation)) return false;
-    
+
     RegisterLocation other = (RegisterLocation) o;
     return this.reg == other.reg;
   }
-  
+
   @Override
   public String toString() {
     return this.reg.toString();

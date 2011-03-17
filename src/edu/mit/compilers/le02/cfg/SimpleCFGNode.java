@@ -12,11 +12,11 @@ public final class SimpleCFGNode implements CFGNode {
   private SimpleCFGNode branchTarget;
   private BasicStatement statement;
   private Argument result;
-  
+
   public SimpleCFGNode(BasicStatement statement) {
     this.statement = statement;
     this.predecessors = new HashSet<CFGNode>();
-    
+
     if (this.statement.type == BasicStatementType.ARGUMENT) {
       this.result = ((ArgumentStatement) statement).getArgument();
     }
@@ -29,7 +29,7 @@ public final class SimpleCFGNode implements CFGNode {
   public SimpleCFGNode getBranchTarget() {
     return branchTarget;
   }
-  
+
   public void setBranchTarget(SimpleCFGNode node) {
     if (branchTarget != null) {
       branchTarget.predecessors.remove(this);
@@ -45,7 +45,7 @@ public final class SimpleCFGNode implements CFGNode {
     if (!isBranch()) {
       return null;
     }
-    
+
     return statement;
   }
 
@@ -53,7 +53,7 @@ public final class SimpleCFGNode implements CFGNode {
   public SimpleCFGNode getNext() {
     return next;
   }
-  
+
   public void setNext(SimpleCFGNode node) {
     if (next != null) {
       if (statement.type == BasicStatementType.JUMP) {
@@ -75,22 +75,22 @@ public final class SimpleCFGNode implements CFGNode {
   public BasicStatement getStatement() {
     return statement;
   }
-  
+
   public Argument getResult() {
     return result;
   }
-  
+
   public boolean hasMultipleEntrances() {
     return predecessors.size() > 1;
   }
-  
 
-  public static void resetVisited() { 
+
+  public static void resetVisited() {
     visited.clear();
   }
-  
+
   @Override
-  public void prepDotString() { 
+  public void prepDotString() {
     visited.clear();
   }
 
@@ -99,19 +99,19 @@ public final class SimpleCFGNode implements CFGNode {
     if (visited.contains(this)) {
       return "";
     }
-    
+
     if (next == null) {
       return this.hashCode() + "[label=\"" + statement.toString() + "\"]\n";
     }
-    
+
     visited.add(this);
-    
+
     String me = "" + this.hashCode();
     String nextStr = "" + next.hashCode();
-    
+
     String s = me + " [label=\"" + statement.toString() + "\"]\n"
                + me + " -> " + nextStr;
-    
+
     if (!isBranch()) {
       s += "\n";
       return s + next.getDotString();

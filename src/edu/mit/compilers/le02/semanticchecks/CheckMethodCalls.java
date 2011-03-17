@@ -55,7 +55,7 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   @Override
   public Boolean visit(MethodDeclNode node) {
     processedMethods.add(node.getName());
-    
+
     defaultBehavior(node);
     return true;
   }
@@ -67,7 +67,7 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
       defaultBehavior(node);
       return true;
     }
-    
+
     if (!processedMethods.contains(methodDesc.getId())) {
       ErrorReporting.reportError(new SemanticException(node.getSourceLoc(),
           "Method " + node.getName() + " called before its declaration."));

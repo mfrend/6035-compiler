@@ -110,7 +110,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       return frag.getEnter();
     }
 
-    boolean isAnd = (node.getOp() == BoolOp.AND); 
+    boolean isAnd = (node.getOp() == BoolOp.AND);
 
     // Short circuit right side
     SimpleCFGNode b2 = branchNode(node.getRight(), t, f);
@@ -158,7 +158,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       if (fragment == null) {
         fragment = curr;
       } else {
-        fragment = fragment.link(curr); 
+        fragment = fragment.link(curr);
       }
     }
     if (node.getStatements().size() == 0) {
@@ -174,13 +174,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment destFrag = node.getLoc().accept(this);
     Argument destArg = destFrag.getExit().getResult();
     assert (destArg instanceof VariableArgument);
-    
+
     CFGFragment frag = node.getValue().accept(this);
     Argument src = frag.getExit().getResult();
 
     BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, destArg, null);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
-    
+
     // Assumption: value to assign is evaluated, then location to assign to
     //             is evaluated, then assignment is performed
     return frag.link(destFrag).append(cfgNode);
@@ -189,14 +189,14 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(ReturnNode node) {
     if (node.hasValue()) {
-      CFGFragment frag = node.getRetValue().accept(this); 
+      CFGFragment frag = node.getRetValue().accept(this);
       Argument returnValue = frag.getExit().getResult();
-      BasicStatement st = new OpStatement(node, AsmOp.RETURN, 
+      BasicStatement st = new OpStatement(node, AsmOp.RETURN,
           returnValue, null, null);
       return frag.append(new SimpleCFGNode(st));
     }
 
-    BasicStatement st = new OpStatement(node, AsmOp.RETURN, 
+    BasicStatement st = new OpStatement(node, AsmOp.RETURN,
         null, null, null);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
 
@@ -209,7 +209,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SimpleCFGNode oldIncrement = increment;
     SimpleCFGNode oldExit = loopExit;
 
-    // Create dummy exit node 
+    // Create dummy exit node
     SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
     loopExit = exit;
 
@@ -268,8 +268,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
   @Override
-  public CFGFragment visit(IfNode node) {        
-    // Create dummy exit node 
+  public CFGFragment visit(IfNode node) {
+    // Create dummy exit node
     SimpleCFGNode exit = new SimpleCFGNode(new DummyStatement());
 
     // Calculate sub-expressions
@@ -283,7 +283,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     }
     else {
       // Make dummy false fragment
-      falseFrag = new CFGFragment(exit, exit);  
+      falseFrag = new CFGFragment(exit, exit);
     }
 
     // Point true fragment at dummy exit
@@ -291,7 +291,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
     // Short circuit the condition
     SimpleCFGNode enter = branchNode(node.getCondition(),
-        trueFrag.getEnter(), 
+        trueFrag.getEnter(),
         falseFrag.getEnter());
 
     // Enter at the condition, exit via the dummy exit node
@@ -329,10 +329,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
     Argument arg1 = leftFrag.getExit().getResult();
     Argument arg2 = rightFrag.getExit().getResult();
-    BasicStatement st = new OpStatement(node, getAsmOp(node), 
+    BasicStatement st = new OpStatement(node, getAsmOp(node),
         arg1, arg2, loc);
 
-    // Order statements as follows: 
+    // Order statements as follows:
     // <left fragment> <right fragment> <bool op stmt>
     return leftFrag.link(rightFrag).append(new SimpleCFGNode(st));
   }
@@ -344,7 +344,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     Argument arg1 = frag1.getExit().getResult();
     Argument arg2 = frag2.getExit().getResult();
 
-    OpStatement s = new OpStatement(node, getAsmOp(node), 
+    OpStatement s = new OpStatement(node, getAsmOp(node),
         arg1, arg2, loc);
 
     return frag1.link(frag2).append(new SimpleCFGNode(s));
@@ -354,7 +354,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment frag = node.getExpr().accept(this);
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
 
-    OpStatement s = new OpStatement(node, AsmOp.NOT, 
+    OpStatement s = new OpStatement(node, AsmOp.NOT,
         frag.getExit().getResult(), null, loc);
 
     return frag.append(new SimpleCFGNode(s));
@@ -365,7 +365,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     CFGFragment frag = node.getExpr().accept(this);
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
 
-    OpStatement s = new OpStatement(node, AsmOp.UNARY_MINUS, 
+    OpStatement s = new OpStatement(node, AsmOp.UNARY_MINUS,
         frag.getExit().getResult(), null, loc);
 
     return frag.append(new SimpleCFGNode(s));
@@ -386,7 +386,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       args.add(frag.getExit().getResult());
     }
 
-    CallStatement s = new CallStatement(node, 
+    CallStatement s = new CallStatement(node,
                                         node.getDesc().getId(), args, loc);
 
     if (frag != null) {
@@ -396,7 +396,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       return new CFGFragment(n, n);
     }
   }
-  
+
 
   public CFGFragment visit(SystemCallNode node) {
     VariableLocation loc = makeTemp(node, node.getType());
@@ -413,7 +413,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       args.add(frag.getExit().getResult());
     }
 
-    CallStatement s = new CallStatement(node, node.getFuncName().getValue(), 
+    CallStatement s = new CallStatement(node, node.getFuncName().getValue(),
                                         args, loc);
 
     SimpleCFGNode cn = new SimpleCFGNode(s);
@@ -424,10 +424,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
 
-  
-  
+
+
   /*
-   * Location and Constant visit methods 
+   * Location and Constant visit methods
    */
   public CFGFragment visit(VariableNode node) {
     return node.getLoc().accept(this);
@@ -443,7 +443,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(ArrayLocationNode node) {
     CFGFragment indexFrag = node.getIndex().accept(this);
     Argument index = indexFrag.getExit().getResult();
-    Argument array = Argument.makeArgument(new GlobalLocation(node.getName()), 
+    Argument array = Argument.makeArgument(new GlobalLocation(node.getName()),
                                            index);
     ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
@@ -463,7 +463,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
     return new CFGFragment(cfgNode, cfgNode);
   }
-  
+
   public CFGFragment visit(StringNode node) {
     String name = ".str" + Math.abs(node.getValue().hashCode());
     cfg.putStringData(name, node);
@@ -476,7 +476,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(SyscallArgNode node) {
     return node.getChildren().get(0).accept(this);
   }
-  
+
 
 
   /*
@@ -495,7 +495,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     case MODULO:
       return AsmOp.MODULO;
     default:
-      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(),
           "MathOp " + node.getOp() + " cannot be converted into an AsmOp."));
       return null;
     }
@@ -516,7 +516,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     case NEQ:
       return AsmOp.NOT_EQUAL;
     default:
-      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(), 
+      ErrorReporting.reportError(new CompilerException(node.getSourceLoc(),
           "BoolOp " + node.getOp() + " cannot be converted into an AsmOp."));
       return null;
     }

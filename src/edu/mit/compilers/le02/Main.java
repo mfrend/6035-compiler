@@ -340,7 +340,7 @@ public class Main {
     }
     return success;
   }
-  
+
   /**
    * Runs the parser on an input and displays any error messages found while
    * parsing.
@@ -358,10 +358,10 @@ public class Main {
       ASTNode parent = IrGenerator.generateIR(parser.getAST());
       SymbolTableGenerator.generateSymbolTable(parent);
       MasterChecker.checkAll(parent);
-      
+
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
-      
+
       if (CLI.debug) {
         CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
       }
@@ -387,7 +387,7 @@ public class Main {
       SymbolTable st =
         SymbolTableGenerator.generateSymbolTable(parent).getSymbolTable();
       MasterChecker.checkAll(parent);
-      
+
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
       for (FieldDescriptor global : st.getFields()) {

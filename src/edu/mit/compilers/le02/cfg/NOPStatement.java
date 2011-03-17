@@ -8,7 +8,7 @@ public final class NOPStatement extends BasicStatement {
     super(node, null);
     this.type = BasicStatementType.NOP;
   }
-  
+
   @Override
   public String toString() {
     return "NOPStatement";

@@ -10,7 +10,7 @@ public class CallStatement extends BasicStatement {
   private List<Argument> args;
   private String name;
 
-  public CallStatement(ExpressionNode expr, String name, List<Argument> args, 
+  public CallStatement(ExpressionNode expr, String name, List<Argument> args,
                        VariableLocation result) {
     super(expr, result);
     this.name = name;
@@ -34,7 +34,7 @@ public class CallStatement extends BasicStatement {
       s += ", " + a;
     }
     s += ")";
-    
+
     if (result != null) {
       s += ": " + result;
     }

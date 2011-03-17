@@ -16,7 +16,7 @@ public abstract class TypedDescriptor extends Descriptor {
   public DecafType getType() {
     return type;
   }
-  
+
   public VariableLocation getLocation() {
 	  return this.location;
   }

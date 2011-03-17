@@ -7,7 +7,7 @@ public abstract class BasicStatement {
   private ASTNode node;
   protected VariableLocation result;
   protected BasicStatementType type;
-  
+
   public enum BasicStatementType {
     DUMMY,
     ARGUMENT,
@@ -16,7 +16,7 @@ public abstract class BasicStatement {
     NOP,
     JUMP
   }
-  
+
   public BasicStatement(ASTNode node, VariableLocation result) {
     this.node = node;
     this.result = result;
@@ -25,13 +25,13 @@ public abstract class BasicStatement {
   public ASTNode getNode() {
     return node;
   }
-  
+
   public VariableLocation getResult() {
     return result;
   }
-  
+
   public BasicStatementType getType() {
     return type;
   }
-  
+
 }

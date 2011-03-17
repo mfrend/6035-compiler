@@ -27,11 +27,11 @@ public class StackLocation extends VariableLocation {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof StackLocation)) return false;
-    
+
     StackLocation other = (StackLocation) o;
     return this.offset == other.offset;
   }
-  
+
   @Override
   public String toString() {
     return offset + "(%rbp)";

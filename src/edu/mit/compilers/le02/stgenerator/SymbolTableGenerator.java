@@ -65,7 +65,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     // Set the descriptors for the AST
     ASTDescriptorVisitor v = new ASTDescriptorVisitor();
     v.setASTDescriptors(root, desc);
-    
+
     // Set the parents for the AST (so they can find the symbol tables)
     ASTParentVisitor pv = new ASTParentVisitor();
     pv.visit(root);
@@ -81,7 +81,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     currParent = globalSymbolTable;
     isField = true;
     for (FieldDeclNode n : node.getFields()) {
-      globalSymbolTable.put(n.getName(), (FieldDescriptor) n.accept(this), 
+      globalSymbolTable.put(n.getName(), (FieldDescriptor) n.accept(this),
                             n.getSourceLoc());
     }
     isField = false;
@@ -120,7 +120,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     BlockNode body = node.getBody();
     // Create and fill method locals
     for (VarDeclNode v : body.getDecls()) {
-      methodSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this), 
+      methodSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
                            v.getSourceLoc());
     }
 
@@ -129,7 +129,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
       s.accept(this);
     }
     body.setSymbolTable(methodSymbolTable);
-    
+
     currParent = parent;
     MethodDescriptor desc =
       new MethodDescriptor(parent, node.getName(), node.getType(),
@@ -163,7 +163,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     SymbolTable localSymbolTable = new SymbolTable(parent);
     currParent = localSymbolTable;
     for (VarDeclNode v : node.getDecls()) {
-      localSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this), 
+      localSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
                            v.getSourceLoc());
     }
 

@@ -19,7 +19,7 @@ public final class BasicBlockNode implements CFGNode {
     this.method = method;
     this.next = null;
     this.branchTarget = null;
-    
+
     this.predecessors = new HashSet<BasicBlockNode>();
     this.statements = new ArrayList<BasicStatement>();
   }
@@ -35,11 +35,11 @@ public final class BasicBlockNode implements CFGNode {
   public void prependStatement(BasicStatement statement) {
     this.statements.add(0, statement);
   }
-  
+
   public void addStatement(BasicStatement statement) {
     this.statements.add(statement);
   }
-  
+
   public void removeFromCFG() {
     assert (statements.isEmpty());
     assert (branchTarget == null);
@@ -58,12 +58,12 @@ public final class BasicBlockNode implements CFGNode {
     ArrayList<BasicStatement> list = new ArrayList<BasicStatement>(statements);
     return list;
   }
-  
+
   public BasicStatement getLastStatement() {
     if (statements.isEmpty()) {
       return null;
     }
-    
+
     return statements.get(statements.size() - 1);
   }
 
@@ -73,21 +73,21 @@ public final class BasicBlockNode implements CFGNode {
   public int largestLocalOffset() {
     int min = 0;
     int curr;
-    for (BasicStatement s : statements) { 
+    for (BasicStatement s : statements) {
       curr = s.getNode().getSymbolTable().getLargestLocalOffset();
       if (curr < min) {
         min = curr;
       }
     }
-    
+
     return min;
   }
-  
+
   public BasicStatement getConditional() {
     if (!isBranch()) {
       return null;
     }
-    
+
     return getLastStatement();
   }
 
@@ -95,7 +95,7 @@ public final class BasicBlockNode implements CFGNode {
     if (branchTarget != null) {
       branchTarget.predecessors.remove(this);
     }
-    
+
     branchTarget = node;
     branchTarget.predecessors.add(this);
   }
@@ -108,7 +108,7 @@ public final class BasicBlockNode implements CFGNode {
     if (next != null) {
       next.predecessors.remove(this);
     }
-    
+
     next = node;
     next.predecessors.add(this);
   }
@@ -131,12 +131,12 @@ public final class BasicBlockNode implements CFGNode {
   public boolean isBranch() {
     return this.branchTarget != null;
   }
-  
+
   @Override
   public void prepDotString() {
     BasicBlockNode.resetVisited();
   }
-  
+
   @Override
   public String getDotString() {
     if (visited.contains(this)) {
@@ -148,14 +148,14 @@ public final class BasicBlockNode implements CFGNode {
     if (next == null) {
       return me + " " + getDotStringLabel() + "\n";
     }
-    
+
     visited.add(this);
-    
+
     String nextStr = next.id.replace(".", "");
-    
+
     String s = me + " " + getDotStringLabel() + "\n"
                + me + " -> " + nextStr;
-    
+
     if (!isBranch()) {
       s += "\n";
       return s + next.getDotString();
@@ -167,11 +167,11 @@ public final class BasicBlockNode implements CFGNode {
       return s + next.getDotString() + branchTarget.getDotString();
     }
   }
-  
+
   public static void resetVisited() {
     visited.clear();
   }
-  
+
   private String getDotStringLabel() {
     String s = "[shape=none, margin=0, label=<<TABLE BORDER=\"0\" "
                + "CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">";
@@ -182,7 +182,7 @@ public final class BasicBlockNode implements CFGNode {
     s += "</TABLE>>]";
     return s;
   }
-  
+
   public String getMethod() {
     return method;
   }

@@ -4,7 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class CFGVisualizer {
-  
+
   public static void writeToDotFile(String filename, ControlFlowGraph cfg, boolean isLow) {
     try {
       FileWriter outfile = new FileWriter(filename);
@@ -15,7 +15,7 @@ public class CFGVisualizer {
       e.printStackTrace();
     }
   }
-  
+
   public static String makeDotFile(ControlFlowGraph cfg, boolean isLow) {
     String dotFile = "digraph G {\n";
     for (String method : cfg.getMethods()) {
@@ -28,8 +28,8 @@ public class CFGVisualizer {
     }
     dotFile += "}\n";
     return dotFile;
-    
+
   }
 
-  
+
 }
