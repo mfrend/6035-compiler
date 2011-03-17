@@ -9,7 +9,6 @@ public abstract class BasicStatement {
   protected BasicStatementType type;
 
   public enum BasicStatementType {
-    DUMMY,
     ARGUMENT,
     OP,
     CALL,
