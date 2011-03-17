@@ -19,7 +19,7 @@ public final class MockASTRoot extends ASTNode {
   public SymbolTable getSymbolTable() {
     return st;
   }
-  
+
   @Override
   public <T> T accept(ASTNodeVisitor<T> v) {
     return null;

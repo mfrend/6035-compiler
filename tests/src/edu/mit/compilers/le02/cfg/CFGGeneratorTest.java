@@ -18,12 +18,12 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
 public class CFGGeneratorTest extends TestCase {
   private SymbolTable symbolTable;
   private ASTNode root;
-  
+
   public void setUp() {
     symbolTable = new SymbolTable(null);
     root = new MockASTRoot(null, symbolTable);
   }
-  
+
   /**
    * Convert a linear fragment of nodes into a list of statements
    */
@@ -41,8 +41,8 @@ public class CFGGeneratorTest extends TestCase {
       }
 
       node = node.getNext();
-    } 
-    
+    }
+
     return list;
   }
 
@@ -57,39 +57,39 @@ public class CFGGeneratorTest extends TestCase {
                             MathOp.MULTIPLY
                           );
     setParents(node);
-    
-    
-    
+
+
+
     CFGFragment frag = node.accept(CFGGenerator.getInstance());
-    
+
     List<BasicStatement> list = getStatements(frag);
     assertEquals(2, list.size());
-    
+
     BasicStatement bs = list.get(0);
     assertTrue(bs instanceof OpStatement);
     OpStatement opSt = (OpStatement) bs;
-    
-    checkOpStatement(opSt, AsmOp.ADD, 
+
+    checkOpStatement(opSt, AsmOp.ADD,
                      Argument.makeArgument(1), Argument.makeArgument(2));
-    
+
     VariableLocation loc = opSt.getResult();
     bs = list.get(1);
     assertTrue(bs instanceof OpStatement);
     opSt = (OpStatement) bs;
-    
+
     checkOpStatement(opSt, AsmOp.MULTIPLY,
                      Argument.makeArgument(loc), Argument.makeArgument(4));
-    
+
     assertEquals(2, symbolTable.size());
-    
+
   }
   private void setParents(ASTNode node) {
     node.accept(new ASTParentVisitor());
     node.setParent(root);
   }
-  private void checkOpStatement(OpStatement opSt, 
+  private void checkOpStatement(OpStatement opSt,
                                 AsmOp op, Argument arg1, Argument arg2) {
-    
+
     assertEquals(op, opSt.getOp());
     assertEquals(arg1, opSt.getArg1());
     assertEquals(arg2, opSt.getArg2());

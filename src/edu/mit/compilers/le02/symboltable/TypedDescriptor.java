@@ -18,7 +18,7 @@ public abstract class TypedDescriptor extends Descriptor {
   }
 
   public VariableLocation getLocation() {
-	  return this.location;
+    return this.location;
   }
 
   @Override
