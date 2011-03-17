@@ -19,7 +19,7 @@ class Program {
         callout("printf", "j:%d k:%d\n", j, k);
       }
     }
-    // If left commented, exposes bug where loop breaks don't actually exit
+    // If left commented, exposed bug where loop breaks didn't actually exit
     // the loop due to no following block to jump to.
     // x = x + 1;
   }
