@@ -36,14 +36,12 @@ node, and if it is a branching node, it has a pointer to a branch target. If
 there are two edges out of the node, then we jump to the branch target if the 
 last operation evaluated to 0. In the first pass, each node represents one 
 of the following types of statements: an argument load, an assembly op, a call, 
-a jump, a dummy statement, or a NOP.
+a jump, or a NOP.
 A NOP is used whenever a method, if, or for block is empty. These statements
-are passed to assembly generation. Dummy statements and some argument loads are 
-only used to build the graph structure; they are removed in the second pass.  
-The second pass over the control-flow graph calculates basic block boundaries 
-and builds a graph where each node is a basic block, which contains a list of 
-the contained statements. This is done precisely by compressing any edges from
-nodes of out-degree 1 to nodes of in-degree 1.
+are passed to assembly generation. The second pass over the control-flow graph 
+calculates basic block boundaries and builds a graph where each node is a basic 
+block, which contains a list of the contained statements. This is done precisely 
+by compressing any edges from nodes of out-degree 1 to nodes of in-degree 1.
 
 We chose to build up to a basic block graph up in two passes rather than one
 because proved easier to generate small parts of the program at a time and
