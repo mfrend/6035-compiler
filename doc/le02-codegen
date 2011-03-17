@@ -30,19 +30,25 @@ We split the code generation phase of the project into three large parts:
 conversion of our high-level IR into a control flow graph (CFG), generation of
 assembly code, and development of an end-to-end testing infrastructure.
 
-We build a flattened control-flow graph from our intermediate representation in
-a single pass. 
-Each node in this graph has a pointer to the next node, and if it is a
-branching node, it has a pointer to a branch target. If there are two edges out
-of the node, then we jump to the branch target if the last operation evaluated
-to 0. In addition, each node of this graph contains one of the following types
-of statements:
-an argument load, an assembly op, a call, a jump, a dummy statement, or a NOP
+We build a control-flow graph from our intermediate representation in two 
+passes.  After each pass, each node in either graph has a pointer to the next 
+node, and if it is a branching node, it has a pointer to a branch target. If 
+there are two edges out of the node, then we jump to the branch target if the 
+last operation evaluated to 0. In the first pass, each node represents one 
+of the following types of statements: an argument load, an assembly op, a call, 
+a jump, a dummy statement, or a NOP.
 A NOP is used whenever a method, if, or for block is empty. These statements
-are passed to assembly generation. Dummy statements are only used to build the
-graph structure; they are not included in the basic block graph. Constructing
-the basic block graph is done in a second pass by compressing any edges from
+are passed to assembly generation. Dummy statements and some argument loads are 
+only used to build the graph structure; they are removed in the second pass.  
+The second pass over the control-flow graph calculates basic block boundaries 
+and builds a graph where each node is a basic block, which contains a list of 
+the contained statements. This is done precisely by compressing any edges from
 nodes of out-degree 1 to nodes of in-degree 1.
+
+We chose to build up to a basic block graph up in two passes rather than one
+because proved easier to generate small parts of the program at a time and
+link them together, than try to generate the basic block structure as we 
+parsed the AST.
 
 The CFG structure consists of a map of label names to basic blocks, a map of
 string names to strings, and a list of global fields. The entry point is
