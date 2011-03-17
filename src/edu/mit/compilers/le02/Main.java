@@ -359,6 +359,10 @@ public class Main {
       SymbolTableGenerator.generateSymbolTable(parent);
       MasterChecker.checkAll(parent);
 
+      if (!ErrorReporting.noErrors()) {
+        return false;
+      }
+
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
 
@@ -387,6 +391,10 @@ public class Main {
       SymbolTable st =
         SymbolTableGenerator.generateSymbolTable(parent).getSymbolTable();
       MasterChecker.checkAll(parent);
+
+      if (!ErrorReporting.noErrors()) {
+        return false;
+      }
 
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
