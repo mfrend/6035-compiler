@@ -54,6 +54,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return instance;
   }
 
+  /*
+   * Make a temporary variable at node's scope with an offset that does not
+   * conflict with any of node's, node's ancestors', or node's descendents'
+   * locals.
+   */
   private VariableLocation makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
     int offset = st.getNonconflictingOffset();
@@ -70,6 +75,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return getInstance().cfg;
   }
 
+  /* 
+   * Create a node which branches on the value of a boolean
+   * expression. The branchNodeHelper method for BoolOpNodes
+   * handles short circuiting.
+   */
   private SimpleCFGNode branchNode(ExpressionNode node,
       SimpleCFGNode t, SimpleCFGNode f) {
 
@@ -85,6 +95,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     if (node instanceof VariableNode) {
       frag = node.accept(this);
       Argument src = frag.getExit().getResult();
+      // Move the value of this variable into a register so it
+      // can be used for je
       BasicStatement st = new OpStatement(node, AsmOp.MOVE, src,
         Argument.makeArgument(new RegisterLocation(Register.R11)), null);
       SimpleCFGNode cfgNode = new SimpleCFGNode(st);
@@ -103,6 +115,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private SimpleCFGNode branchNodeHelper(BoolOpNode node,
       SimpleCFGNode t, SimpleCFGNode f) {
     if ((node.getOp() != BoolOp.AND) && (node.getOp() != BoolOp.OR)) {
+      // Equality and comparision operators do not need to be short circuited
       CFGFragment frag = node.accept(this);
       SimpleCFGNode exit = frag.getExit();
       exit.setBranchTarget(t);
@@ -113,14 +126,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
     boolean isAnd = (node.getOp() == BoolOp.AND);
 
-    // Short circuit right side
+    // Short circuit the right side if possible
     SimpleCFGNode b2 = branchNode(node.getRight(), t, f);
     SimpleCFGNode b1;
 
     if (isAnd) {
       b1 = branchNode(node.getLeft(), b2, f);
-    }
-    else {
+    } else {
       b1 = branchNode(node.getLeft(), t, b2);
     }
 
@@ -305,13 +317,15 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
   /*
-   * Expression visit methods
+   * Expression visit methods create an asm OpStatement for each unary
+   * or binary operation in the expression
    */
   @Override
   public CFGFragment visit(BoolOpNode node) {
     VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
 
     if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
+      // Create two nodes which will either move true or false into loc
       BasicStatement trueStmt = new OpStatement(node, AsmOp.MOVE,
           Argument.makeArgument(true), Argument.makeArgument(loc), null);
       BasicStatement falseStmt = new OpStatement(node, AsmOp.MOVE,
@@ -319,10 +333,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       SimpleCFGNode trueNode = new SimpleCFGNode(trueStmt);
       SimpleCFGNode falseNode = new SimpleCFGNode(falseStmt);
 
+      // Connect these nodes to a common exit
       SimpleCFGNode exit = new SimpleCFGNode(new NOPStatement(node));
       trueNode.setNext(exit);
       falseNode.setNext(exit);
 
+      // Create a node which branches on the expression - note that
+      // branchNode handles short circuiting
       SimpleCFGNode enter = branchNode(node, trueNode, falseNode);
       return new CFGFragment(enter, exit);
     }
@@ -335,7 +352,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     BasicStatement st = new OpStatement(node, getAsmOp(node),
         arg1, arg2, loc);
 
-    // Order statements as follows:
+    // Expressions are evaluated in the following order:
     // <left fragment> <right fragment> <bool op stmt>
     return leftFrag.link(rightFrag).append(new SimpleCFGNode(st));
   }
@@ -377,6 +394,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag.append(new SimpleCFGNode(s));
   }
 
+  /*
+   * Method calls and system calls are represented by a call node which
+   * can contain a list of arguments of arbtrary length.
+   */
   @Override
   public CFGFragment visit(MethodCallNode node) {
     VariableLocation loc = makeTemp(node, node.getType());
@@ -435,7 +456,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
 
   /*
-   * Location and Constant visit methods
+   * Location and Constant visit methods create an ArgumentStatement with
+   * the location or value of this expression
    */
   @Override
   public CFGFragment visit(VariableNode node) {
@@ -495,7 +517,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
 
   /*
-   * Utility methods
+   * Utility methods for converting Decaf ops to asm ops
    */
   private AsmOp getAsmOp(MathOpNode node) {
     switch(node.getOp()) {
