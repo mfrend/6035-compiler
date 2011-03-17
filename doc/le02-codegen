@@ -5,20 +5,20 @@ We used GitHub to organize our work and required a code review for each commit
 before it was merged; thus, at least two members of the group understand each
 line of code in detail and the entire group understands the overall design.
 Maria augmented the descriptors in the existing AST with memory location
-information, with collaboration from David.  Shaunak generated a control flow
+information, with collaboration from David. Shaunak generated a control flow
 graph for If, For, Break, Continue, and short circuited expressions, with
-collaboration from David.  David also expanded all remaining expressions into
-basic statements.  Liz then translated the low-level IR into assembly code.
+collaboration from David. David also expanded all remaining expressions into
+basic statements. Liz then translated the low-level IR into assembly code.
 Liz also wrote the GCC-calling infrastructure and the end to end testing
-infrastructure. Maria drafted the writeup, with collaboration from Shaunak.
-All members of the team worked on debugging, testing, and polishing the final
-product.
+infrastructure. Maria drafted the writeup, with collaboration from Shaunak and
+Liz. All members of the team worked on debugging, testing, and polishing the
+final product.
 
 ==Clarification/addition/assumptions==
-We went slightly beyond the scope of the project by assigning register
-locations to the first six arguments of a function.  While this should be
-contained in the optimization, we decided that we would rather not choose a
-memory layout convention which we knew we would want to change.  
+We chose to leave the first six arguments of a function in the mandated by the
+x86-64 calling convention instead of pushing them immediately to the stack.
+This resulted in some additional complexity since it meant that we had to
+save caller variables on function call rather than trusting the stack.
 
 We made an assumption regarding the following statement:
 A[function()]=B[function()]
@@ -46,7 +46,7 @@ nodes of out-degree 1 to nodes of in-degree 1.
 
 The CFG structure consists of a map of label names to basic blocks, a map of
 string names to strings, and a list of global fields. The entry point is
-defined as being the basic block named “main”. To generate this CFG,
+defined as being the basic block named 'main'. To generate this CFG,
 generic visitor classes designed for the semantic checker were used.
 Descriptors were first augmented in our existing AST to include memory
 information. Once symbol tables were generated, locations were then assigned to
@@ -57,15 +57,25 @@ flow element. Finally, all remaining expressions were expanded into basic
 statements.
 
 This CFG structure was then converted into assembly code by traversing each
-method’s control flow, adding any previously unseen basic blocks to the list
-of blocks to convert, and converting the (arg1 arg2 dest) statements of one
-block at a time into at&t syntax asm code.
+method's control flow, and converting blocks encountered to corresponding
+assembly sections. At the end of each BasicBlockNode, the next target and the
+branch target are added to the list of blocks to convert if they have not
+already been converted. The process of converting each BasicBlockNode involves
+converting the (arg1 arg2 dest) statements in the body of the block into at&t
+syntax asm code. Additionally, jmps are inserted to replicate the flows among
+named blocks into (conditional) jumps between named sections.
 
- Regarding our stack design, we decided that used registers should reside below
-the locals as it is easy to calculate the positions of locals on the stack when
-they are created, before we’ve determined which registers we’ll be using.
-We calculate the position of locals be pre-allocating them as we generate our
-CFG.  We use the standard stack frame layout, as follows:
+Boilerplate is inserted for method entry and returns, implicit returns are
+created if we fall off the end of a method without a return, the string table
+is populated, and the global symbols are reserved/initialized. Additionally,
+error handling and array bounds checks are added.
+
+Regarding our stack design, we decided that temporarily popped registers should
+reside below the locals as it is easy to calculate the positions of locals on
+the stack when they are created, before we've determined which registers we'll
+be using. We calculate the position of locals be pre-allocating them as we
+generate our CFG.  We use the standard stack frame layout, as follows:
+
 +------------------------+
 | ... previous frame ... |
 +------------------------+
@@ -77,7 +87,7 @@ CFG.  We use the standard stack frame layout, as follows:
 +------------------------+
 |      argument 7        | 	16(%rbp)
 +------------------------+
-|      return addr       | 	8(%rbp)
+|      return address    | 	8(%rbp)
 +------------------------+
 |      Old %rbp          | <- %rbp
 +------------------------+
@@ -89,13 +99,13 @@ CFG.  We use the standard stack frame layout, as follows:
 +------------------------+
 |      local N           |
 +------------------------+
-|      used register 1   |
+|      popped value 1    |
 +------------------------+
-|      used register 2   |
+|      popped value 2    |
 +------------------------+
-|      used register 3   |
+|      popped value 3    |
 +------------------------+
-|      used register 4   | <- %rsp 		
+|      popped value 4    | <- %rsp 		
 +------------------------+
 
 Finally, an end-to-end testing infrastructure was implemented to help us more
@@ -106,6 +116,23 @@ checkers for both the AST and the CFG, along with a number of unit tests.
 Our choice of using local positioning vs. argument positioning could effect us
 in the future due to the fact that it will limit the number of registers
 available to us for general use.
+
+We encountered problems most principally with the for loop - we were trying to
+determine whether its index variable should be allocated in the context of the
+block containing the for loop, or within its body. Bugs in the implementation
+resulted in the loop index counter colliding with a local variable in the loop
+causing loops to be executed fewer times than normal.
+
+Additionally, we discovered bugs where conditionals consisted of single
+variables that were not explicitly loaded in the CFG; we added code to convert
+references to conditionals without computation of the value of the conditional
+to actual loads of the conditional so that conditional branch could proceed.
+
+Finally, method calls were problematic - we failed to correctly initialize
+variables allocated from the stack, causing sporadic errors. We also
+accidentally reversed the wrong list of registers when computing the order in
+which to pop caller-saved registers off the stack, causing recursive call
+errors.
 
 ==Commented source code==
 See the README file for an index of what components are located in which

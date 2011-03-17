@@ -8,6 +8,7 @@ src
 |    the main entry point for the compiler
 |-edu/mit/compilers/le02/CompilerException.java
 |   the base SourceLocation-aware exception class for the compiler
+|----------------Previous phases----------------
 |-src/edu/mit/compilers/le02/SourceLocation.java
 |   encodes input locations for use in error reporting
 |-src/edu/mit/compilers/le02/ErrorReporting.java
@@ -40,10 +41,36 @@ src
 |   base AST walking class, used for semantic checks/symbol table generation
 |-src/edu/mit/compilers/le02/ast/AstPrettyPrinter.java
 |   pretty-prints the AST
+|----------------Codegen----------------
+|-src/edu/mit/compilers/cfg/*Statement.java
+|   Classes roughly encapsulating flattened low-level IR statements.
+|-src/edu/mit/compilers/cfg/CFGGenerator.java
+|   The first pass CFG generator that flattens the AST tree
+|-src/edu/mit/compilers/cfg/BasicBlockGraph.java
+|   The second pass CFG generator that merges adjacent non-branching blocks
+|   of BasicStatements into single BasicBlockNodes.
+|-src/edu/mit/compilers/cfg/CFGFragment.java
+|   A non-branching fragment of the control flow graph; mergeable
+|-src/edu/mit/compilers/cfg/*Argument.java
+|   Represents a single memory location or register location.
+|-src/edu/mit/compilers/cfg/BasicBlockNode.java
+|   Represents a single element of the final CFG structure. Contains a target
+|   and optionally a branch target and a conditional at the end to evaluate
+|-src/edu/mit/compilers/cfg/CFGVisualizer.java
+|   Generates a .dot graphviz file from a first or second-stage CFG.
+|-src/edu/mit/compilers/cfg/ControlFlowGraph.java
+|   Encapsulates a Control Flow Graph. Contains a list of functions and their
+|   start nodes, and all globals and strings.
+|-src/edu/mit/compilers/cfg/AsmWriter.java
+|   Transforms a second-stage ControlFlowGraph into a set of assembly
+|   instructions that are written to the output file.
 
 tests
 |-src/**/*.java
 |   unit tests for code
+|-tests/codegen
+|   contains .dcf programs to compile, and the expected output of those
+|   programs' output when compiled and run.
 |-tests/semantics
 |   contains legal and illegal programs, and verifies that they pass or fail
 |   semantic checks appropriately
