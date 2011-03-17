@@ -39,6 +39,9 @@ public class AsmWriter {
   private ControlFlowGraph cfg;
   private PrintStream ps;
 
+  /**
+   * Generates a new AsmWriter class and configures its inputs/outputs.
+   */
   public AsmWriter(ControlFlowGraph graph, SymbolTable table,
       PrintStream writer) {
     cfg = graph;
@@ -46,6 +49,9 @@ public class AsmWriter {
     st = table;
   }
 
+  /**
+   * Processes inputs and writes assembly instructions to the output.
+   */
   public void write() {
     ps.println("# Assembly output generated from " +
       CLI.getInputFilename());
@@ -54,57 +60,79 @@ public class AsmWriter {
     writeStrings();
     writeGlobals();
     writeMethods();
-    ps.println("array_oob_error_handler:");
+    writeLabel("array_oob_error_handler");
     generateImmediateExit("aoob_msg");
-    ps.println("nonvoid_noreturn_error_handler:");
+    writeLabel("nonvoid_noreturn_error_handler");
     generateImmediateExit("nonvoid_noreturn_msg");
   }
 
+  /**
+   * Writes the global string table, plus runtime error messages.
+   * Additionally, saves the names of each method so errors can refer to
+   * which method triggered them.
+   */
   public void writeStrings() {
+    // Strings are read-only data.
     ps.println(".section .rodata");
+
+    // Strings from the string table.
     for (String name : cfg.getAllStringData()) {
-      ps.println(name + ":");
+      writeLabel(name);
       StringNode node = cfg.getStringData(name);
       // We want the explicitly escaped version.
       ps.println("  .string " + node.toString());
     }
+
+    // Method names.
     for (String methodName : cfg.getMethods()) {
-      ps.println("." + methodName + "_name:");
+      writeLabel("." + methodName + "_name");
       ps.println("  .string \"" + methodName + "\"");
     }
-    ps.println(".aoob_msg:");
+
+    // Error handler messages.
+    writeLabel(".aoob_msg");
     ps.println(
       "  .string \"*** RUNTIME ERROR ***: " +
       "Array out of Bounds access in method \\\"%s\\\"\\n\"");
-    ps.println(".nonvoid_noreturn_msg:");
+    writeLabel(".nonvoid_noreturn_msg");
     ps.println(
         "  .string \"*** RUNTIME ERROR ***: " +
         "No return value from non-void method \\\"%s\\\"\\n\"");
   }
 
+  /**
+   * Reserves space for global variables and zero-initializes them.
+   */
   public void writeGlobals() {
     for (String globalName : cfg.getGlobals()) {
+      // Globals belong in bss (zero-initialized, writeable memory)
       ps.println(".bss");
-      ps.println(globalName + ":");
+      writeLabel(globalName);
       FieldDescriptor desc = cfg.getGlobal(globalName);
       switch (desc.getType()) {
        case INT:
        case BOOLEAN:
+        // Initialize a single 64-bit variable to 0.
         ps.println("  .quad 0");
         break;
        case BOOLEAN_ARRAY:
        case INT_ARRAY:
+        // Initialize the values in the array's memory range to zero.
         int size = desc.getLength();
         ps.println("  .rept " + size);
         ps.println("  .quad 0");
         ps.println("  .endr");
+        // Save the read-only size of the array for array index checks.
         ps.println(".section .rodata");
-        ps.println(globalName + "_size:");
+        writeLabel(globalName + "_size");
         ps.println("  .quad " + size);
       }
     }
   }
 
+  /**
+   * Writes the blocks associated with each method to the assembly file.
+   */
   public void writeMethods() {
     ps.println(".section .rodata");
     for (String methodName : cfg.getMethods()) {
@@ -116,12 +144,16 @@ public class AsmWriter {
       nodesToProcess.add(methodNode);
 
       while (!nodesToProcess.isEmpty()) {
-        // Pop top element to work with
+        // Pop top element of queue to process.
         BasicBlockNode node = nodesToProcess.remove(0);
+        // If we've seen this node already, we don't need to output it again.
         if (processed.contains(node)) {
           continue;
         }
+        // Mark this node processed.
         processed.add(node);
+
+        // If this node has successors, queue them for processing.
         BasicBlockNode branch = node.getBranchTarget();
         if (node.isBranch()) {
           nodesToProcess.add(branch);
@@ -131,7 +163,8 @@ public class AsmWriter {
           nodesToProcess.add(next);
         }
 
-        ps.println(node.getId() + ":");
+        // Start the output.
+        writeLabel(node.getId());
         for (BasicStatement stmt : node.getStatements()) {
           SourceLocation sl =
             SourceLocation.getSourceLocationWithoutDetails();
@@ -316,6 +349,10 @@ public class AsmWriter {
     }
   }
 
+  /**
+   * Performs a boolean comparison of two arguments.
+   * The arguments must have already been pulled out of memory.
+   */
   protected void processBoolean(AsmOp op, String arg1, String arg2,
       SourceLocation sl) {
     writeOp("xorq", Register.RAX, Register.RAX, sl);
@@ -345,6 +382,7 @@ public class AsmWriter {
     writeOp(cmovOp, Register.R10, Register.RAX, sl);
   }
 
+  /** Contains the registers used for argument passing in order. */
   public static Register[] argumentRegisters = {
     Register.RDI, // 1st arg
     Register.RSI, // 2nd arg
@@ -354,6 +392,10 @@ public class AsmWriter {
     Register.R9, // 6th arg
   };
 
+  /**
+   * Generates the header for a method entry.
+   * Requires the method descriptor and the number of locals to initialize.
+   */
   protected void generateMethodHeader(MethodDescriptor desc,
                                       int numLocals) {
     SourceLocation sl = desc.getSourceLocation();
@@ -372,17 +414,28 @@ public class AsmWriter {
     desc.markRegisterUsed(Register.R12);
   }
 
-  protected void generateImmediateExit(String errmsg_label) {
+  /**
+   * Displays the error message located at errmsgLabel, then immediately
+   * exits. Used for error handling.
+   * If R12 is set, it will be passed as the first format string argument.
+   */
+  protected void generateImmediateExit(String errmsgLabel) {
     SourceLocation sl = SourceLocation.getSourceLocationWithoutDetails();
     writeOp("xorq", Register.RAX, Register.RAX, sl);
     writeOp("movq", Register.R12, Register.RSI, sl);
-    writeOp("movq", "$." + errmsg_label, Register.RDI, sl);
+    writeOp("movq", "$." + errmsgLabel, Register.RDI, sl);
     writeOp("call", "printf", sl);
     writeOp("xorq", Register.RAX, Register.RAX, sl);
     writeOp("xorq", Register.RDI, Register.RDI, sl);
     writeOp("call", "exit", sl);
   }
 
+  /**
+   * Generates the method trailer for returning from a method.
+   * Detects if it's being asked to return without an argument and the
+   * method is non-void; if so, writes an error handler that will be called
+   * at runtime if we reach this ending by falling off the method end.
+   */
   protected void generateMethodReturn(String arg1, MethodDescriptor desc,
                                       SourceLocation sl) {
     if (desc.getType() != DecafType.VOID && arg1 == null) {
@@ -391,35 +444,42 @@ public class AsmWriter {
       return;
     }
     if (arg1 != null) {
-      writeOp("movq", arg1, Register.RAX, sl); // Save result in return register
+      // Save result in return register.
+      writeOp("movq", arg1, Register.RAX, sl);
     } else {
-      // Clear %rax to prevent confusion and non-zero exit codes.
+      // Clear %rax to prevent confusion and non-zero exit codes since
+      // decaf allows main() to be either void or int and system reads
+      // the return value regardless of whether main is void.
       writeOp("xorq", Register.RAX, Register.RAX, sl);
     }
 
+    // Restore callee-saved registers we used.
     List<Register> usedRegisters = desc.getUsedCalleeRegisters();
     Collections.reverse(usedRegisters);
     for (Register reg : usedRegisters) {
-      writeOp("popq", reg, sl); // Save registers used in method.
+      writeOp("popq", reg, sl);
     }
 
-    writeOp("leave", sl); // Push old base pointer.
+    // Push old base pointer.
+    writeOp("leave", sl);
     // Caller cleans up arguments.
     writeOp("ret", sl);
   }
 
+  /**
+   * Generates an outbound method call. Requires both the call statement
+   * for the current call and also the current method.
+   */
   protected void generateCall(CallStatement call,
       MethodDescriptor thisMethod) {
     SourceLocation sl = call.getNode().getSourceLoc();
-    // Push variables we need to save. for now, we can assume none need saving.
-    // because we are not using registers at all, but this won't fly in future
-    // We'd instead find the parent MethodDescriptor and use
+    // Push caller-saved variables that we've used and need to keep.
     List<Register> usedRegisters = thisMethod.getUsedCallerRegisters();
     for (Register r : usedRegisters) {
       writeOp("pushq", r, sl);
     }
 
-    // Push arguments
+    // Push arguments.
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
@@ -433,8 +493,10 @@ public class AsmWriter {
                 argumentRegisters[ii].toString(), sl);
       }
     }
+
     // Empty %rax to cope with printf vararg issue
     writeOp("xorq", Register.RAX, Register.RAX, sl);
+
     // Now we're ready to make the call.
     // This automatically pushes the return address; callee removes return addr
     writeOp("call", call.getMethodName(), sl);
@@ -455,6 +517,10 @@ public class AsmWriter {
       convertVariableLocation(call.getResult()), sl);
   }
 
+  /**
+   * Loads a variable from memory so that it can be used in subsequent
+   * computation. Saves to R10 if it's the first argument, R11 for the second.
+   */
   protected String prepareArgument(Argument arg,
       boolean first, String methodName, SourceLocation sl) {
     Register tempStorage = first ? Register.R10 : Register.R11;
@@ -466,7 +532,10 @@ public class AsmWriter {
         return "$0";
       }
      case CONST_INT:
-      // The immediate values in decaf cannot exceed 32 bits, so we are fine.
+      // The immediate values in decaf cannot exceed 32 bits, so we don't need
+      // to mov-shl-mov-add, but if we had to deal with 64 bits, we'd do this.
+      // We still need to load to registers since some ops only work on
+      // registers and not on immediates.
       writeOp("movq",
         "$" + ((ConstantArgument)arg).getInt(), tempStorage, sl);
       break;
@@ -479,12 +548,24 @@ public class AsmWriter {
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+
+      // Prepare the symbol and index names. The index needs recursive
+      // resolution since it might be a variable or another array.
+      // Symbol will always be a global address.
       String symbol = "." + ava.getLoc().getSymbol();
+      // The index will be a temporary register (either R10 or R11).
+      // As it happens, this is also our return register, but that's okay.
       String index = prepareArgument(ava.getIndex(), first, methodName, sl);
+
+      // Perform array bounds check. TODO(lizf): fix code duplication.
       writeOp("cmpq", index, symbol + "_size", sl);
       writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
       writeOp("jle", "array_oob_error_handler", sl);
+
+      // Use R12 to store the global name to access.
       writeOp("movq", "$" + symbol, Register.R12, sl);
+
+      // Finally, perform the indirection to look up from memory+offset.
       writeOp("movq",
         "(" + Register.R12 + ", " + index + ", 8)",
         tempStorage, sl);
@@ -493,6 +574,10 @@ public class AsmWriter {
     return "" + tempStorage;
   }
 
+  /**
+   * Saves a result to a variable or an array variable.
+   * Results are always located in R11 for now.
+   */
   protected void writeToArgument(Argument arg, String methodName,
       SourceLocation sl) {
     switch (arg.getType()) {
@@ -505,18 +590,35 @@ public class AsmWriter {
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
       assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+
+      // Prepare the symbol and index names. The index needs recursive
+      // resolution since it might be a variable or another array.
+      // Symbol will always be a global address.
       String symbol = "." + ava.getLoc().getSymbol();
+
+      // The index will be an unused register (R10).
+      // We don't want to use R11, which would clobber the result to return.
       String index = prepareArgument(ava.getIndex(), true, methodName, sl);
+
+      // Perform array bounds check. TODO(lizf): fix code duplication.
       writeOp("cmpq", index, symbol + "_size", sl);
       writeOp("movq", "$." + methodName + "_name", Register.R12, sl);
       writeOp("jle", "array_oob_error_handler", sl);
+
+      // Use R12 to store the global name to access.
       writeOp("movq", "$" + symbol, Register.R12, sl);
+
+      // Finally, perform the indirection to save to memory+offset.
       writeOp("movq", Register.R11,
         "(" + Register.R12 + ", " + index + ", 8)", sl);
       break;
     }
   }
 
+  /**
+   * Converts a VariableLocation object to the corresponding ASM string
+   * required to look it up as an op's argument.
+   */
   protected String convertVariableLocation(VariableLocation loc) {
     switch (loc.getLocationType()) {
      case GLOBAL:
@@ -533,11 +635,12 @@ public class AsmWriter {
     return "";
   }
 
+  // Methods below are utility methods to ease repetitive casting.
   protected void writeOp(String opcode,
                          SourceLocation loc) {
     ps.println("  " +
         opcode +
-        " # " + getOriginalSource(loc));
+        getOriginalSource(loc));
   }
 
   protected void writeOp(String opcode,
@@ -552,7 +655,7 @@ public class AsmWriter {
     ps.println("  " +
         opcode + " " +
         first_operand +
-        " # " + getOriginalSource(loc));
+        getOriginalSource(loc));
   }
 
   protected void writeOp(String opcode,
@@ -574,6 +677,9 @@ public class AsmWriter {
     writeOp(opcode, first_operand, "" + second_operand, loc);
   }
 
+  /**
+   * Writes an operation to the ASM output stream.
+   */
   protected void writeOp(String opcode,
                          String first_operand,
                          String second_operand,
@@ -582,13 +688,19 @@ public class AsmWriter {
       opcode + " " +
       first_operand + ", " +
       second_operand +
-      " # " + getOriginalSource(loc));
+      getOriginalSource(loc));
   }
 
+  /**
+   * Writes a label to the ASM output stream.
+   */
   protected void writeLabel(String label) {
     ps.println(label + ":");
   }
 
+  /**
+   * Attempts to pull the original source line corresponding to an ASM op.
+   */
   protected static String getOriginalSource(SourceLocation loc) {
     if (loc.getLine() >= 0 && loc.getCol() >= 0 &&
         !loc.getFilename().equals(CLI.STDIN)) {
@@ -601,7 +713,7 @@ public class AsmWriter {
           lineContents = reader.readLine();
           line++;
         }
-        return lineContents.substring(0, loc.getCol()) + "@" +
+        return " # " + lineContents.substring(0, loc.getCol()) + "@" +
           lineContents.substring(loc.getCol());
       } catch (IOException ioe) {
         return "";
