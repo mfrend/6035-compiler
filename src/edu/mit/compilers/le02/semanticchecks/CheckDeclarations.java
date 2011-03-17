@@ -91,7 +91,8 @@ public class CheckDeclarations extends ASTNodeVisitor<Boolean> {
             "Indexing into non-array " + node.getName()));
       }
 
-      if (node.getIndex().getType() != DecafType.INT) {
+      if (DecafType.simplify(node.getIndex().getType())
+          != DecafType.INT) {
         ErrorReporting.reportError(
           new SemanticException(node.getIndex().getSourceLoc(),
             "Non-integer index into array " + node.getName()));
