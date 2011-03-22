@@ -6,11 +6,16 @@ import java.util.ArrayList;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayDeclNode;
+import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
+import edu.mit.compilers.le02.ast.BooleanNode;
 import edu.mit.compilers.le02.ast.ClassNode;
+import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.FieldDeclNode;
 import edu.mit.compilers.le02.ast.ForNode;
+import edu.mit.compilers.le02.ast.IntNode;
 import edu.mit.compilers.le02.ast.MethodDeclNode;
+import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.ast.StatementNode;
 import edu.mit.compilers.le02.ast.VarDeclNode;
 import edu.mit.compilers.le02.DecafType;
@@ -154,6 +159,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     for (VarDeclNode v : node.getDecls()) {
       localSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
                            v.getSourceLoc());
+      addLocalInitializer(node, v);
     }
 
     // Create the local symbol table for any nested blocks
@@ -164,6 +170,22 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     currParent = parent;
     node.setSymbolTable(localSymbolTable);
     return null;
+  }
+
+  private static void addLocalInitializer(BlockNode node, VarDeclNode decl) {
+    ArrayList<StatementNode> statements = 
+        new ArrayList<StatementNode>(node.getStatements());
+    ScalarLocationNode loc = 
+        new ScalarLocationNode(decl.getSourceLoc(), decl.getName());
+
+    ExpressionNode val = new IntNode(decl.getSourceLoc(), 0);
+    if (decl.getType() == DecafType.BOOLEAN) {
+      val = new BooleanNode(decl.getSourceLoc(), false);
+    }
+
+    AssignNode init = new AssignNode(decl.getSourceLoc(), loc, val);
+    statements.add(0, init);
+    node.setStatements(statements);
   }
 
   @Override

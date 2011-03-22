@@ -7,6 +7,7 @@ import edu.mit.compilers.le02.Util;
 import edu.mit.compilers.le02.ast.ArrayDeclNode;
 import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
+import edu.mit.compilers.le02.ast.BooleanNode;
 import edu.mit.compilers.le02.ast.BreakNode;
 import edu.mit.compilers.le02.ast.ClassNode;
 import edu.mit.compilers.le02.ast.FieldDeclNode;
@@ -148,7 +149,16 @@ public class SymbolTableGeneratorTest extends TestCase {
     MethodDescriptor md = (MethodDescriptor) mst.get("method1",
                                                      SymbolType.EITHER);
     checkTypedDesc(md, "method1", DecafType.INT);
-    BlockNode node = (BlockNode) md.getCode().getStatements().get(1);
+
+    AssignNode local1assign = (AssignNode) md.getCode().getStatements().get(0);
+    assert(local1assign.getLoc().getName() == "local1");
+    assert(((BooleanNode) local1assign.getValue()).getValue() == false);
+
+    AssignNode local2assign = (AssignNode) md.getCode().getStatements().get(1);
+    assert(local2assign.getLoc().getName() == "local2");
+    assert(((IntNode) local2assign.getValue()).getValue() == 0);
+    
+    BlockNode node = (BlockNode) md.getCode().getStatements().get(3);
     SymbolTable lst = node.getSymbolTable();
     assertNotNull(lst);
 
@@ -162,7 +172,7 @@ public class SymbolTableGeneratorTest extends TestCase {
     ld = (LocalDescriptor) lst.get("local4", SymbolType.EITHER);
     checkTypedDesc(ld, "local4", DecafType.INT);
 
-    ForNode f = (ForNode) md.getCode().getStatements().get(2);
+    ForNode f = (ForNode) md.getCode().getStatements().get(4);
     lst = f.getBody().getSymbolTable();
     assertNotNull(lst);
     ld = (LocalDescriptor) lst.get("forVar", SymbolType.EITHER);
