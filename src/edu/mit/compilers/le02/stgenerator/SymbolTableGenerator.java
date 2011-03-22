@@ -121,7 +121,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     isParam = false;
 
     // Create the local table for this block and any nested blocks
-    node.getBody().accept(this);
+    this.handleBlock(node.getBody());
 
     MethodDescriptor desc =
       new MethodDescriptor(parent, node.getName(), node.getType(),
@@ -151,14 +151,20 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
 
   @Override
   public Descriptor visit(BlockNode node) {
-    SymbolTable parent = new SymbolTable(currParent);
+    SymbolTable parent = currParent;
+    currParent = new SymbolTable(parent);
 
-    // Create and fill localSymbolTable
-    SymbolTable localSymbolTable = new SymbolTable(parent);
-    currParent = localSymbolTable;
+    this.handleBlock(node);
+
+    currParent = parent;
+    return null;
+  }
+
+  private void handleBlock(BlockNode node) {
+    // Fill the current symbol table with the block locals
     for (VarDeclNode v : node.getDecls()) {
-      localSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
-                           v.getSourceLoc());
+      currParent.put(v.getName(), (LocalDescriptor) v.accept(this),
+                     v.getSourceLoc());
       addLocalInitializer(node, v);
     }
 
@@ -167,9 +173,7 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
       s.accept(this);
     }
 
-    currParent = parent;
-    node.setSymbolTable(localSymbolTable);
-    return null;
+    node.setSymbolTable(currParent);
   }
 
   private static void addLocalInitializer(BlockNode node, VarDeclNode decl) {
