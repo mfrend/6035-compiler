@@ -204,14 +204,8 @@ public class SymbolTable {
       return 0;
     }
 
-    Comparator<LocalDescriptor> c = new Comparator<LocalDescriptor>() {
-      public int compare(LocalDescriptor d1, LocalDescriptor d2) {
-        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
-      }
-    };
-
     // Return minimum because the local offsets are negative
-    return Collections.min(locals, c).getLocation().getOffset();
+    return Collections.min(locals).getLocation().getOffset();
   }
 
   /**

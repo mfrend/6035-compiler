@@ -54,7 +54,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return instance;
   }
 
-  /*
+  /**
    * Make a temporary variable at node's scope with an offset that does not
    * conflict with any of node's, node's ancestors', or node's descendents'
    * locals.
@@ -75,7 +75,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return getInstance().cfg;
   }
 
-  /* 
+  /**
    * Create a node which branches on the value of a boolean
    * expression. The branchNodeHelper method for BoolOpNodes
    * handles short circuiting.
@@ -394,7 +394,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return frag.append(new SimpleCFGNode(s));
   }
 
-  /*
+  /**
    * Method calls and system calls are represented by a call node which
    * can contain a list of arguments of arbtrary length.
    */

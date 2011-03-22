@@ -18,7 +18,6 @@ public class CheckMethodCalls extends ASTNodeVisitor<Boolean> {
   /** Holds the CheckMethodCalls singleton. */
   private static CheckMethodCalls instance;
   private SymbolTable methodTable;
-  private int methodIndex;
   private Set<String> processedMethods;
 
   /**

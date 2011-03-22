@@ -1,6 +1,5 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 
 public final class NOPStatement extends BasicStatement {
