@@ -102,40 +102,29 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     int i = 0;
 
     // Create and fill paramSymbolTable
-    SymbolTable methodSymbolTable = new SymbolTable(parent);
+    currParent = new SymbolTable(parent);
     List<String> params = new ArrayList<String>();
-    currParent = methodSymbolTable;
     isParam = true;
     for (VarDeclNode v : node.getParams()) {
       ParamDescriptor param = (ParamDescriptor)v.accept(this);
       param.setIndex(i);
       i++;
 
-      methodSymbolTable.put(v.getName(), param, v.getSourceLoc());
+      currParent.put(v.getName(), param, v.getSourceLoc());
       params.add(v.getName());
     }
     isParam = false;
 
-    // Create the local table for this block (and any nested blocks)
-    BlockNode body = node.getBody();
-    // Create and fill method locals
-    for (VarDeclNode v : body.getDecls()) {
-      methodSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
-                           v.getSourceLoc());
-    }
+    // Create the local table for this block and any nested blocks
+    node.getBody().accept(this);
 
-    // Create the local symbol table for any nested blocks
-    for (StatementNode s : body.getStatements()) {
-      s.accept(this);
-    }
-    body.setSymbolTable(methodSymbolTable);
-
-    currParent = parent;
     MethodDescriptor desc =
       new MethodDescriptor(parent, node.getName(), node.getType(),
-                           methodSymbolTable, params, node.getBody(),
+                           currParent, params, node.getBody(),
                            node.getSourceLoc());
     node.setDescriptor(desc);
+
+    currParent = parent;
     return desc;
   }
 
