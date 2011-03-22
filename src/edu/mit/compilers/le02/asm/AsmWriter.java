@@ -455,10 +455,6 @@ public class AsmWriter {
                                       int numLocals) {
     SourceLocation sl = desc.getSourceLocation();
     writeOp("enter", "$" + numLocals, "$0", sl);
-    for (int ii = -8; ii >= -(numLocals + 8); ii -= 8) {
-      writeOp("movq", "$0", convertVariableLocation(
-        new StackLocation(ii)), sl);
-    }
 
     for (Register reg : desc.getUsedCalleeRegisters()) {
       writeOp("pushq", reg, sl); // Save registers used in method.
