@@ -177,8 +177,12 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
   }
 
   private static void addLocalInitializer(BlockNode node, VarDeclNode decl) {
-    ArrayList<StatementNode> statements =
-        new ArrayList<StatementNode>(node.getStatements());
+    ArrayList<StatementNode> statements;
+    if (node.getStatements() instanceof ArrayList) {
+      statements = (ArrayList<StatementNode>) node.getStatements();
+    } else {
+      statements = new ArrayList<StatementNode>(node.getStatements());
+    }
     ScalarLocationNode loc =
         new ScalarLocationNode(decl.getSourceLoc(), decl.getName());
 
