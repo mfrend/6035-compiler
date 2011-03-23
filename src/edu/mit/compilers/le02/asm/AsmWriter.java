@@ -165,187 +165,242 @@ public class AsmWriter {
 
         // Start the output.
         writeLabel(node.getId());
+
+        // Process each statement.
         for (BasicStatement stmt : node.getStatements()) {
-          SourceLocation sl =
-            SourceLocation.getSourceLocationWithoutDetails();
-          if (stmt.getNode() != null) {
-            sl = stmt.getNode().getSourceLoc();
-          }
-
-          if (stmt instanceof OpStatement) {
-            // Default to saving results in R10; we can pull results from a
-            // different register if the CPU spec mandates it.
-            Register resultReg = Register.R11;
-            OpStatement op = (OpStatement)stmt;
-
-            // prepareArgument loads an argument from memory/another register
-            // into R10 or R11 and returns the reg it stored the argument in.
-            String arg1 = "<error>";
-            if (op.getArg1() != null) {
-              arg1 = prepareArgument(op.getArg1(), true, methodName, sl);
-            }
-            String arg2 = "<error>";
-            if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
-              arg2 = prepareArgument(op.getArg2(), false, methodName, sl);
-            }
-
-            switch(op.getOp()) {
-             case MOVE:
-              arg2 = "" + Register.R11;
-              writeOp("movq", arg1, arg2, sl);
-              writeToArgument(op.getArg2(), methodName, sl);
-              // Continue here because we don't need to move result again
-              continue;
-             case ADD:
-              writeOp("addq", arg1, arg2, sl);
-              break;
-             case SUBTRACT:
-              writeOp("subq", arg2, arg1, sl);
-              resultReg = Register.R10;
-              break;
-             case MULTIPLY:
-              writeOp("imulq", arg1, arg2, sl);
-              break;
-              // Result in arg2 (R11)
-             case DIVIDE:
-             case MODULO:
-              writeOp("movq", arg1, "%rax", sl);
-              writeOp("pushq", "%rdx", sl);
-              writeOp("idivq", arg2, sl);
-              if (op.getOp() == AsmOp.DIVIDE) {
-                // RDX is fixed to hold the quotient.
-                resultReg = Register.RAX;
-              } else {
-                // RDX is fixed to hold the remainder.
-                resultReg = Register.RDX;
-              }
-              break;
-             case UNARY_MINUS:
-              writeOp("negq", arg1, sl);
-              resultReg = Register.R10;
-              break;
-             case NOT:
-              writeOp("xorq", "$1", arg1, sl);
-              resultReg = Register.R10;
-              break;
-             case EQUAL:
-             case NOT_EQUAL:
-             case LESS_THAN:
-             case LESS_OR_EQUAL:
-             case GREATER_THAN:
-             case GREATER_OR_EQUAL:
-              processBoolean(op.getOp(), arg1, arg2, sl);
-              resultReg = Register.RAX;
-              break;
-             case RETURN:
-              if (op.getArg1() != null) {
-                generateMethodReturn(arg1, thisMethod, sl);
-              } else {
-                generateMethodReturn(null, thisMethod, sl);
-              }
-              continue;
-             case ENTER:
-              generateMethodHeader(thisMethod,
-                ((ConstantArgument)op.getArg1()).getInt());
-              continue;
-             default:
-              ErrorReporting.reportError(new AsmException(
-                sl, "Unknown opcode."));
-              continue;
-            }
-            if (op.getResult() != null) {
-              writeOp("movq", resultReg,
-                convertVariableLocation(op.getResult()), sl);
-            } else {
-              ps.println("  /* Ignoring result assignment of conditional. */");
-            }
-            if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
-              writeOp("popq", "%rdx", sl);
-            }
-          } else if (stmt instanceof CallStatement) {
-            generateCall((CallStatement)stmt, thisMethod);
-          } else if (stmt instanceof NOPStatement) {
-            // This is a nop; ignore it and continue onwards.
-            continue;
-          } else {
-            // We have a DummyStatement or ArgumentStatement that made it to
-            // ASM generation.
-            ErrorReporting.reportError(new AsmException(
-              sl, "Low level statement found at codegen time"));
-            continue;
-          }
+          processStatement(stmt, methodName, thisMethod);
         }
+
+        // Generate an appropriate SourceLocation for the block trailer.
         SourceLocation loc = SourceLocation.getSourceLocationWithoutDetails();
         if (node.getLastStatement() != null &&
             node.getLastStatement().getNode() != null) {
           loc = node.getLastStatement().getNode().getSourceLoc();
         }
+
+        // Write the block trailer. There are three cases to consider:
+        // If the node is a branch, write the branch trailer.
+        // Otherwise, if there's a next node, write an unconditional jump.
+        // Finally, if there's no next node, insert an implicit return.
         if (node.isBranch()) {
-          // The last operation carried out will be a conditional.
-          // Find out what that conditional was.
-          if (node.getConditional() instanceof OpStatement) {
-            String conditionalJump = "";
-            Register resultRegister = null;
-            OpStatement condition = (OpStatement)node.getConditional();
-            switch (condition.getOp()) {
-             case EQUAL:
-              conditionalJump = "je";
-              break;
-             case NOT_EQUAL:
-              conditionalJump = "jne";
-              break;
-             case LESS_THAN:
-              conditionalJump = "jl";
-              break;
-             case LESS_OR_EQUAL:
-              conditionalJump = "jle";
-              break;
-             case GREATER_THAN:
-              conditionalJump = "jg";
-              break;
-             case GREATER_OR_EQUAL:
-              conditionalJump = "jge";
-              break;
-             case NOT:
-              resultRegister = Register.R10;
-              break;
-             case MOVE:
-              resultRegister = Register.R11;
-              break;
-             default:
-               ErrorReporting.reportError(new AsmException(
-                 loc, "Bad opcode for conditional"));
-               continue;
-            }
-            if (conditionalJump != "") {
-              writeOp(conditionalJump, branch.getId(), loc);
-            } else {
-              writeOp("movq", "$1", Register.R12, loc);
-              writeOp("cmpq", Register.R12, resultRegister, loc);
-              writeOp("je", branch.getId(), loc);
-            }
-          } else {
-            // We just came back from a call.
-            writeOp("movq", "$1", Register.R12, loc);
-            writeOp("cmpq", Register.R12, Register.RAX, loc);
-            writeOp("je", branch.getId(), loc);
-          }
-          if (next != null) {
-            writeOp("jmp", next.getId(), loc);
-          } else {
-            // insert an implicit return.
-            MethodDescriptor returnMethod = st.getMethod(methodName);
-            generateMethodReturn(null, returnMethod, loc);
-          }
+          processBranch(node, branch, next, methodName, loc);
         } else if (next != null) {
           writeOp("jmp", next.getId(), loc);
         } else if (!(node.getLastStatement() instanceof OpStatement &&
             ((OpStatement)node.getLastStatement()).getOp() == AsmOp.RETURN)) {
-          // insert an implicit return.
+          // Insert an implicit return.
           MethodDescriptor returnMethod = st.getMethod(methodName);
           generateMethodReturn(null, returnMethod, loc);
         }
       }
+    }
+  }
+
+  /**
+   * Writes a trailer for the current block, assuming ends in a branch.
+   */
+  protected void processBranch(BasicBlockNode node, BasicBlockNode branch,
+      BasicBlockNode next, String methodName, SourceLocation loc) {
+    // If the last operation carried out was a conditional, the flags from
+    // that comparison will still be set; we just need to retrieve the op
+    // so we can perform the correct jump using those flags.
+    // It's also possible it was a NOT which leaves its return value to R10,
+    // or that a MOVE was executed specially to retrieve a value from memory
+    // or a register; if this is the case, the conditional value lives in R11.
+    String conditionalJump = "";
+    Register resultRegister = null;
+
+    if (node.getConditional() instanceof OpStatement) {
+      OpStatement condition = (OpStatement)node.getConditional();
+      switch (condition.getOp()) {
+       case EQUAL:
+        conditionalJump = "je";
+        break;
+       case NOT_EQUAL:
+        conditionalJump = "jne";
+        break;
+       case LESS_THAN:
+        conditionalJump = "jl";
+        break;
+       case LESS_OR_EQUAL:
+        conditionalJump = "jle";
+        break;
+       case GREATER_THAN:
+        conditionalJump = "jg";
+        break;
+       case GREATER_OR_EQUAL:
+        conditionalJump = "jge";
+        break;
+       case NOT:
+        // NOT leaves value in R10.
+        resultRegister = Register.R10;
+        break;
+       case MOVE:
+        // MOV leaves value in R11.
+        resultRegister = Register.R11;
+        break;
+       default:
+        // Something has gone wrong. This shouldn't happen.
+        ErrorReporting.reportError(new AsmException(
+          loc, "Bad opcode for conditional"));
+        return;
+      }
+    } else {
+      // We just came back from a call e.g. if (foo()) [...]
+      // The return value of the call will still be in RAX.
+      resultRegister = Register.RAX;
+    }
+
+    // If we had a CMP earlier, perform the conditional jump now.
+    // Otherwise, we need to compare the boolean to true and jump if it is
+    // in fact true ($1).
+    if (conditionalJump != "") {
+      writeOp(conditionalJump, branch.getId(), loc);
+    } else {
+      writeOp("movq", "$1", Register.R12, loc);
+      writeOp("cmpq", Register.R12, resultRegister, loc);
+      writeOp("je", branch.getId(), loc);
+    }
+
+    // Write the alternate unconditional jump to the next block since by this
+    // point we've failed the conditional jump check.
+    if (next != null) {
+      writeOp("jmp", next.getId(), loc);
+    } else {
+      // Insert an implicit return, since there are no more basicblocks left
+      // in this method to jump to.
+      MethodDescriptor returnMethod = st.getMethod(methodName);
+      generateMethodReturn(null, returnMethod, loc);
+    }
+  }
+
+  /**
+   * Writes a statement from the block to the ASM output stream.
+   */
+  protected void processStatement(BasicStatement stmt, String methodName,
+      MethodDescriptor thisMethod) {
+    // Save the location of the statement we are processing, if known.
+    SourceLocation sl =
+      SourceLocation.getSourceLocationWithoutDetails();
+    if (stmt.getNode() != null) {
+      sl = stmt.getNode().getSourceLoc();
+    }
+
+    if (stmt instanceof OpStatement) {
+      processOpStatement((OpStatement)stmt, methodName, thisMethod, sl);
+    } else if (stmt instanceof CallStatement) {
+      generateCall((CallStatement)stmt, thisMethod);
+    } else if (stmt instanceof NOPStatement) {
+      // This is a nop; ignore it and continue onwards.
+      return;
+    } else {
+      // We have an ArgumentStatement that made it to ASM generation.
+      // These are supposed to be filtered out during CFG pass 2.
+      ErrorReporting.reportError(new AsmException(
+        sl, "Low level statement found at codegen time"));
+      return;
+    }
+  }
+
+  /**
+   * Processes a single OpStatement into assembly instructions.
+   */
+  protected void processOpStatement(OpStatement op, String methodName,
+      MethodDescriptor thisMethod, SourceLocation sl) {
+    // Default to saving results in R10; we can pull results from a
+    // different register if the CPU spec mandates it.
+    Register resultReg = Register.R11;
+
+    // prepareArgument loads an argument from memory/another register
+    // into R10 or R11 and returns the reg it stored the argument in.
+    String arg1 = "<error>";
+    if (op.getArg1() != null) {
+      arg1 = prepareArgument(op.getArg1(), true, methodName, sl);
+    }
+    String arg2 = "<error>";
+    if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
+      arg2 = prepareArgument(op.getArg2(), false, methodName, sl);
+    }
+
+    switch(op.getOp()) {
+     case MOVE:
+      arg2 = "" + Register.R11;
+      writeOp("movq", arg1, arg2, sl);
+      writeToArgument(op.getArg2(), methodName, sl);
+      // Stop here because we don't need to move result again.
+      return;
+     case ADD:
+      writeOp("addq", arg1, arg2, sl);
+      break;
+     case SUBTRACT:
+      writeOp("subq", arg2, arg1, sl);
+      // Subtract reverses the order of its arguments, so arg1 contains the
+      // modified result.
+      resultReg = Register.R10;
+      break;
+     case MULTIPLY:
+      writeOp("imulq", arg1, arg2, sl);
+      break;
+     case DIVIDE:
+     case MODULO:
+      // Division needs to use RAX for the dividend, and overwrites RAX/RDX
+      // to store its outputs.
+      writeOp("movq", arg1, "%rax", sl);
+      // Unfortunately, RDX may contain the first argument to the function.
+      // We need to push it to memory to save it.
+      writeOp("pushq", "%rdx", sl);
+      writeOp("idivq", arg2, sl);
+      if (op.getOp() == AsmOp.DIVIDE) {
+        // RDX is fixed to hold the quotient.
+        resultReg = Register.RAX;
+      } else {
+        // RDX is fixed to hold the remainder.
+        resultReg = Register.RDX;
+      }
+      break;
+     case UNARY_MINUS:
+      // Unary operations use R10 for input and output.
+      writeOp("negq", arg1, sl);
+      resultReg = Register.R10;
+      break;
+     case NOT:
+      writeOp("xorq", "$1", arg1, sl);
+      resultReg = Register.R10;
+      break;
+     case EQUAL:
+     case NOT_EQUAL:
+     case LESS_THAN:
+     case LESS_OR_EQUAL:
+     case GREATER_THAN:
+     case GREATER_OR_EQUAL:
+      processBoolean(op.getOp(), arg1, arg2, sl);
+      resultReg = Register.RAX;
+      break;
+     case RETURN:
+      if (op.getArg1() != null) {
+        generateMethodReturn(arg1, thisMethod, sl);
+      } else {
+        generateMethodReturn(null, thisMethod, sl);
+      }
+      return;
+     case ENTER:
+      generateMethodHeader(thisMethod,
+        ((ConstantArgument)op.getArg1()).getInt());
+      return;
+     default:
+      ErrorReporting.reportError(new AsmException(
+        sl, "Unknown opcode."));
+      return;
+    }
+    if (op.getResult() != null) {
+      writeOp("movq", resultReg,
+        convertVariableLocation(op.getResult()), sl);
+    } else {
+      ps.println("  /* Ignoring result assignment of conditional. */");
+    }
+    if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
+      // Restore the register we displaced for division/modulo.
+      writeOp("popq", "%rdx", sl);
     }
   }
 
@@ -400,10 +455,6 @@ public class AsmWriter {
                                       int numLocals) {
     SourceLocation sl = desc.getSourceLocation();
     writeOp("enter", "$" + numLocals, "$0", sl);
-    for (int ii = -8; ii >= -(numLocals + 8); ii -= 8) {
-      writeOp("movq", "$0", convertVariableLocation(
-        new StackLocation(ii)), sl);
-    }
 
     for (Register reg : desc.getUsedCalleeRegisters()) {
       writeOp("pushq", reg, sl); // Save registers used in method.

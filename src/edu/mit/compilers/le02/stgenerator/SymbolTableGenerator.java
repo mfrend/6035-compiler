@@ -6,11 +6,16 @@ import java.util.ArrayList;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayDeclNode;
+import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
+import edu.mit.compilers.le02.ast.BooleanNode;
 import edu.mit.compilers.le02.ast.ClassNode;
+import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.FieldDeclNode;
 import edu.mit.compilers.le02.ast.ForNode;
+import edu.mit.compilers.le02.ast.IntNode;
 import edu.mit.compilers.le02.ast.MethodDeclNode;
+import edu.mit.compilers.le02.ast.ScalarLocationNode;
 import edu.mit.compilers.le02.ast.StatementNode;
 import edu.mit.compilers.le02.ast.VarDeclNode;
 import edu.mit.compilers.le02.DecafType;
@@ -102,40 +107,29 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
     int i = 0;
 
     // Create and fill paramSymbolTable
-    SymbolTable methodSymbolTable = new SymbolTable(parent);
+    currParent = new SymbolTable(parent);
     List<String> params = new ArrayList<String>();
-    currParent = methodSymbolTable;
     isParam = true;
     for (VarDeclNode v : node.getParams()) {
       ParamDescriptor param = (ParamDescriptor)v.accept(this);
       param.setIndex(i);
       i++;
 
-      methodSymbolTable.put(v.getName(), param, v.getSourceLoc());
+      currParent.put(v.getName(), param, v.getSourceLoc());
       params.add(v.getName());
     }
     isParam = false;
 
-    // Create the local table for this block (and any nested blocks)
-    BlockNode body = node.getBody();
-    // Create and fill method locals
-    for (VarDeclNode v : body.getDecls()) {
-      methodSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
-                           v.getSourceLoc());
-    }
+    // Create the local table for this block and any nested blocks
+    this.handleBlock(node.getBody());
 
-    // Create the local symbol table for any nested blocks
-    for (StatementNode s : body.getStatements()) {
-      s.accept(this);
-    }
-    body.setSymbolTable(methodSymbolTable);
-
-    currParent = parent;
     MethodDescriptor desc =
       new MethodDescriptor(parent, node.getName(), node.getType(),
-                           methodSymbolTable, params, node.getBody(),
+                           currParent, params, node.getBody(),
                            node.getSourceLoc());
     node.setDescriptor(desc);
+
+    currParent = parent;
     return desc;
   }
 
@@ -157,14 +151,21 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
 
   @Override
   public Descriptor visit(BlockNode node) {
-    SymbolTable parent = new SymbolTable(currParent);
+    SymbolTable parent = currParent;
+    currParent = new SymbolTable(parent);
 
-    // Create and fill localSymbolTable
-    SymbolTable localSymbolTable = new SymbolTable(parent);
-    currParent = localSymbolTable;
+    this.handleBlock(node);
+
+    currParent = parent;
+    return null;
+  }
+
+  private void handleBlock(BlockNode node) {
+    // Fill the current symbol table with the block locals
     for (VarDeclNode v : node.getDecls()) {
-      localSymbolTable.put(v.getName(), (LocalDescriptor) v.accept(this),
-                           v.getSourceLoc());
+      currParent.put(v.getName(), (LocalDescriptor) v.accept(this),
+                     v.getSourceLoc());
+      addLocalInitializer(node, v);
     }
 
     // Create the local symbol table for any nested blocks
@@ -172,9 +173,27 @@ public class SymbolTableGenerator extends ASTNodeVisitor<Descriptor> {
       s.accept(this);
     }
 
-    currParent = parent;
-    node.setSymbolTable(localSymbolTable);
-    return null;
+    node.setSymbolTable(currParent);
+  }
+
+  private static void addLocalInitializer(BlockNode node, VarDeclNode decl) {
+    ArrayList<StatementNode> statements;
+    if (node.getStatements() instanceof ArrayList) {
+      statements = (ArrayList<StatementNode>) node.getStatements();
+    } else {
+      statements = new ArrayList<StatementNode>(node.getStatements());
+    }
+    ScalarLocationNode loc =
+        new ScalarLocationNode(decl.getSourceLoc(), decl.getName());
+
+    ExpressionNode val = new IntNode(decl.getSourceLoc(), 0);
+    if (decl.getType() == DecafType.BOOLEAN) {
+      val = new BooleanNode(decl.getSourceLoc(), false);
+    }
+
+    AssignNode init = new AssignNode(decl.getSourceLoc(), loc, val);
+    statements.add(0, init);
+    node.setStatements(statements);
   }
 
   @Override
