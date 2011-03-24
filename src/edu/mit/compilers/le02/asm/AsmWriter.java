@@ -349,6 +349,7 @@ public class AsmWriter {
       // Unfortunately, RDX may contain the first argument to the function.
       // We need to push it to memory to save it.
       writeOp("pushq", "%rdx", sl);
+      writeOp("xorq", "%rdx", "%rdx", sl);
       writeOp("idivq", arg2, sl);
       if (op.getOp() == AsmOp.DIVIDE) {
         // RDX is fixed to hold the quotient.
