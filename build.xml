@@ -126,6 +126,7 @@
     <exec executable="${tests}/parser/test.sh" failonerror="true" />
     <exec executable="${tests}/semantics/test.sh" failonerror="true" />
     <exec executable="${tests}/codegen/test.sh" failonerror="true" />
+    <exec executable="${tests}/dataflow/test.sh" failonerror="true" />
   </target>
 
   <target name="lint">
