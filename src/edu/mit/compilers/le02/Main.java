@@ -8,6 +8,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.HashSet;
+import java.util.Set;
 
 import antlr.ANTLRException;
 import antlr.ASTFactory;
@@ -62,7 +64,8 @@ public class Main {
   };
 
   public enum Optimization {
-    SAMPLE_OPT("sample");
+    COMMON_SUBEXPR("cse"),
+    COPY_PROPAGATION("cp");
     private String flagName;
 
     private Optimization(String flag) {
@@ -91,6 +94,14 @@ public class Main {
     }
 
     CLI.parse(args, optimizations);
+
+    Set<Optimization> enabledOpts = new HashSet<Optimization>();
+    ii = 0;
+    for (Optimization opt : Optimization.values()) {
+      if (CLI.opts[ii]) {
+        enabledOpts.add(opt);
+      }
+    }
 
     // If we have a valid file input, set up the input stream.
     if (CLI.infile != null) {
