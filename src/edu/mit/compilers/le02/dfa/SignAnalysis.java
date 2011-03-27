@@ -1,8 +1,7 @@
 package edu.mit.compilers.le02.dfa;
 
 /**
- * Lattice for Sign Analysis
- * 
+ * Lattice for Sign Analysis of Multiplication
  * @author Maria Frendberg (mfrend@mit.edu)
  * 
  */

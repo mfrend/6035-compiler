@@ -1,7 +1,7 @@
 package edu.mit.compilers.le02.dfa;
 
 /**
- * Sign Abstraction for Data-Flow Analysis
+ * Sign Abstraction for Multiplication for Data-Flow Analysis
  * @author Maria Frendberg(mfrend@mit.edu)
  *
  */
@@ -11,6 +11,7 @@ public enum Sign implements Type<Sign>{
 	ZERO,
 	POS,
 	TOP;
+	
 	
 	public Sign transferFunction(Sign sign){
 		switch(this){
