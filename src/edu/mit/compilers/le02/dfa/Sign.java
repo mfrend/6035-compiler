@@ -5,7 +5,7 @@ package edu.mit.compilers.le02.dfa;
  * @author Maria Frendberg(mfrend@mit.edu)
  *
  */
-public enum Sign {
+public enum Sign implements Type<Sign>{
 	BOT,
 	NEG,
 	ZERO,
