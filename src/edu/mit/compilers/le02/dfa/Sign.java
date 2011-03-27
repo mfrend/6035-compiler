@@ -1,5 +1,10 @@
 package edu.mit.compilers.le02.dfa;
 
+/**
+ * Sign Abstraction for Data-Flow Analysis
+ * @author Maria Frendberg(mfrend@mit.edu)
+ *
+ */
 public enum Sign {
 	BOT,
 	NEG,
