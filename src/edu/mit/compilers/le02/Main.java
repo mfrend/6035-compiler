@@ -8,8 +8,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.EnumSet;
 
 import antlr.ANTLRException;
 import antlr.ASTFactory;
@@ -87,21 +86,8 @@ public class Main {
     InputStream inputStream = System.in;
 
     // Prepare the list of all optimization flags for the CLI utility.
-    String[] optimizations = new String[Optimization.values().length];
-    int ii = 0;
-    for (Optimization opt : Optimization.values()) {
-      optimizations[ii] = opt.flagName();
-    }
-
-    CLI.parse(args, optimizations);
-
-    Set<Optimization> enabledOpts = new HashSet<Optimization>();
-    ii = 0;
-    for (Optimization opt : Optimization.values()) {
-      if (CLI.opts[ii]) {
-        enabledOpts.add(opt);
-      }
-    }
+    EnumSet<Optimization> enabledOpts = EnumSet.noneOf(Optimization.class);
+    CLI.parse(args, enabledOpts);
 
     // If we have a valid file input, set up the input stream.
     if (CLI.infile != null) {
