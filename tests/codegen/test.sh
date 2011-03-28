@@ -7,6 +7,11 @@ runcompiler() {
 
 fail=0
 
+if ! gcc -v 2>&1 |grep -q '^Target: x86_64-linux-gnu'; then
+  echo "Refusing to run cross-compilation on non-64-bit architechure."
+  exit 0;
+fi
+
 for file in `dirname $0`/input/*.dcf; do
   asm=`tempfile --suffix=.s`
   msg=""
