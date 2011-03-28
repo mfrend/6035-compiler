@@ -22,6 +22,11 @@ public class GlobalLocation extends VariableLocation {
     GlobalLocation other = (GlobalLocation) o;
     return this.symbol.equals(other.symbol);
   }
+  
+  @Override
+  public int hashCode() {
+    return this.symbol.hashCode();
+  }
 
   @Override
   public String toString() {

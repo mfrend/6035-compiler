@@ -48,6 +48,11 @@ public class RegisterLocation extends VariableLocation{
     RegisterLocation other = (RegisterLocation) o;
     return this.reg == other.reg;
   }
+  
+  @Override
+  public int hashCode() {
+    return this.reg.ordinal();
+  }
 
   @Override
   public String toString() {

@@ -5,7 +5,7 @@ import java.util.LinkedList;
 
 public class WorklistAlgorithm {
 
-  public static <T> void runForward(Collection<WorklistItem<T>> items, Lattice<T> lattice, 
+  public static <T, U> void runForward(Collection<WorklistItem<T>> items, Lattice<T, U> lattice, 
       WorklistItem<T> startItem, T startInfo) {
     LinkedList<WorklistItem<T>> worklist = new LinkedList<WorklistItem<T>>(items);
 
