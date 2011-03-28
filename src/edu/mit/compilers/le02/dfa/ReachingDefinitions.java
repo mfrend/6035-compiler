@@ -49,8 +49,6 @@ public class ReachingDefinitions extends Lattice<BitSet> {
 	}
 	
 	public ReachingDefinitions(ControlFlowGraph cfg) {
-	  cfg
-	  getDefinitions(node)
 	}
 	
 	private Set<BasicStatement> getDefinitions(BasicBlockNode node) {
