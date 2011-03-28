@@ -7,7 +7,7 @@ import java.util.Set;
 
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
-import edu.mit.compilers.le02.cfg.ConstantArgument;
+import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 
 
 public class ReachingDefinitions extends Lattice<BitSet> {
@@ -48,8 +48,14 @@ public class ReachingDefinitions extends Lattice<BitSet> {
 	  
 	}
 	
-	public ReachingDefinitions() {
-	  
+	public ReachingDefinitions(ControlFlowGraph cfg) {
+	  cfg
+	  getDefinitions(node)
+	}
+	
+	private Set<BasicStatement> getDefinitions(BasicBlockNode node) {
+	  // TODO
+	  return null;
 	}
 
   @Override
