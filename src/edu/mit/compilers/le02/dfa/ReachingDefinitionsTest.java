@@ -47,7 +47,7 @@ public class ReachingDefinitionsTest extends TestCase {
     ReachingDefinitions defs = new ReachingDefinitions(node);
     BlockItem bi = defs.getDefinitions(node);
     assertNotNull(bi);
-    assertTrue(bi.getOutDefinitions().isEmpty());
+    assertTrue(bi.getInDefinitions().isEmpty());
     
     List<BasicStatement> nodeDefs = bi.getOutDefinitions();
     assertEquals(1, nodeDefs.size());

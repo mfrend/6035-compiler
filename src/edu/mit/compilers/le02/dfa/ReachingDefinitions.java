@@ -3,14 +3,18 @@ package edu.mit.compilers.le02.dfa;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
+import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 
 /**
@@ -22,45 +26,81 @@ public class ReachingDefinitions extends BasicBlockVisitor
                                  implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockDefinitions;
 	private Map<BasicStatement, Integer> definitionIndices;
+  private Map<VariableLocation, BitSet> varDefinitions;
   private List<BasicStatement> definitions;
   
 	
-	public static class BlockItem extends GenKillItem {
-	  private BasicBlockNode node;
+	public class BlockItem extends GenKillItem {
+	  private ReachingDefinitions parent;
+    private BasicBlockNode node;
     private List<BasicStatement> blockDefinitions;
     private Map<VariableLocation, Set<BasicStatement>> reachingDefinitions;
     private Set<BlockItem> predecessorSet;
     private Set<BlockItem> successorSet;
+    private BitSet genSet;
+    private BitSet killSet;
 	  
-	  public BlockItem(BasicBlockNode node, List<BasicStatement> blockDefs) {
+	  public BlockItem(ReachingDefinitions parent,
+	                   BasicBlockNode node, List<BasicStatement> blockDefs) {
+	    this.parent = parent;
 	    this.node = node;
 	    this.blockDefinitions = blockDefs;
+	    
+	    this.genSet = new BitSet();
+	    this.killSet = new BitSet();
+	    this.initGenKill();
+	  }
+	  
+	  private void initGenKill() {
+      int index;
+      for (BasicStatement s : blockDefinitions) {
+        OpStatement def = (OpStatement) s;
+        index = parent.definitionIndices.get(s);
+        this.genSet.set(index);
+        
+        this.killSet.or(parent.varDefinitions.get(
+                                             parent.getDefinitionTarget(def)));
+      }
 	  }
 
     public Set<BasicStatement> getReachingDefinitions(VariableLocation loc) {
       return reachingDefinitions.get(loc);
     }
 	  
-	  public List<BasicStatement> getInDefinitions() {
-	    BitSet in = this.getIn();
-	    return null;
+	  private List<BasicStatement> getBitsetDefinitions(BitSet bs) {
+	    if (blockDefinitions.isEmpty()) {
+	      return Collections.emptyList();
+	    }
+	    
+	    List<BasicStatement> defs = new ArrayList<BasicStatement>();
+	    
+	    int index;
+	    for (BasicStatement s : blockDefinitions) {
+	      index = parent.definitionIndices.get(s);
+	      if (bs.get(index)) {
+	        defs.add(s);
+	      }
+	    }
+	    
+	    return defs;
 	  }
-	  
+
+    public List<BasicStatement> getInDefinitions() {
+      return getBitsetDefinitions(this.getIn());
+    }
+    
     public List<BasicStatement> getOutDefinitions() {
-      BitSet in = this.getIn();
-      return null;
+      return getBitsetDefinitions(this.getOut());
     }
 
     @Override
     protected BitSet gen() {
-      // TODO Auto-generated method stub
-      return null;
+      return genSet;
     }
 
     @Override
     protected BitSet kill() {
-      // TODO Auto-generated method stub
-      return null;
+      return killSet;
     }
 
     @Override
@@ -90,7 +130,15 @@ public class ReachingDefinitions extends BasicBlockVisitor
 	  this.definitions = new ArrayList<BasicStatement>();
 	  this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.blockDefinitions = new HashMap<BasicBlockNode, BlockItem>(); 
+    this.varDefinitions = new HashMap<VariableLocation, BitSet>();
 	  this.visit(methodRoot);
+	  
+	  BlockItem start = blockDefinitions.get(methodRoot);
+	  BitSet init = bottom();
+    
+	  // Run a fixed point algorithm on the definitions to calculate the
+	  // reaching definitions.
+	  WorklistAlgorithm.runForward(blockDefinitions.values(), this, start, init);
 	}
 
   @Override
@@ -107,19 +155,65 @@ public class ReachingDefinitions extends BasicBlockVisitor
 	  
 	  for (BasicStatement s : node.getStatements()) {
 	    if (isDefinition(s)) {
+	      OpStatement def = (OpStatement) s;
+	      VariableLocation target = getDefinitionTarget(def);
+	      
 	      blockDefs.add(s);
 	      definitions.add(s);
 	      definitionIndices.put(s, definitions.size() - 1);
+	      
+	      BitSet bs = varDefinitions.get(target);
+	      if (bs == null) {
+	        bs = new BitSet();
+	        varDefinitions.put(target, bs);
+	      }
+	      bs.set(definitions.size() - 1);
 	    }
 	  }
 	  
-	  return new BlockItem(node, blockDefs);
+	  return new BlockItem(this, node, blockDefs);
 	  
 	}
 	
 	private boolean isDefinition(BasicStatement s) {
-	  return false;
+	  if (!(s instanceof OpStatement)) { 
+	    return false;
+	  }
+	  
+	  OpStatement ops = (OpStatement) s;
+	  switch (ops.getOp()) {
+	    case MOVE:
+	    case ADD:
+	    case SUBTRACT:
+	    case MULTIPLY:
+	    case DIVIDE:
+	    case MODULO:
+	    case UNARY_MINUS:
+	    case NOT:
+	      return true;
+	    default:
+	      return false;
+	  }
 	}
+	
+	private VariableLocation getDefinitionTarget(OpStatement def) {
+    switch (def.getOp()) {
+      case MOVE:
+        return ((VariableArgument) def.getArg2()).getLoc();
+      case ADD:
+      case SUBTRACT:
+      case MULTIPLY:
+      case DIVIDE:
+      case MODULO:
+      case UNARY_MINUS:
+      case NOT:
+        return def.getResult();
+      default:
+        ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
+        		"of a non definition!"));
+        return null;
+    }
+  }
 
   @Override
   public BitSet abstractionFunction(BasicBlockNode value) {
