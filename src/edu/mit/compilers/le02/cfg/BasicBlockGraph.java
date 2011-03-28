@@ -1,10 +1,15 @@
 package edu.mit.compilers.le02.cfg;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
+import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.opt.BasicBlockVisitor;
+import edu.mit.compilers.le02.opt.CpVisitor;
+import edu.mit.compilers.le02.opt.CseVisitor;
 
 public class BasicBlockGraph {
   private static int id;
@@ -16,7 +21,8 @@ public class BasicBlockGraph {
     return ".block" + Integer.toString(id);
   }
 
-  public static ControlFlowGraph makeBasicBlockGraph(ControlFlowGraph cfg) {
+  public static ControlFlowGraph makeBasicBlockGraph(ControlFlowGraph cfg,
+      EnumSet<Optimization> opts) {
     ControlFlowGraph newCFG = new ControlFlowGraph();
 
     id = -1;
@@ -32,6 +38,18 @@ public class BasicBlockGraph {
         if (n.getStatements().isEmpty()) {
           n.removeFromCFG();
         }
+      }
+
+      // Run CSE
+      if (opts.contains(Optimization.COMMON_SUBEXPR)) {
+        BasicBlockVisitor cse = new CseVisitor();
+        cse.visit(methodEnter);
+      }
+
+      // Run CP
+      if (opts.contains(Optimization.COPY_PROPAGATION)) {
+        CpVisitor cp = new CpVisitor();
+        cp.visit(methodEnter);
       }
 
       // Places an enter statement with the desired offset

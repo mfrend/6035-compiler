@@ -117,13 +117,15 @@ public class Main {
       }
       break;
      case CFG:
-      if (!generateCFG(inputStream) || !ErrorReporting.noErrors()) {
+      if (!generateCFG(inputStream, enabledOpts) ||
+          !ErrorReporting.noErrors()) {
         retCode = ReturnCode.CFG_FAILED;
       }
       break;
      case DEFAULT:
      case ASSEMBLY:
-      if (!generateAsm(inputStream) || !ErrorReporting.noErrors()) {
+      if (!generateAsm(inputStream, enabledOpts) ||
+          !ErrorReporting.noErrors()) {
         retCode = ReturnCode.ASM_FAILED;
       }
       break;
@@ -345,7 +347,8 @@ public class Main {
    * @param inputStream The stream to read input from.
    * @return true if parser ran without errors, false if errors found.
    */
-  protected static boolean generateCFG(InputStream inputStream) {
+  protected static boolean generateCFG(InputStream inputStream,
+                                       EnumSet<Optimization> opts) {
     boolean success = true;
     try {
       // Initialize and invoke the parser.
@@ -361,7 +364,7 @@ public class Main {
       }
 
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
-      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
 
       if (CLI.debug) {
         CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
@@ -377,7 +380,8 @@ public class Main {
     return success;
   }
 
-  protected static boolean generateAsm(InputStream inputStream) {
+  protected static boolean generateAsm(InputStream inputStream,
+                                       EnumSet<Optimization> opts) {
     boolean success = true;
     try {
       // Initialize and invoke the parser.
@@ -394,7 +398,7 @@ public class Main {
       }
 
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
-      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
       for (FieldDescriptor global : st.getFields()) {
         cfg.putGlobal("." + global.getId(), global);
       }
