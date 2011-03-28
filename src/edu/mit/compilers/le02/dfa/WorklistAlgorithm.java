@@ -4,14 +4,14 @@ import java.util.Collection;
 import java.util.LinkedList;
 
 public class WorklistAlgorithm {
-  /* 
-  */
+  /*
+   */
   public static <T> void runForward(Collection<? extends WorklistItem<T>> items,
-                                    Lattice<T, ?> lattice, 
-                                    WorklistItem<T> startItem,
-                                    T startInfo) {
-    LinkedList<WorklistItem<T>> worklist = 
-       new LinkedList<WorklistItem<T>>(items);
+      Lattice<T, ?> lattice,
+      WorklistItem<T> startItem,
+      T startInfo) {
+    LinkedList<WorklistItem<T>> worklist =
+      new LinkedList<WorklistItem<T>>(items);
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
@@ -33,7 +33,7 @@ public class WorklistAlgorithm {
       // Calculate the least upper bound of all the predecessors
       T sup = lattice.bottom();
       for(WorklistItem<T> pred : item.predecessors()) {
-        sup = lattice.leastUpperBound(pred.getIn(), sup);
+        sup = lattice.leastUpperBound(pred.getOut(), sup);
       }
       item.setIn(sup);
 
@@ -44,7 +44,7 @@ public class WorklistAlgorithm {
       // to the worklist.
       if (!newOut.equals(item.getOut())) {
         item.setOut(newOut);
-        
+
         worklist.addAll(item.successors());
       }
     }

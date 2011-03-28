@@ -46,12 +46,12 @@ public final class OpStatement extends BasicStatement {
   public Argument getArg2() {
     return arg2;
   }
-  
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof OpStatement)) return false;
-    
+
     OpStatement other = (OpStatement) o;
     return op.equals(other.op)
            && arg1.equals(other.arg1)

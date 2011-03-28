@@ -157,7 +157,7 @@ public class SymbolTableGeneratorTest extends TestCase {
     AssignNode local2assign = (AssignNode) md.getCode().getStatements().get(1);
     assert(local2assign.getLoc().getName() == "local2");
     assert(((IntNode) local2assign.getValue()).getValue() == 0);
-    
+
     BlockNode node = (BlockNode) md.getCode().getStatements().get(3);
     SymbolTable lst = node.getSymbolTable();
     assertNotNull(lst);

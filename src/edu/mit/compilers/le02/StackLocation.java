@@ -31,7 +31,7 @@ public class StackLocation extends VariableLocation {
     StackLocation other = (StackLocation) o;
     return this.offset == other.offset;
   }
-  
+
   @Override
   public int hashCode() {
     return this.offset;
