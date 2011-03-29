@@ -50,6 +50,11 @@ public class RegisterLocation extends VariableLocation{
   }
 
   @Override
+  public int hashCode() {
+    return this.reg.ordinal();
+  }
+
+  @Override
   public String toString() {
     return this.reg.toString();
   }

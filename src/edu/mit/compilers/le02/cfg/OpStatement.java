@@ -48,6 +48,18 @@ public final class OpStatement extends BasicStatement {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof OpStatement)) return false;
+
+    OpStatement other = (OpStatement) o;
+    return op.equals(other.op)
+           && arg1.equals(other.arg1)
+           && arg2.equals(other.arg2)
+           && result.equals(other.result);
+  }
+
+  @Override
   public String toString() {
     String s = "OpStatement(" + op;
     if (arg1 != null) {

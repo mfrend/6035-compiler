@@ -33,6 +33,11 @@ public class StackLocation extends VariableLocation {
   }
 
   @Override
+  public int hashCode() {
+    return this.offset;
+  }
+
+  @Override
   public String toString() {
     return offset + "(%rbp)";
   }

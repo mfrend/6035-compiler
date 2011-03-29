@@ -13,7 +13,7 @@ public abstract class BasicBlockVisitor {
     List<BasicBlockNode> nodesToProcess = new ArrayList<BasicBlockNode>();
     Set<BasicBlockNode> processed = new HashSet<BasicBlockNode>();
     nodesToProcess.add(methodNode);
-  
+
     while (!nodesToProcess.isEmpty()) {
       // Pop top element of queue to process.
       BasicBlockNode node = nodesToProcess.remove(0);
@@ -23,7 +23,7 @@ public abstract class BasicBlockVisitor {
       }
       // Mark this node processed.
       processed.add(node);
-  
+
       // If this node has successors, queue them for processing.
       BasicBlockNode branch = node.getBranchTarget();
       if (node.isBranch()) {

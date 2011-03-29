@@ -28,6 +28,10 @@ public final class BasicBlockNode implements CFGNode {
     return id;
   }
 
+  public Set<BasicBlockNode> getPredecessors() {
+    return predecessors;
+  }
+
   public void setStatements(List<BasicStatement> statements) {
     this.statements = statements;
   }
