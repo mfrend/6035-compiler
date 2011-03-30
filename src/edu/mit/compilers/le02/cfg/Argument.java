@@ -11,6 +11,7 @@ public abstract class Argument {
   }
 
   abstract public ArgType getType();
+  abstract public boolean isVariable();
 
   public static Argument makeArgument(VariableLocation loc) {
     return new VariableArgument(loc);

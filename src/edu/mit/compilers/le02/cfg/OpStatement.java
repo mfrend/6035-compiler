@@ -55,8 +55,7 @@ public final class OpStatement extends BasicStatement {
     OpStatement other = (OpStatement) o;
     return op.equals(other.op)
            && arg1.equals(other.arg1)
-           && arg2.equals(other.arg2)
-           && result.equals(other.result);
+           && arg2.equals(other.arg2);
   }
   
   @Override
@@ -70,9 +69,6 @@ public final class OpStatement extends BasicStatement {
     }
     if (arg2 != null) { 
       hc += 1 + arg2.hashCode();
-    }
-    if (result != null) { 
-      hc += 1 + result.hashCode();
     }
     
     return hc;

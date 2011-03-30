@@ -32,4 +32,9 @@ public class VariableArgument extends Argument {
     return this.loc.toString();
   }
 
+  @Override
+  public boolean isVariable() {
+    return true;
+  }
+
 }

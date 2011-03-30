@@ -64,5 +64,10 @@ public final class ConstantArgument extends Argument {
     }
   }
 
+  @Override
+  public boolean isVariable() {
+    return false;
+  }
+
 
 }
