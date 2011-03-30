@@ -8,6 +8,7 @@ import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
@@ -73,6 +74,15 @@ public class CseVisitor extends BasicBlockVisitor {
   @Override
   protected void processNode(BasicBlockNode node) {
     for (BasicStatement stmt : node.getStatements()) {
+      if (stmt.getType() == BasicStatementType.CALL) {
+        // Invalidate all cached global variable values.
+        // This necessitates enumerating all globals and dropping em.
+        for (TypedDescriptor key : varToVal.keySet()) {
+          if (key instanceof FieldDescriptor) {
+            varToVal.remove(key);
+          }
+        }
+      }
       if (stmt.getType() != BasicStatementType.OP) {
         continue;
       }
