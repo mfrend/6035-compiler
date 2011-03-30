@@ -8,7 +8,6 @@ import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.RegisterLocation;
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
@@ -39,8 +38,10 @@ import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
 import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private static CFGGenerator instance = null;
@@ -59,14 +60,14 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    * conflict with any of node's, node's ancestors', or node's descendents'
    * locals.
    */
-  private VariableLocation makeTemp(ASTNode node, DecafType type) {
+  private TypedDescriptor makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
     int offset = st.getNonconflictingOffset();
 
     LocalDescriptor ld =
       new LocalDescriptor(st, Math.abs(offset) + "lcltmp", type, offset);
     st.put(ld.getId(), ld, node.getSourceLoc());
-    return ld.getLocation();
+    return ld;
   }
 
   public static ControlFlowGraph generateCFG(ASTNode root) {
@@ -98,7 +99,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       // Move the value of this variable into a register so it
       // can be used for je
       BasicStatement st = new OpStatement(node, AsmOp.MOVE, src,
-        Argument.makeArgument(new RegisterLocation(Register.R11)), null);
+        Argument.makeArgument(new AnonymousDescriptor(
+          new RegisterLocation(Register.R11))), null);
       SimpleCFGNode cfgNode = new SimpleCFGNode(st);
       frag = frag.append(cfgNode);
     } else {
@@ -227,7 +229,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = exit;
 
     // Evaluate the exit condition
-    VariableLocation exitLoc = makeTemp(node.getBody(), DecafType.BOOLEAN);
+    TypedDescriptor exitLoc = makeTemp(node.getBody(), DecafType.BOOLEAN);
     CFGFragment exitFrag = node.getEnd().accept(this);
     Argument exitVal = exitFrag.getExit().getResult();
     BasicStatement exitStatement = new OpStatement(node, AsmOp.MOVE,
@@ -235,7 +237,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     exitFrag = exitFrag.append(new SimpleCFGNode(exitStatement));
 
     // Create a node where the iterator is incremented
-    VariableLocation loc = node.getInit().getLoc().getDesc().getLocation();
+    TypedDescriptor loc = node.getInit().getLoc().getDesc();
     Argument loopVar = Argument.makeArgument(loc);
     BasicStatement st = new OpStatement(node, AsmOp.ADD,
         loopVar, new ConstantArgument(1), loc);
@@ -322,7 +324,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    */
   @Override
   public CFGFragment visit(BoolOpNode node) {
-    VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
+    TypedDescriptor loc = makeTemp(node, DecafType.BOOLEAN);
 
     if ((node.getOp() == BoolOp.AND) || (node.getOp() == BoolOp.OR)) {
       // Create two nodes which will either move true or false into loc
@@ -361,7 +363,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(MathOpNode node) {
     CFGFragment frag1 = node.getLeft().accept(this);
     CFGFragment frag2 = node.getRight().accept(this);
-    VariableLocation loc = makeTemp(node, DecafType.INT);
+    TypedDescriptor loc = makeTemp(node, DecafType.INT);
     Argument arg1 = frag1.getExit().getResult();
     Argument arg2 = frag2.getExit().getResult();
 
@@ -374,7 +376,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(NotNode node) {
     CFGFragment frag = node.getExpr().accept(this);
-    VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
+    TypedDescriptor loc = makeTemp(node, DecafType.BOOLEAN);
 
     OpStatement s = new OpStatement(node, AsmOp.NOT,
         frag.getExit().getResult(), null, loc);
@@ -386,7 +388,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(MinusNode node) {
     CFGFragment frag = node.getExpr().accept(this);
-    VariableLocation loc = makeTemp(node, DecafType.BOOLEAN);
+    TypedDescriptor loc = makeTemp(node, DecafType.BOOLEAN);
 
     OpStatement s = new OpStatement(node, AsmOp.UNARY_MINUS,
         frag.getExit().getResult(), null, loc);
@@ -400,7 +402,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    */
   @Override
   public CFGFragment visit(MethodCallNode node) {
-    VariableLocation loc = makeTemp(node, node.getType());
+    TypedDescriptor loc = makeTemp(node, node.getType());
 
     CFGFragment frag = null;
     List<Argument> args = new ArrayList<Argument>();
@@ -428,7 +430,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(SystemCallNode node) {
-    VariableLocation loc = makeTemp(node, node.getType());
+    TypedDescriptor loc = makeTemp(node, node.getType());
 
     CFGFragment frag = null;
     List<Argument> args = new ArrayList<Argument>();
@@ -466,7 +468,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(ScalarLocationNode node) {
-    Argument arg = Argument.makeArgument(node.getDesc().getLocation());
+    Argument arg = Argument.makeArgument(node.getDesc());
     ArgumentStatement as = new ArgumentStatement(node, arg);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
     return new CFGFragment(cfgNode, cfgNode);
@@ -476,7 +478,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(ArrayLocationNode node) {
     CFGFragment indexFrag = node.getIndex().accept(this);
     Argument index = indexFrag.getExit().getResult();
-    Argument array = Argument.makeArgument(new GlobalLocation(node.getName()),
+    Argument array = Argument.makeArgument(node.getDesc(),
                                            index);
     ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
@@ -504,7 +506,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     String name = ".str" + Math.abs(node.getValue().hashCode());
     cfg.putStringData(name, node);
     ArgumentStatement as = new ArgumentStatement(node,
-                             Argument.makeArgument(new GlobalLocation(name)));
+      Argument.makeArgument(new AnonymousDescriptor(
+        new GlobalLocation(name))));
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
     return new CFGFragment(cfgNode, cfgNode);
   }

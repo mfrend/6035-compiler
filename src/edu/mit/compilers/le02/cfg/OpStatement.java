@@ -1,7 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
@@ -27,7 +27,7 @@ public final class OpStatement extends BasicStatement {
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
-                     VariableLocation result) {
+                     TypedDescriptor result) {
     super(node, result);
     this.op = op;
     this.arg1 = arg1;

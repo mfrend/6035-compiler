@@ -1,6 +1,7 @@
 package edu.mit.compilers.le02.opt;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -77,9 +78,10 @@ public class CseVisitor extends BasicBlockVisitor {
       if (stmt.getType() == BasicStatementType.CALL) {
         // Invalidate all cached global variable values.
         // This necessitates enumerating all globals and dropping em.
-        for (TypedDescriptor key : varToVal.keySet()) {
-          if (key instanceof FieldDescriptor) {
-            varToVal.remove(key);
+        Iterator<TypedDescriptor> it = varToVal.keySet().iterator();
+        while (it.hasNext()) {
+          if (it.next() instanceof FieldDescriptor) {
+            it.remove();
           }
         }
       }
@@ -89,15 +91,14 @@ public class CseVisitor extends BasicBlockVisitor {
       OpStatement op = (OpStatement)stmt;
       switch (op.getOp()) {
        case MOVE:
-        // Doesn't quite work yet. requires OpStatements to care not just
-        // about VariableLocations but also about root TypedDescriptors.
-        //varToVal.put(op.getArg2(), Value.nextIndex());
+        if (op.getArg2().getLoc() != null)
+        varToVal.put(op.getArg2().getLoc(), Value.nextIndex());
         break;
        case RETURN:
        case ENTER:
         continue;
        default:
-        //varToVal.put(op.getResult(), Value.nextIndex());
+        varToVal.put(op.getResult(), Value.nextIndex());
       }
     }
   }

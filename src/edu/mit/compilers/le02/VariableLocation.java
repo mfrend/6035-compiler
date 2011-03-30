@@ -4,7 +4,7 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 
 
 
-public class VariableLocation {
+public abstract class VariableLocation {
   protected LocationType type;
 
   public enum LocationType {

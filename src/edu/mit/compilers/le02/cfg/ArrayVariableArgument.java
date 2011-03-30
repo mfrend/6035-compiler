@@ -1,11 +1,11 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class ArrayVariableArgument extends VariableArgument {
   private Argument index;
 
-  public ArrayVariableArgument(VariableLocation loc, Argument index) {
+  public ArrayVariableArgument(TypedDescriptor loc, Argument index) {
     super(loc);
     this.index = index;
   }
