@@ -78,20 +78,11 @@ implements Lattice<BitSet, BasicBlockNode> {
     public Collection<WorklistItem<BitSet>> predecessors() {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
-      // Return the list of successors of this node - the 'predecessors'
-      // in a reverse traversal
-      WorklistItem<BitSet> item;
-      if (node.getNext() != null) {
-        item = parent.blockItems.get(node.getNext());
+
+      for (BasicBlockNode pred : this.node.getPredecessors()) {
+        WorklistItem<BitSet> item = parent.blockItems.get(pred);
         ret.add(item);
       }
-
-
-      if (node.getBranchTarget() != null) {
-        item = parent.blockItems.get(node.getBranchTarget());
-        ret.add(item);
-      }
-
       return ret;
     }
 
@@ -99,12 +90,18 @@ implements Lattice<BitSet, BasicBlockNode> {
     public Collection<WorklistItem<BitSet>> successors() {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
-      // Return the list of predecessors of this node - the 'successors'
-      // in a reverse traversal
-      for (BasicBlockNode pred : this.node.getPredecessors()) {
-        WorklistItem<BitSet> item = parent.blockItems.get(pred);
+
+      WorklistItem<BitSet> item;
+      if (node.getNext() != null) {
+        item = parent.blockItems.get(node.getNext());
         ret.add(item);
       }
+
+      if (node.getBranchTarget() != null) {
+        item = parent.blockItems.get(node.getBranchTarget());
+        ret.add(item);
+      }
+
       return ret;
     }
   }
@@ -123,7 +120,7 @@ implements Lattice<BitSet, BasicBlockNode> {
 
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
-    WorklistAlgorithm.runForward(blockItems.values(), this, start, init);
+    WorklistAlgorithm.runBackwards(blockItems.values(), this, start, init);
   }
 
   @Override
