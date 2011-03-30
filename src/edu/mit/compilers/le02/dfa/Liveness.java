@@ -114,13 +114,21 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.variables = new ArrayList<VariableLocation>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
 
+    // TODO Probably not in this visitor, but write a way to find the
+    // 'last' basic block in a method. If there is no unique last block,
+    // create one
     this.visit(methodEnd);
     BlockItem start = blockItems.get(methodEnd);
+    // TODO Make the initial bitset the set of globals - these are
+    // the variables which are live outside the method
     BitSet init = bottom();
 
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
     WorklistAlgorithm.runBackwards(blockItems.values(), this, start, init);
+
+    // TODO Either in this visitor or in another, run through definitions
+    // and remove all definitions of dead variables
   }
 
   @Override
