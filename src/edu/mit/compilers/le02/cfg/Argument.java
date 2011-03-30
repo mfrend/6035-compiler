@@ -1,6 +1,6 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public abstract class Argument {
   public enum ArgType {
@@ -13,11 +13,15 @@ public abstract class Argument {
   abstract public ArgType getType();
   abstract public boolean isVariable();
 
-  public static Argument makeArgument(VariableLocation loc) {
+  public TypedDescriptor getLoc() {
+    return null;
+  }
+
+  public static Argument makeArgument(TypedDescriptor loc) {
     return new VariableArgument(loc);
   }
 
-  public static Argument makeArgument(VariableLocation loc, Argument index) {
+  public static Argument makeArgument(TypedDescriptor loc, Argument index) {
     return new ArrayVariableArgument(loc, index);
   }
 

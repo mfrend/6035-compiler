@@ -1,7 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class OpStatement extends BasicStatement {
   private AsmOp op;
@@ -27,7 +27,7 @@ public final class OpStatement extends BasicStatement {
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,
-                     VariableLocation result) {
+                     TypedDescriptor result) {
     super(node, result);
     this.op = op;
     this.arg1 = arg1;
@@ -57,20 +57,19 @@ public final class OpStatement extends BasicStatement {
            && arg1.equals(other.arg1)
            && arg2.equals(other.arg2);
   }
-  
+
   @Override
   public int hashCode() {
     int hc = 0;
-    if (op != null) { 
+    if (op != null) {
       hc += 1 + op.hashCode();
     }
-    if (arg1 != null) { 
+    if (arg1 != null) {
       hc += 1 + arg1.hashCode();
     }
-    if (arg2 != null) { 
+    if (arg2 != null) {
       hc += 1 + arg2.hashCode();
     }
-    
     return hc;
   }
 

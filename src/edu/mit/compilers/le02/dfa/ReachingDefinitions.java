@@ -14,7 +14,6 @@ import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
-import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
@@ -59,7 +58,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
           this.killSet.or(parent.globalDefinitions);
           continue;
         }
-        
+
         OpStatement def = (OpStatement) s;
         index = parent.definitionIndices.get(s);
         this.genSet.set(index);
@@ -178,7 +177,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       if (isDefinition(s)) {
         OpStatement def = (OpStatement) s;
         VariableLocation target = getDefinitionTarget(def);
-        
+
         blockDefs.add(s);
         definitions.add(s);
         int index = definitions.size() - 1;
@@ -190,7 +189,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
           varDefinitions.put(target, bs);
         }
         bs.set(index);
-        
+
         if (target.getLocationType() == LocationType.GLOBAL) {
           globalDefinitions.set(index);
         }
@@ -225,11 +224,11 @@ public class ReachingDefinitions extends BasicBlockVisitor
         return false;
     }
   }
-  
+
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
-        return ((VariableArgument) def.getArg2()).getLoc();
+        return ((VariableArgument) def.getArg2()).getLoc().getLocation();
       case ADD:
       case SUBTRACT:
       case MULTIPLY:
@@ -237,7 +236,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       case MODULO:
       case UNARY_MINUS:
       case NOT:
-        return def.getResult();
+        return def.getResult().getLocation();
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non definition!"));
