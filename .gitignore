@@ -3,7 +3,6 @@ dist
 autogen
 .classpath
 .project
-code/
 *.dot
 *.png
 *.s
