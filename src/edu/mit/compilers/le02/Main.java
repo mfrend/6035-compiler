@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.EnumSet;
 
 import antlr.ANTLRException;
 import antlr.ASTFactory;
@@ -62,7 +63,8 @@ public class Main {
   };
 
   public enum Optimization {
-    SAMPLE_OPT("sample");
+    COMMON_SUBEXPR("cse"),
+    COPY_PROPAGATION("cp");
     private String flagName;
 
     private Optimization(String flag) {
@@ -84,13 +86,8 @@ public class Main {
     InputStream inputStream = System.in;
 
     // Prepare the list of all optimization flags for the CLI utility.
-    String[] optimizations = new String[Optimization.values().length];
-    int ii = 0;
-    for (Optimization opt : Optimization.values()) {
-      optimizations[ii] = opt.flagName();
-    }
-
-    CLI.parse(args, optimizations);
+    EnumSet<Optimization> enabledOpts = EnumSet.noneOf(Optimization.class);
+    CLI.parse(args, enabledOpts);
 
     // If we have a valid file input, set up the input stream.
     if (CLI.infile != null) {
@@ -120,13 +117,15 @@ public class Main {
       }
       break;
      case CFG:
-      if (!generateCFG(inputStream) || !ErrorReporting.noErrors()) {
+      if (!generateCFG(inputStream, enabledOpts) ||
+          !ErrorReporting.noErrors()) {
         retCode = ReturnCode.CFG_FAILED;
       }
       break;
      case DEFAULT:
      case ASSEMBLY:
-      if (!generateAsm(inputStream) || !ErrorReporting.noErrors()) {
+      if (!generateAsm(inputStream, enabledOpts) ||
+          !ErrorReporting.noErrors()) {
         retCode = ReturnCode.ASM_FAILED;
       }
       break;
@@ -348,7 +347,8 @@ public class Main {
    * @param inputStream The stream to read input from.
    * @return true if parser ran without errors, false if errors found.
    */
-  protected static boolean generateCFG(InputStream inputStream) {
+  protected static boolean generateCFG(InputStream inputStream,
+                                       EnumSet<Optimization> opts) {
     boolean success = true;
     try {
       // Initialize and invoke the parser.
@@ -364,7 +364,7 @@ public class Main {
       }
 
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
-      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
 
       if (CLI.debug) {
         CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
@@ -380,7 +380,8 @@ public class Main {
     return success;
   }
 
-  protected static boolean generateAsm(InputStream inputStream) {
+  protected static boolean generateAsm(InputStream inputStream,
+                                       EnumSet<Optimization> opts) {
     boolean success = true;
     try {
       // Initialize and invoke the parser.
@@ -397,7 +398,7 @@ public class Main {
       }
 
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
-      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg);
+      ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
       for (FieldDescriptor global : st.getFields()) {
         cfg.putGlobal("." + global.getId(), global);
       }

@@ -1,6 +1,9 @@
 package edu.mit.compilers.tools;
 
+import java.util.EnumSet;
 import java.util.Vector;
+
+import edu.mit.compilers.le02.Main.Optimization;
 
 /**
  * A generic command-line interface for 6.035 compilers.  This class
@@ -132,11 +135,9 @@ public class CLI {
    * @param args Array of arguments passed in to the program's Main
    *   function.
    * @param optnames Ordered array of recognized optimization names.  */
-  public static void parse (String args[], String optnames[]) {
+  public static void parse (String args[], EnumSet<Optimization> opts) {
     int context = 0;
     String ext = ".out";
-
-      opts = new boolean[optnames.length];
 
     for (int i = 0; i < args.length; i++)
     {
@@ -168,14 +169,14 @@ public class CLI {
       switch (context) {
        case 1:
         boolean hit = false;
-        for (int j = 0; j < optnames.length; j++) {
-          if (args[i].equals("all") || (args[i].equals(optnames[j]))) {
+        for (Optimization opt : Optimization.values()) {
+          if (args[i].equals("all") || (args[i].equals(opt.flagName()))) {
             hit = true;
-            opts[j] = true;
+            opts.add(opt);
           }
-          if (args[i].equals("-" + optnames[j])) {
+          if (args[i].equals("-" + opt.flagName())) {
             hit = true;
-            opts[j] = false;
+            opts.remove(opt);
           }
         }
         if (!hit) {

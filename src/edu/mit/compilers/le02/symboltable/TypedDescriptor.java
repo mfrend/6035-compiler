@@ -26,4 +26,18 @@ public abstract class TypedDescriptor extends Descriptor {
     return this.getType().toString();
   }
 
+  @Override
+  public boolean equals(Object o) {
+
+    if (!(o instanceof TypedDescriptor)) {
+      return false;
+    }
+    TypedDescriptor desc = (TypedDescriptor)o;
+    return desc.getId().equals(getId());
+  }
+
+  @Override
+  public int hashCode() {
+    return getId().hashCode();
+  }
 }

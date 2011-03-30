@@ -2,7 +2,9 @@ package edu.mit.compilers.le02;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Util {
 
@@ -18,6 +20,21 @@ public class Util {
     }
     return list;
   }
+
+
+  /**
+   * Constructs a set of out of a vararg list of elements.
+   * Allows easy construction of lists for ASTNode.getChildren()
+   * and unit testing.
+   */
+  public static <T> Set<T> makeSet(T... args) {
+    HashSet<T> set = new HashSet<T>();
+    for (T t : args) {
+      set.add(t);
+    }
+    return set;
+  }
+
 
   /**
    * Returns an empty list containing the specified class type.

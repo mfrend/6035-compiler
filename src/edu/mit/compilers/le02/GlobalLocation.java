@@ -24,6 +24,11 @@ public class GlobalLocation extends VariableLocation {
   }
 
   @Override
+  public int hashCode() {
+    return this.symbol.hashCode();
+  }
+
+  @Override
   public String toString() {
     return symbol;
   }
