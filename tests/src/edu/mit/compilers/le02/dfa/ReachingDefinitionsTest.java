@@ -34,16 +34,16 @@ public class ReachingDefinitionsTest extends TestCase {
 
   private OpStatement makeDef(String name, int value) {
     GlobalLocation loc = new GlobalLocation(name);
-    return new OpStatement(null, AsmOp.MOVE, 
-                           Argument.makeArgument(value), 
+    return new OpStatement(null, AsmOp.MOVE,
+                           Argument.makeArgument(value),
                            Argument.makeArgument(loc), null);
   }
-  
+
 
   private OpStatement makeLocalDef(int offset, int value) {
     StackLocation loc = new StackLocation(offset);
-    return new OpStatement(null, AsmOp.MOVE, 
-                           Argument.makeArgument(value), 
+    return new OpStatement(null, AsmOp.MOVE,
+                           Argument.makeArgument(value),
                            Argument.makeArgument(loc), null);
   }
 
@@ -180,7 +180,7 @@ public class ReachingDefinitionsTest extends TestCase {
     checkReachingDefs(bi, "var", 1, 10);
     checkReachingDefs(bi, "var2", 1, 20);
     checkReachingDefs(bi, "var3", 1, 30);
-    
+
     bi = defs.getDefinitions(loop);
     assertNotNull(bi);
     checkReachingDefs(bi, "var", 1, 10);
@@ -193,7 +193,7 @@ public class ReachingDefinitionsTest extends TestCase {
     checkReachingDefs(bi, "var2", Util.makeSet(20, 2000));
     checkReachingDefs(bi, "var3", Util.makeSet(30, 3000));
   }
-  
+
   /**
    * Test that definitions carry from block to block, and are
    * properly overwritten (for a cfg of blocks arranged serially)
@@ -209,10 +209,10 @@ public class ReachingDefinitionsTest extends TestCase {
     top.addStatement(makeDef("var", 10));
     top.addStatement(makeLocalDef(-16, 20));
     top.addStatement(makeDef("var3", 30));
-    
-    List<Argument> args = Collections.emptyList(); 
+
+    List<Argument> args = Collections.emptyList();
     CallStatement cs = new CallStatement(null, "dummy", args, null);
-    
+
     middle.addStatement(makeDef("dummyvar", 11));
     middle.addStatement(cs);
     middle.addStatement(makeDef("var4", 40));
@@ -256,7 +256,7 @@ public class ReachingDefinitionsTest extends TestCase {
       assertEquals(value, ((ConstantArgument) def.getArg1()).getInt());
     }
   }
-  
+
   private void checkReachingDefs(BlockItem bi,
       int offset, int num, int value) {
     Collection<BasicStatement> reachingDefs;
@@ -275,7 +275,7 @@ public class ReachingDefinitionsTest extends TestCase {
 
     reachingDefs = bi.getReachingDefinitions(makeLoc(name));
     assertEquals(defs.size(), reachingDefs.size());
-    
+
     Set<Integer> actualDefs = new HashSet<Integer>();
     for (BasicStatement s : reachingDefs) {
       OpStatement def = (OpStatement) s;
@@ -283,5 +283,5 @@ public class ReachingDefinitionsTest extends TestCase {
     }
     assertEquals(defs, actualDefs);
   }
-  
+
 }

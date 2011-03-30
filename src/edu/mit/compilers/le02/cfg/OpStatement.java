@@ -58,23 +58,23 @@ public final class OpStatement extends BasicStatement {
            && arg2.equals(other.arg2)
            && result.equals(other.result);
   }
-  
+
   @Override
   public int hashCode() {
     int hc = 0;
-    if (op != null) { 
+    if (op != null) {
       hc += 1 + op.hashCode();
     }
-    if (arg1 != null) { 
+    if (arg1 != null) {
       hc += 1 + arg1.hashCode();
     }
-    if (arg2 != null) { 
+    if (arg2 != null) {
       hc += 1 + arg2.hashCode();
     }
-    if (result != null) { 
+    if (result != null) {
       hc += 1 + result.hashCode();
     }
-    
+
     return hc;
   }
 

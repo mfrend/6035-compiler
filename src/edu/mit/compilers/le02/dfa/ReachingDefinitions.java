@@ -59,7 +59,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
           this.killSet.or(parent.globalDefinitions);
           continue;
         }
-        
+
         OpStatement def = (OpStatement) s;
         index = parent.definitionIndices.get(s);
         this.genSet.set(index);
@@ -178,7 +178,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       if (isDefinition(s)) {
         OpStatement def = (OpStatement) s;
         VariableLocation target = getDefinitionTarget(def);
-        
+
         blockDefs.add(s);
         definitions.add(s);
         int index = definitions.size() - 1;
@@ -190,7 +190,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
           varDefinitions.put(target, bs);
         }
         bs.set(index);
-        
+
         if (target.getLocationType() == LocationType.GLOBAL) {
           globalDefinitions.set(index);
         }
@@ -225,7 +225,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
         return false;
     }
   }
-  
+
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
