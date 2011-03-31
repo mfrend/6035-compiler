@@ -39,7 +39,8 @@ public class DeadCodeElimination extends BasicBlockVisitor {
     Set<BasicStatement> eliminationSet = item.getEliminationSet();
 
     for (BasicStatement s : oldStatements) {
-      if (!eliminationSet.contains(s)) {
+      if ((!eliminationSet.contains(s))
+          || ((node.isBranch()) && (s == node.getLastStatement()))) {
         statements.add(s);
       }
     }
