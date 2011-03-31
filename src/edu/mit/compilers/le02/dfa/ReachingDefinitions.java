@@ -228,7 +228,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
-        return ((VariableArgument) def.getArg2()).getLoc().getLocation();
+        return ((VariableArgument) def.getArg2()).getDesc().getLocation();
       case ADD:
       case SUBTRACT:
       case MULTIPLY:

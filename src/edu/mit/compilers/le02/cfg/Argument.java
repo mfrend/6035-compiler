@@ -12,7 +12,7 @@ public abstract class Argument {
 
   abstract public ArgType getType();
 
-  public TypedDescriptor getLoc() {
+  public TypedDescriptor getDesc() {
     return null;
   }
 

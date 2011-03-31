@@ -64,7 +64,7 @@ public class CseVisitor extends BasicBlockVisitor {
           stmt.getArg1().getType() == ArgType.CONST_BOOL) {
         left = (ConstantArgument)stmt.getArg1();
       } else {
-        left = stmt.getArg1().getLoc();
+        left = stmt.getArg1().getDesc();
       }
       if (!varToVal.containsKey(left)) {
         varToVal.put(left, Value.nextIndex());
@@ -79,7 +79,7 @@ public class CseVisitor extends BasicBlockVisitor {
           stmt.getArg2().getType() == ArgType.CONST_BOOL) {
         right = (ConstantArgument)stmt.getArg2();
       } else {
-        right = stmt.getArg2().getLoc();
+        right = stmt.getArg2().getDesc();
       }
       if (!varToVal.containsKey(right)) {
         varToVal.put(right, Value.nextIndex());
@@ -143,14 +143,14 @@ public class CseVisitor extends BasicBlockVisitor {
           // We can silently drop a self-assignment.
           continue;
         }
-        if (op.getArg2().getLoc() instanceof AnonymousDescriptor) {
+        if (op.getArg2().getDesc() instanceof AnonymousDescriptor) {
           // This is either an implicit conditional assignment for je or
           // an implicit string MOV to push arguments for a callout.
           newStmts.add(stmt);
           continue;
         }
-        if (op.getArg2().getLoc() != null) {
-          storedVar = op.getArg2().getLoc();
+        if (op.getArg2().getDesc() != null) {
+          storedVar = op.getArg2().getDesc();
         }
         break;
        case RETURN:
