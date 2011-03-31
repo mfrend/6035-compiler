@@ -11,6 +11,7 @@ import java.util.Set;
 
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
@@ -27,8 +28,6 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
-
-  private List<VariableLocation> variables;
   private Map<VariableLocation, Integer> variableIndices;
 
   public class BlockItem extends GenKillItem {
@@ -110,8 +109,6 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
-
-    this.variables = new ArrayList<VariableLocation>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
 
     // TODO Probably not in this visitor, but write a way to find the
@@ -122,6 +119,11 @@ implements Lattice<BitSet, BasicBlockNode> {
     // TODO Make the initial bitset the set of globals - these are
     // the variables which are live outside the method
     BitSet init = bottom();
+    for (VariableLocation loc : variableIndices.keySet()) {
+      if (loc.getLocationType() == LocationType.GLOBAL) {
+        init.set(variableIndices.get(loc));
+      }
+    }
 
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
@@ -258,13 +260,13 @@ implements Lattice<BitSet, BasicBlockNode> {
 
   @Override
   public BitSet bottom() {
-    return new BitSet(variables.size());
+    return new BitSet(variableIndices.size());
   }
 
   @Override
   public BitSet top() {
-    BitSet s = new BitSet(variables.size());
-    s.flip(0, variables.size());
+    BitSet s = new BitSet(variableIndices.size());
+    s.flip(0, variableIndices.size());
     return s;
   }
 
