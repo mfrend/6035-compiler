@@ -1,22 +1,17 @@
 package edu.mit.compilers.le02.dfa;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import junit.framework.TestCase;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.StackLocation;
-import edu.mit.compilers.le02.Util;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
-import edu.mit.compilers.le02.cfg.ConstantArgument;
+import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.AvailableExpressions.BlockItem;
@@ -73,6 +68,32 @@ public class AvailableExpressionsTest extends TestCase {
     assertSame(expr, nodeDefs.get(0));
   }
 
+  public void testNullResultStatement() {
+    BasicBlockNode node = new BasicBlockNode("main", "main");
+
+    node.addStatement(new CallStatement(null, "main", null, null));
+
+    AvailableExpressions exprs = new AvailableExpressions(node);
+  }
+
+  public void testUnaryStatements() {
+    BasicBlockNode node = new BasicBlockNode("main", "main");
+
+    GlobalLocation loc = new GlobalLocation("var");
+    node.addStatement(new OpStatement(null, AsmOp.NOT,
+                          Argument.makeArgument(new AnonymousDescriptor(loc)),
+                          null,
+                          new FieldDescriptor(null, "res", DecafType.BOOLEAN)));
+
+    node.addStatement(new OpStatement(null, AsmOp.UNARY_MINUS,
+                          Argument.makeArgument(new AnonymousDescriptor(loc)),
+                          null,
+                          new FieldDescriptor(null, "res", DecafType.INT)));
+
+    AvailableExpressions exprs = new AvailableExpressions(node);
+  }
+
+
   /**
    * Test that expressions are available only if available on two branches
    */
@@ -89,10 +110,10 @@ public class AvailableExpressionsTest extends TestCase {
 
     top.addStatement(makeExpr(AsmOp.ADD, "var1", "var2", "res"));
     top.addStatement(makeExpr(AsmOp.SUBTRACT, "var3", "var4", "res2"));
-    
+
     left.addStatement(makeExpr(AsmOp.MULTIPLY, "x", "y", "var1"));
     left.addStatement(makeExpr(AsmOp.MODULO, "var1", "z", "res3"));
-    
+
     right.addStatement(makeExpr(AsmOp.DIVIDE, "x", "z", "res3"));
     right.addStatement(makeExpr(AsmOp.MODULO, "var1", "z", "res4"));
 
@@ -120,12 +141,9 @@ public class AvailableExpressionsTest extends TestCase {
     assertEquals(4, nodeDefs.size());
     assertTrue(isAvailable(bi, AsmOp.ADD, "var1", "var2"));
     assertTrue(isAvailable(bi, AsmOp.SUBTRACT, "var3", "var4"));
-    
+
     bi = exprs.getExpressions(end);
     assertNotNull(bi);
-    System.out.println(bi.getInExpressions());
-    System.out.println(bi.gen());
-    System.out.println(bi.kill());
     assertFalse(isAvailable(bi, AsmOp.ADD, "var1", "var2"));
     assertTrue(isAvailable(bi, AsmOp.SUBTRACT, "var3", "var4"));
     assertFalse(isAvailable(bi, AsmOp.MULTIPLY, "x", "y"));
@@ -133,9 +151,9 @@ public class AvailableExpressionsTest extends TestCase {
     assertTrue(isAvailable(bi, AsmOp.MODULO, "var1", "z"));
   }
 
-  private boolean isAvailable(BlockItem bi, 
+  private boolean isAvailable(BlockItem bi,
                               AsmOp op, String arg1, String arg2) {
-    
+
     OpStatement expr = makeExpr(op, arg1, arg2, "dummy");
 
     return bi.expressionIsAvailable(expr);

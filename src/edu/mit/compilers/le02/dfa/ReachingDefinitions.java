@@ -151,7 +151,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.varDefinitions = new HashMap<VariableLocation, BitSet>();
     this.globalDefinitions = new BitSet();
     this.visit(methodRoot);
-    
+
     for (BlockItem bi : blockDefinitions.values()) {
       bi.init();
     }

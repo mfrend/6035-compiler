@@ -27,34 +27,34 @@ public class AvailableExpressions extends BasicBlockVisitor
   private Set<Expression> expressionSet;
   private Map<Expression, Integer> exprIndices;
   private Map<BasicBlockNode, BlockItem> blockExpressions;
-  private Map<VariableLocation, BitSet> exprsFromVar; 
+  private Map<VariableLocation, BitSet> exprsFromVar;
   private BitSet callKill;
-  
+
   public static class Expression {
     private OpStatement expr;
-    
+
     public Expression(OpStatement expr) {
       this.expr = expr;
     }
-    
+
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
       if (!(o instanceof Expression)) return false;
-      
+
       Expression e = (Expression) o;
       return expr.expressionEquals(e.expr);
     }
-    
+
     public OpStatement getStatement() {
       return expr;
     }
-    
+
     @Override
     public int hashCode() {
-      return expr.getOp().hashCode() + 
-             + ((expr.getArg1() == null) ? expr.getArg1().hashCode() + 1 : 0)
-             + ((expr.getArg2() == null) ? expr.getArg2().hashCode() + 1 : 0);
+      return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) +
+             + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
+             + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
     }
   }
 
@@ -64,7 +64,7 @@ public class AvailableExpressions extends BasicBlockVisitor
     private List<BasicStatement> blockExprs;
     private BitSet genSet;
     private BitSet killSet;
-    
+
     public BlockItem(AvailableExpressions parent,
                      BasicBlockNode node, List<BasicStatement> blockExprs) {
       this.parent = parent;
@@ -84,20 +84,20 @@ public class AvailableExpressions extends BasicBlockVisitor
           continue;
         }
 
-        
+
         Expression expr = new Expression((OpStatement) s);
         index = parent.exprIndices.get(expr);
         this.genSet.set(index);
-        
+
         BitSet killed = parent.exprsFromVar.get(
                             parent.getExpressionTarget(expr.getStatement()));
-        
+
         if (killed != null) {
           this.killSet.or(killed);
         }
       }
     }
-    
+
 
     /**
      * Evaluates to true if the given expression is available at the start of
@@ -127,7 +127,7 @@ public class AvailableExpressions extends BasicBlockVisitor
 
       return exprs;
     }
-    
+
     private List<BasicStatement> getBitsetStatements(BitSet bs) {
       if (parent.expressions.isEmpty()) {
         return Collections.emptyList();
@@ -171,7 +171,14 @@ public class AvailableExpressions extends BasicBlockVisitor
         new ArrayList<WorklistItem<BitSet>>();
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockExpressions.get(pred);
-        ret.add(item);
+
+        // XXX: Somehow it can happen that an node is a predecessor and yet
+        //      doesn't get visited by the visitor (theoretically it should be
+        //      disconnected from the graph in this case).  We should really
+        //      figure out where this happens...but for now, this works.
+        if (item != null) {
+          ret.add(item);
+        }
       }
       return ret;
     }
@@ -209,7 +216,7 @@ public class AvailableExpressions extends BasicBlockVisitor
     for (BlockItem bi : blockExpressions.values()) {
       bi.init();
     }
-    
+
     BlockItem start = blockExpressions.get(methodRoot);
     BitSet init = new BitSet(expressions.size());
 
@@ -217,17 +224,17 @@ public class AvailableExpressions extends BasicBlockVisitor
     // reaching definitions.
     WorklistAlgorithm.runForward(blockExpressions.values(), this, start, init);
   }
-  
-  
+
+
   public BlockItem getExpressions(BasicBlockNode node) {
     return blockExpressions.get(node);
   }
-  
+
   @Override
   protected void processNode(BasicBlockNode node) {
     this.blockExpressions.put(node, calcExpressions(node));
   }
-  
+
   private BlockItem calcExpressions(BasicBlockNode node) {
     List<BasicStatement> blockExprs = new ArrayList<BasicStatement>();
 
@@ -237,17 +244,17 @@ public class AvailableExpressions extends BasicBlockVisitor
         Expression expr = new Expression(opSt);
 
         blockExprs.add(opSt);
-        
+
         if (expressionSet.contains(expr)) {
           continue;
         }
-                
+
         expressions.add(expr);
         expressionSet.add(expr);
         int index = expressions.size() - 1;
         exprIndices.put(expr, index);
-        
-        VariableArgument vArg; 
+
+        VariableArgument vArg;
         if (opSt.getArg1().isVariable()) {
           vArg = (VariableArgument) opSt.getArg1();
           if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
@@ -255,27 +262,27 @@ public class AvailableExpressions extends BasicBlockVisitor
           }
 
           BitSet bs = exprsFromVar.get(vArg.getDesc().getLocation());
-          
+
           if (bs == null) {
             bs = new BitSet();
           }
-          
+
           bs.set(index);
           exprsFromVar.put(vArg.getDesc().getLocation(), bs);
         }
-        
-        if (opSt.getArg2().isVariable()) {
+
+        if (opSt.getArg2() != null && opSt.getArg2().isVariable()) {
           vArg = (VariableArgument) opSt.getArg2();
           if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
             callKill.set(index);
           }
-          
+
           BitSet bs = exprsFromVar.get(vArg.getDesc().getLocation());
-          
+
           if (bs == null) {
             bs = new BitSet();
           }
-          
+
           bs.set(index);
           exprsFromVar.put(vArg.getDesc().getLocation(), bs);
         }
@@ -290,7 +297,7 @@ public class AvailableExpressions extends BasicBlockVisitor
 
   }
 
-  private boolean isExpression(BasicStatement s) {
+  public static boolean isExpression(BasicStatement s) {
     if (!(s instanceof OpStatement)) {
       return false;
     }
@@ -305,7 +312,7 @@ public class AvailableExpressions extends BasicBlockVisitor
         return true;
     }
   }
-  
+
   private VariableLocation getExpressionTarget(OpStatement expr) {
     switch (expr.getOp()) {
       case MOVE:
@@ -315,12 +322,14 @@ public class AvailableExpressions extends BasicBlockVisitor
         "of a non-expression!"));
         return null;
       default:
+        if (expr.getResult() == null) {
+          return null;
+        }
         return expr.getResult().getLocation();
-        
     }
   }
 
-  
+
   @Override
   public BitSet abstractionFunction(BasicBlockNode value) {
     // TODO Auto-generated method stub
@@ -351,7 +360,7 @@ public class AvailableExpressions extends BasicBlockVisitor
     ret.and(v2);
     return ret;
   }
-  
-  
+
+
 
 }
