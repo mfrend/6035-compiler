@@ -18,18 +18,45 @@ import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
-import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 
 public class AvailableExpressions extends BasicBlockVisitor
                                   implements Lattice<BitSet, BasicBlockNode> {
 
-  private List<OpStatement> expressions;
-  private Set<OpStatement> expressionSet;
-  private Map<OpStatement, Integer> exprIndices;
+  private List<Expression> expressions;
+  private Set<Expression> expressionSet;
+  private Map<Expression, Integer> exprIndices;
   private Map<BasicBlockNode, BlockItem> blockExpressions;
   private Map<VariableLocation, BitSet> exprsFromVar; 
   private BitSet callKill;
+  
+  public static class Expression {
+    private OpStatement expr;
+    
+    public Expression(OpStatement expr) {
+      this.expr = expr;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof Expression)) return false;
+      
+      Expression e = (Expression) o;
+      return expr.expressionEquals(e.expr);
+    }
+    
+    public OpStatement getStatement() {
+      return expr;
+    }
+    
+    @Override
+    public int hashCode() {
+      return expr.getOp().hashCode() + 
+             + ((expr.getArg1() == null) ? expr.getArg1().hashCode() + 1 : 0)
+             + ((expr.getArg2() == null) ? expr.getArg2().hashCode() + 1 : 0);
+    }
+  }
 
   public class BlockItem extends GenKillItem {
     private AvailableExpressions parent;
@@ -57,12 +84,13 @@ public class AvailableExpressions extends BasicBlockVisitor
           continue;
         }
 
-        OpStatement expr = (OpStatement) s;
-        index = parent.exprIndices.get(s);
+        
+        Expression expr = new Expression((OpStatement) s);
+        index = parent.exprIndices.get(expr);
         this.genSet.set(index);
         
         BitSet killed = parent.exprsFromVar.get(
-                            parent.getExpressionTarget(expr));
+                            parent.getExpressionTarget(expr.getStatement()));
         
         if (killed != null) {
           this.killSet.or(killed);
@@ -78,10 +106,29 @@ public class AvailableExpressions extends BasicBlockVisitor
      * @return true if expr is available, false otherwise.
      */
     public boolean expressionIsAvailable(OpStatement expr) {
-      return getBitsetExpressions(this.getIn()).contains(expr);
+      return getBitsetExpressions(this.getIn()).contains(new Expression(expr));
     }
 
-    private List<BasicStatement> getBitsetExpressions(BitSet bs) {
+    private List<Expression> getBitsetExpressions(BitSet bs) {
+      if (parent.expressions.isEmpty()) {
+        return Collections.emptyList();
+      }
+
+      List<Expression> exprs = new ArrayList<Expression>();
+
+      int len = parent.expressions.size();
+      for (int i = 0 ; i < len; i++) {
+        Expression expr = parent.expressions.get(i);
+
+        if (bs.get(i)) {
+          exprs.add(expr);
+        }
+      }
+
+      return exprs;
+    }
+    
+    private List<BasicStatement> getBitsetStatements(BitSet bs) {
       if (parent.expressions.isEmpty()) {
         return Collections.emptyList();
       }
@@ -90,10 +137,10 @@ public class AvailableExpressions extends BasicBlockVisitor
 
       int len = parent.expressions.size();
       for (int i = 0 ; i < len; i++) {
-        BasicStatement s = parent.expressions.get(i);
+        Expression expr = parent.expressions.get(i);
 
         if (bs.get(i)) {
-          exprs.add(s);
+          exprs.add(expr.getStatement());
         }
       }
 
@@ -101,11 +148,11 @@ public class AvailableExpressions extends BasicBlockVisitor
     }
 
     public List<BasicStatement> getInExpressions() {
-      return getBitsetExpressions(this.getIn());
+      return getBitsetStatements(this.getIn());
     }
 
     public List<BasicStatement> getOutExpressions() {
-      return getBitsetExpressions(this.getOut());
+      return getBitsetStatements(this.getOut());
     }
 
     @Override
@@ -151,9 +198,9 @@ public class AvailableExpressions extends BasicBlockVisitor
   }
 
   public AvailableExpressions(BasicBlockNode methodRoot) {
-    this.expressions = new ArrayList<OpStatement>();
-    this.expressionSet = new HashSet<OpStatement>();
-    this.exprIndices = new HashMap<OpStatement, Integer>();
+    this.expressions = new ArrayList<Expression>();
+    this.expressionSet = new HashSet<Expression>();
+    this.exprIndices = new HashMap<Expression, Integer>();
     this.blockExpressions = new HashMap<BasicBlockNode, BlockItem>();
     this.exprsFromVar = new HashMap<VariableLocation, BitSet>();
     this.callKill = new BitSet();
@@ -186,50 +233,51 @@ public class AvailableExpressions extends BasicBlockVisitor
 
     for (BasicStatement s : node.getStatements()) {
       if (isExpression(s)) {
-        OpStatement expr = (OpStatement) s;
+        OpStatement opSt = (OpStatement) s;
+        Expression expr = new Expression(opSt);
+
+        blockExprs.add(opSt);
         
         if (expressionSet.contains(expr)) {
-          blockExprs.add(expr);
           continue;
         }
                 
-        blockExprs.add(expr);
         expressions.add(expr);
         expressionSet.add(expr);
         int index = expressions.size() - 1;
         exprIndices.put(expr, index);
         
         VariableArgument vArg; 
-        if (expr.getArg1().isVariable()) {
-          vArg = (VariableArgument) expr.getArg1();
-          if (vArg.getLoc().getLocation().getLocationType() == LocationType.GLOBAL) {
+        if (opSt.getArg1().isVariable()) {
+          vArg = (VariableArgument) opSt.getArg1();
+          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
             callKill.set(index);
           }
 
-          BitSet bs = exprsFromVar.get(vArg.getLoc().getLocation());
+          BitSet bs = exprsFromVar.get(vArg.getDesc().getLocation());
           
           if (bs == null) {
             bs = new BitSet();
           }
           
           bs.set(index);
-          exprsFromVar.put(vArg.getLoc().getLocation(), bs);
+          exprsFromVar.put(vArg.getDesc().getLocation(), bs);
         }
         
-        if (expr.getArg2().isVariable()) {
-          vArg = (VariableArgument) expr.getArg2();
-          if (vArg.getLoc().getLocation().getLocationType() == LocationType.GLOBAL) {
+        if (opSt.getArg2().isVariable()) {
+          vArg = (VariableArgument) opSt.getArg2();
+          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
             callKill.set(index);
           }
           
-          BitSet bs = exprsFromVar.get(vArg.getLoc().getLocation());
+          BitSet bs = exprsFromVar.get(vArg.getDesc().getLocation());
           
           if (bs == null) {
             bs = new BitSet();
           }
           
           bs.set(index);
-          exprsFromVar.put(vArg.getLoc().getLocation(), bs);
+          exprsFromVar.put(vArg.getDesc().getLocation(), bs);
         }
 
       }

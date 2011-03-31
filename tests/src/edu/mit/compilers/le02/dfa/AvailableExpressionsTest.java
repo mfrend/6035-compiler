@@ -76,7 +76,7 @@ public class AvailableExpressionsTest extends TestCase {
   /**
    * Test that expressions are available only if available on two branches
    */
-  public void testOverride() {
+  public void testBranch() {
     BasicBlockNode top = new BasicBlockNode("main", "main");
     BasicBlockNode left = new BasicBlockNode("block1", "main");
     BasicBlockNode right = new BasicBlockNode("block2", "main");
@@ -110,7 +110,6 @@ public class AvailableExpressionsTest extends TestCase {
     bi = exprs.getExpressions(left);
     assertNotNull(bi);
     nodeDefs = bi.getOutExpressions();
-    System.out.println(nodeDefs);
     assertEquals(3, nodeDefs.size());
     assertTrue(isAvailable(bi, AsmOp.ADD, "var1", "var2"));
     assertTrue(isAvailable(bi, AsmOp.SUBTRACT, "var3", "var4"));
