@@ -15,7 +15,7 @@ public class VariableArgument extends Argument {
   }
 
   @Override
-  public TypedDescriptor getLoc() {
+  public TypedDescriptor getDesc() {
     return loc;
   }
 

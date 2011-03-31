@@ -22,4 +22,8 @@ public enum DecafType {
     }
     return type;
   }
+
+  public boolean isArray() {
+    return (this == INT_ARRAY || this == BOOLEAN_ARRAY);
+  }
 }

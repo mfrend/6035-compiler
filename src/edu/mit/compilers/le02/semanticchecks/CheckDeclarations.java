@@ -84,8 +84,7 @@ public class CheckDeclarations extends ASTNodeVisitor<Boolean> {
         new SymbolTableException(node.getSourceLoc(),
           "Undeclared array " + node.getName()));
     } else {
-      if (!((desc.getType() == DecafType.INT_ARRAY) ||
-          (desc.getType() == DecafType.BOOLEAN_ARRAY))) {
+      if (!desc.getType().isArray()) {
         ErrorReporting.reportError(
           new SemanticException(node.getSourceLoc(),
             "Indexing into non-array " + node.getName()));
@@ -110,8 +109,7 @@ public class CheckDeclarations extends ASTNodeVisitor<Boolean> {
       ErrorReporting.reportError(
         new SymbolTableException(node.getSourceLoc(),
               "Undeclared variable " + node.getName()));
-    } else if ((desc.getType() == DecafType.INT_ARRAY) ||
-        (desc.getType() == DecafType.BOOLEAN_ARRAY)) {
+    } else if (desc.getType().isArray()) {
       ErrorReporting.reportError(
         new SemanticException(node.getSourceLoc(),
           "Array " + node.getName() + " used without index as scalar"));

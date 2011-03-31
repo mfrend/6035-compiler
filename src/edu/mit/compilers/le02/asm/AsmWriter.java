@@ -593,19 +593,19 @@ public class AsmWriter {
      case VARIABLE:
       writeOp("movq",
         convertVariableLocation(
-          ((VariableArgument)arg).getLoc().getLocation()),
+          ((VariableArgument)arg).getDesc().getLocation()),
         tempStorage, sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
-      assert(ava.getLoc().getLocation().getLocationType() ==
+      assert(ava.getDesc().getLocation().getLocationType() ==
         LocationType.GLOBAL);
 
       // Prepare the symbol and index names. The index needs recursive
       // resolution since it might be a variable or another array.
       // Symbol will always be a global address.
-      String symbol = "." + ava.getLoc().getLocation().getSymbol();
+      String symbol = "." + ava.getDesc().getLocation().getSymbol();
       // The index will be a temporary register (either R10 or R11).
       // As it happens, this is also our return register, but that's okay.
       String index = prepareArgument(ava.getIndex(), first, methodName, sl);
@@ -638,18 +638,18 @@ public class AsmWriter {
       writeOp("movq",
         Register.R11,
         convertVariableLocation(
-          ((VariableArgument)arg).getLoc().getLocation()), sl);
+          ((VariableArgument)arg).getDesc().getLocation()), sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
-      assert(ava.getLoc().getLocation().getLocationType() ==
+      assert(ava.getDesc().getLocation().getLocationType() ==
              LocationType.GLOBAL);
 
       // Prepare the symbol and index names. The index needs recursive
-      // resolution since it might be a variable or another array.
+      // resolution since it might be a variable.
       // Symbol will always be a global address.
-      String symbol = "." + ava.getLoc().getLocation().getSymbol();
+      String symbol = "." + ava.getDesc().getLocation().getSymbol();
 
       // The index will be an unused register (R10).
       // We don't want to use R11, which would clobber the result to return.
