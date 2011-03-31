@@ -1,7 +1,9 @@
 package edu.mit.compilers.le02.cfg;
 
+import edu.mit.compilers.le02.opt.CseVariable;
 
-public final class ConstantArgument extends Argument {
+
+public final class ConstantArgument extends Argument implements CseVariable {
   private int i;
   private boolean b;
   private boolean isInt;
@@ -46,9 +48,17 @@ public final class ConstantArgument extends Argument {
 
     if (this.isInt) {
       return this.i == other.i;
-    }
-    else {
+    } else {
       return this.b == other.b;
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    if (this.isInt) {
+      return this.i;
+    } else {
+      return (this.b) ? 1 : 0;
     }
   }
 

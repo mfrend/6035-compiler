@@ -2,8 +2,10 @@ package edu.mit.compilers.le02.symboltable;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.opt.CseVariable;
 
-public abstract class TypedDescriptor extends Descriptor {
+public abstract class TypedDescriptor
+    extends Descriptor implements CseVariable {
   private DecafType type;
   protected VariableLocation location;
 
@@ -33,11 +35,17 @@ public abstract class TypedDescriptor extends Descriptor {
       return false;
     }
     TypedDescriptor desc = (TypedDescriptor)o;
-    return desc.getId().equals(getId());
+    return desc != null && getLocation().equals(desc.getLocation());
   }
 
   @Override
   public int hashCode() {
     return getId().hashCode();
   }
+
+  public boolean isLocalTemporary() {
+    return getId().matches("^[0-9]+" + LOCAL_TEMP_SUFFIX + "$");
+  }
+
+  public static String LOCAL_TEMP_SUFFIX = "lcltmp";
 }

@@ -60,12 +60,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    * conflict with any of node's, node's ancestors', or node's descendents'
    * locals.
    */
-  private TypedDescriptor makeTemp(ASTNode node, DecafType type) {
+  public static LocalDescriptor makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
     int offset = st.getNonconflictingOffset();
 
     LocalDescriptor ld =
-      new LocalDescriptor(st, Math.abs(offset) + "lcltmp", type, offset);
+      new LocalDescriptor(st,
+        Math.abs(offset) + TypedDescriptor.LOCAL_TEMP_SUFFIX, type, offset);
     st.put(ld.getId(), ld, node.getSourceLoc());
     return ld;
   }

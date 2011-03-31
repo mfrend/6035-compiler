@@ -53,48 +53,32 @@ public final class OpStatement extends BasicStatement {
     if (!(o instanceof OpStatement)) return false;
 
     OpStatement other = (OpStatement) o;
-    return op.equals(other.op)
-           && arg1.equals(other.arg1)
-           && arg2.equals(other.arg2)
-           && result.equals(other.result);
+    return expressionEquals(other) &&
+      ((result != null) ? result.equals(other.result) : other.result == null);
+  }
+
+  public boolean expressionEquals(OpStatement other) {
+    return op.equals(other.op) &&
+      ((arg1 != null) ? arg1.equals(other.arg1) : (other.arg1 == null)) &&
+      ((arg2 != null) ? arg2.equals(other.arg2) : (other.arg2 == null));
   }
 
   @Override
   public int hashCode() {
-    int hc = 0;
-    if (op != null) {
-      hc += 1 + op.hashCode();
-    }
-    if (arg1 != null) {
-      hc += 1 + arg1.hashCode();
-    }
-    if (arg2 != null) {
-      hc += 1 + arg2.hashCode();
-    }
-    if (result != null) {
-      hc += 1 + result.hashCode();
-    }
-
-    return hc;
+    return ((op != null) ? 1 + op.hashCode() : 0) +
+      ((arg1 != null) ? 1 + arg1.hashCode() : 0) +
+      ((arg2 != null) ? 1 + arg2.hashCode() : 0) +
+      ((result != null) ? 1 + result.hashCode() : 0);
   }
 
   @Override
   public String toString() {
-    String s = "OpStatement(" + op;
-    if (arg1 != null) {
-      s += ", " + arg1;
-    }
-    if (arg2 != null && op != AsmOp.MOVE) {
-      s += ", " + arg2;
-    }
-    s += ")";
-    if (result != null) {
-      s += ": " + result;
-    }
-    if (op == AsmOp.MOVE) {
-      s += ": " + arg2;
-    }
-    return s;
+    return "OpStatement(" + op +
+      ((arg1 != null) ? ", " + arg1 : "") +
+      ((arg2 != null && op != AsmOp.MOVE) ? ", " + arg2 : "") +
+      ")" +
+      ((result != null) ? ": " + result : "") +
+      ((op == AsmOp.MOVE) ? ": " + arg2 : "");
   }
 
 }
