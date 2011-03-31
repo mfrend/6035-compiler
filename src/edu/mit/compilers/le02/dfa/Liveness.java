@@ -196,7 +196,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
-        return ((VariableArgument) def.getArg2()).getLoc();
+        return ((VariableArgument) def.getArg2()).getDesc().getLocation();
       case ADD:
       case SUBTRACT:
       case MULTIPLY:
@@ -204,7 +204,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       case MODULO:
       case UNARY_MINUS:
       case NOT:
-        return def.getResult();
+        return def.getResult().getLocation();
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non definition!"));
@@ -220,7 +220,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       case UNARY_MINUS:
       case NOT:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg1()).getLoc());
+          ret.add(((VariableArgument) def.getArg1()).getDesc().getLocation());
         }
         break;
       case ADD:
@@ -229,10 +229,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       case DIVIDE:
       case MODULO:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg1()).getLoc());
+          ret.add(((VariableArgument) def.getArg1()).getDesc().getLocation());
         }
         if (def.getArg2() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg2()).getLoc());
+          ret.add(((VariableArgument) def.getArg2()).getDesc().getLocation());
         }
         break;
       default:
