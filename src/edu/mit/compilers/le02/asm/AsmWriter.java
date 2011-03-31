@@ -647,7 +647,7 @@ public class AsmWriter {
              LocationType.GLOBAL);
 
       // Prepare the symbol and index names. The index needs recursive
-      // resolution since it might be a variable or another array.
+      // resolution since it might be a variable.
       // Symbol will always be a global address.
       String symbol = "." + ava.getDesc().getLocation().getSymbol();
 

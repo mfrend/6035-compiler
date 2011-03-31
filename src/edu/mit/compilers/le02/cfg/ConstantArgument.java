@@ -1,5 +1,6 @@
 package edu.mit.compilers.le02.cfg;
 
+import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.opt.CseVariable;
 
 
@@ -25,6 +26,16 @@ public final class ConstantArgument extends Argument implements CseVariable {
     }
     else {
       return ArgType.CONST_BOOL;
+    }
+  }
+
+  @Override
+  public DecafType getFlattenedType() {
+    if (isInt) {
+      return DecafType.INT;
+    }
+    else {
+      return DecafType.BOOLEAN;
     }
   }
 

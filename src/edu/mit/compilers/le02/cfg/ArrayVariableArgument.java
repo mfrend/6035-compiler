@@ -1,8 +1,11 @@
 package edu.mit.compilers.le02.cfg;
 
+import edu.mit.compilers.le02.DecafType;
+import edu.mit.compilers.le02.opt.CseVariable;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
-public class ArrayVariableArgument extends VariableArgument {
+public class ArrayVariableArgument
+    extends VariableArgument implements CseVariable {
   private Argument index;
 
   public ArrayVariableArgument(TypedDescriptor loc, Argument index) {
@@ -30,7 +33,17 @@ public class ArrayVariableArgument extends VariableArgument {
   }
 
   @Override
+  public int hashCode() {
+    return loc.hashCode() + index.hashCode();
+  }
+
+  @Override
   public String toString() {
     return loc.toString() + "[" + index + "]";
+  }
+
+  @Override
+  public DecafType getFlattenedType() {
+    return loc.getFlattenedType();
   }
 }

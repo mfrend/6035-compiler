@@ -1,5 +1,6 @@
 package edu.mit.compilers.le02.cfg;
 
+import edu.mit.compilers.le02.opt.CseVariable;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public abstract class Argument {
@@ -16,11 +17,19 @@ public abstract class Argument {
     return null;
   }
 
+  public static Argument makeArgument(CseVariable var) {
+    if (var instanceof TypedDescriptor) {
+      return makeArgument((TypedDescriptor)var);
+    }
+    return (Argument)var;
+  }
+
   public static Argument makeArgument(TypedDescriptor loc) {
     return new VariableArgument(loc);
   }
 
-  public static Argument makeArgument(TypedDescriptor loc, Argument index) {
+  public static Argument makeArgument(TypedDescriptor loc,
+                                      Argument index) {
     return new ArrayVariableArgument(loc, index);
   }
 

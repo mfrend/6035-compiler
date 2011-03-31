@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.cfg.Argument;
+import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CFGGenerator;
@@ -115,7 +116,7 @@ public class CseVisitor extends BasicBlockVisitor {
   protected void processNode(BasicBlockNode node) {
     List<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     for (BasicStatement stmt : node.getStatements()) {
-      TypedDescriptor storedVar = null;
+      CseVariable storedVar = null;
       if (stmt.getType() == BasicStatementType.CALL) {
         // Invalidate all cached global variable values.
         // This necessitates enumerating all globals and dropping em.
@@ -143,13 +144,17 @@ public class CseVisitor extends BasicBlockVisitor {
           // We can silently drop a self-assignment.
           continue;
         }
-        if (op.getArg2().getDesc() instanceof AnonymousDescriptor) {
+        if (op.getArg2().getDesc() != null &&
+            op.getArg2().getDesc() instanceof AnonymousDescriptor) {
           // This is either an implicit conditional assignment for je or
           // an implicit string MOV to push arguments for a callout.
+          // In either case, not cacheable.
           newStmts.add(stmt);
           continue;
         }
-        if (op.getArg2().getDesc() != null) {
+        if (op.getArg2() instanceof ArrayVariableArgument) {
+          storedVar = (ArrayVariableArgument)op.getArg2();
+        } else if (op.getArg2().getDesc() != null) {
           storedVar = op.getArg2().getDesc();
         }
         break;
@@ -176,11 +181,26 @@ public class CseVisitor extends BasicBlockVisitor {
         newStmts.add(stmt);
       }
       if (storedVar != null) {
+        if (storedVar instanceof ArrayVariableArgument) {
+          // This is a global array that we've scribbled on.
+          // Invalidate all previous references to that array.
+          Iterator<CseVariable> it = varToVal.keySet().iterator();
+          while (it.hasNext()) {
+            CseVariable var = it.next();
+            if (var instanceof ArrayVariableArgument &&
+                ((ArrayVariableArgument)var).getDesc().equals(
+                    ((ArrayVariableArgument)storedVar).getDesc())) {
+              it.remove();
+            }
+          }
+        }
+
         Value val = Value.nextIndex();
         varToVal.put(storedVar, val);
-
         expToVal.put(valexp, val);
-        if (storedVar.isLocalTemporary()) {
+
+        if (storedVar instanceof LocalDescriptor &&
+            ((LocalDescriptor)storedVar).isLocalTemporary()) {
           // This is an immutable temporary, but need to register the
           // correspondence.
           expToTmp.put(valexp, (LocalDescriptor)storedVar);
@@ -188,7 +208,7 @@ public class CseVisitor extends BasicBlockVisitor {
           // We need to archive a copy of this variable just in case.
           // Allocate a new temporary.
           LocalDescriptor tempDescriptor =
-            CFGGenerator.makeTemp(stmt.getNode(), storedVar.getType());
+            CFGGenerator.makeTemp(stmt.getNode(), storedVar.getFlattenedType());
           newStmts.add(new OpStatement(stmt.getNode(), AsmOp.MOVE,
             Argument.makeArgument(storedVar),
             Argument.makeArgument(tempDescriptor),

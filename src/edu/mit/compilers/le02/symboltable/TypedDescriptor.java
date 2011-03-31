@@ -19,6 +19,11 @@ public abstract class TypedDescriptor
     return type;
   }
 
+  @Override
+  public DecafType getFlattenedType() {
+    return DecafType.simplify(type);
+  }
+
   public VariableLocation getLocation() {
     return this.location;
   }

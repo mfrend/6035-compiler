@@ -399,7 +399,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   /**
    * Method calls and system calls are represented by a call node which
-   * can contain a list of arguments of arbtrary length.
+   * can contain a list of arguments of arbitrary length.
    */
   @Override
   public CFGFragment visit(MethodCallNode node) {
@@ -479,6 +479,16 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   public CFGFragment visit(ArrayLocationNode node) {
     CFGFragment indexFrag = node.getIndex().accept(this);
     Argument index = indexFrag.getExit().getResult();
+    if (index instanceof ArrayVariableArgument) {
+      // This needs to be flattened rather than passed through.
+      ArrayVariableArgument ava = (ArrayVariableArgument)index;
+      LocalDescriptor indexTemp =
+        makeTemp(node, DecafType.simplify(ava.getDesc().getType()));
+      index = Argument.makeArgument(indexTemp);
+      indexFrag = indexFrag.append(new SimpleCFGNode(
+        new OpStatement(node, AsmOp.MOVE, ava, index, null)));
+      
+    }
     Argument array = Argument.makeArgument(node.getDesc(),
                                            index);
     ArgumentStatement as = new ArgumentStatement(node, array);
