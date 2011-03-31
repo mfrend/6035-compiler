@@ -257,7 +257,9 @@ public class AvailableExpressions extends BasicBlockVisitor
         VariableArgument vArg;
         if (opSt.getArg1().isVariable()) {
           vArg = (VariableArgument) opSt.getArg1();
-          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
+          if (vArg.getDesc().getLocation().getLocationType()
+                == LocationType.GLOBAL) {
+
             callKill.set(index);
           }
 
@@ -273,7 +275,9 @@ public class AvailableExpressions extends BasicBlockVisitor
 
         if (opSt.getArg2() != null && opSt.getArg2().isVariable()) {
           vArg = (VariableArgument) opSt.getArg2();
-          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
+          if (vArg.getDesc().getLocation().getLocationType()
+                == LocationType.GLOBAL) {
+
             callKill.set(index);
           }
 

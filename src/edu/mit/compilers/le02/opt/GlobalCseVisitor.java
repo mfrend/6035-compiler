@@ -153,7 +153,8 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
 
     VariableArgument vArg = (VariableArgument) arg;
     if (globalsClobbered
-        && vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
+        && vArg.getDesc().getLocation().getLocationType()
+               == LocationType.GLOBAL) {
       return false;
     }
 
