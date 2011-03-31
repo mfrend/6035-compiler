@@ -43,8 +43,16 @@ public final class OpStatement extends BasicStatement {
     return arg1;
   }
 
+  public void setArg1(Argument a) {
+    arg1 = a;
+  }
+
   public Argument getArg2() {
     return arg2;
+  }
+
+  public void setArg2(Argument a) {
+    arg2 = a;
   }
 
   @Override

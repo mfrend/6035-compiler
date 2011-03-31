@@ -64,7 +64,8 @@ public class Main {
 
   public enum Optimization {
     COMMON_SUBEXPR("cse"),
-    COPY_PROPAGATION("cp");
+    COPY_PROPAGATION("cp"),
+    DEAD_CODE("dc");
     private String flagName;
 
     private Optimization(String flag) {

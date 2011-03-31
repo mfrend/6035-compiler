@@ -26,6 +26,9 @@ public class CallStatement extends BasicStatement {
     return new ArrayList<Argument>(args);
   }
 
+  public void setArgs(List<Argument> newArgs) {
+    args = newArgs;
+  }
 
   @Override
   public String toString() {

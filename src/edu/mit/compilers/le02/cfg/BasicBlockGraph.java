@@ -40,20 +40,26 @@ public class BasicBlockGraph {
         }
       }
 
-      // Run CSE
+      // Run local CSE
       if (opts.contains(Optimization.COMMON_SUBEXPR)) {
         BasicBlockVisitor cse = new CseVisitor();
         cse.visit(methodEnter);
-        // We've changed the number of local variables.
-        // That's okay - we don't call getLargestLocalOffset until after
-        // optimization is finished.
       }
 
-      // Run CP
+      // Run local CP
       if (opts.contains(Optimization.COPY_PROPAGATION)) {
         CpVisitor cp = new CpVisitor();
         cp.visit(methodEnter);
       }
+
+      // Run local dead code elimination.
+      if (opts.contains(Optimization.DEAD_CODE)) {
+        // TODO(dkoh)
+      }
+
+      // All of these optimizations change the number of local variables.
+      // That's okay - we don't call getLargestLocalOffset until after
+      // optimization is finished.
 
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();

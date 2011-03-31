@@ -116,7 +116,6 @@ public class CseVisitor extends BasicBlockVisitor {
   protected void processNode(BasicBlockNode node) {
     List<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     for (BasicStatement stmt : node.getStatements()) {
-      CseVariable storedVar = null;
       if (stmt.getType() == BasicStatementType.CALL) {
         // Invalidate all cached global variable values.
         // This necessitates enumerating all globals and dropping em.
@@ -137,6 +136,8 @@ public class CseVisitor extends BasicBlockVisitor {
         newStmts.add(stmt);
         continue;
       }
+
+      CseVariable storedVar = null;
       OpStatement op = (OpStatement)stmt;
       switch (op.getOp()) {
        case MOVE:
