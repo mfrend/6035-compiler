@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
@@ -33,7 +34,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   public class BlockItem extends GenKillItem {
     private Liveness parent;
     private BasicBlockNode node;
-    private List<BasicStatement> blockItems;
+    private List<BasicStatement> blockDefs;
     private BitSet genSet;
     private BitSet killSet;
 
@@ -41,7 +42,7 @@ implements Lattice<BitSet, BasicBlockNode> {
         BasicBlockNode node, List<BasicStatement> blockDefs) {
       this.parent = parent;
       this.node = node;
-      this.blockItems = blockDefs;
+      this.blockDefs = blockDefs;
 
       this.genSet = new BitSet();
       this.killSet = new BitSet();
@@ -51,7 +52,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     private void init() {
       int index;
 
-      for (BasicStatement s : blockItems) {
+      for (BasicStatement s : blockDefs) {
         index = parent.definitionIndices.get(s);
         if (!this.killSet.get(index)) {
           this.genSet.set(index);
@@ -61,6 +62,32 @@ implements Lattice<BitSet, BasicBlockNode> {
           this.killSet.set(i);
         }
       }
+    }
+
+    public Set<BasicStatement> getEliminationSet() {
+      BitSet liveness = (BitSet) this.getOut().clone();
+      Set<BasicStatement> ret = new HashSet<BasicStatement>();
+      BasicStatement s;
+      int def;
+
+      for (int i = blockDefs.size() - 1; i >= 0; i--) {
+        s = blockDefs.get(i);
+        def = parent.definitionIndices.get(s);
+
+        if (liveness.get(def)) {
+          // This variable is currently live, so this definition cannot
+          // be eliminated. Set and clear liveness bits for used and defd vars
+          liveness.clear(def);
+          for (Integer use : parent.useIndices.get(s)) {
+            liveness.set(use);
+          }
+        } else {
+          // This variable is not live so this definition can be eliminated
+          ret.add(s);
+        }
+      }
+
+      return ret;
     }
 
     @Override
@@ -105,7 +132,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
   }
 
-  public Liveness(BasicBlockNode methodEnd) {
+  public Liveness(BasicBlockNode methodStart, BasicBlockNode methodEnd) {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
@@ -114,10 +141,8 @@ implements Lattice<BitSet, BasicBlockNode> {
     // TODO Probably not in this visitor, but write a way to find the
     // 'last' basic block in a method. If there is no unique last block,
     // create one
-    this.visit(methodEnd);
+    this.visit(methodStart);
     BlockItem start = blockItems.get(methodEnd);
-    // TODO Make the initial bitset the set of globals - these are
-    // the variables which are live outside the method
     BitSet init = bottom();
     for (VariableLocation loc : variableIndices.keySet()) {
       if (loc.getLocationType() == LocationType.GLOBAL) {
@@ -128,9 +153,6 @@ implements Lattice<BitSet, BasicBlockNode> {
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
     WorklistAlgorithm.runBackwards(blockItems.values(), this, start, init);
-
-    // TODO Either in this visitor or in another, run through definitions
-    // and remove all definitions of dead variables
   }
 
   @Override
@@ -277,4 +299,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
+  public Map<BasicBlockNode, BlockItem> getBlockItems() {
+    return blockItems;
+  }
 }

@@ -50,7 +50,8 @@ public class WorklistAlgorithm {
     }
   }
 
-  public static <T> void runBackwards(Collection<? extends WorklistItem<T>> items,
+  public static <T> void runBackwards(
+      Collection<? extends WorklistItem<T>> items,
       Lattice<T, ?> lattice,
       WorklistItem<T> startItem,
       T startInfo) {
