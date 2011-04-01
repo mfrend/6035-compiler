@@ -21,6 +21,8 @@ import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
+import edu.mit.compilers.le02.symboltable.FieldDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
  *
@@ -33,6 +35,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
   private Map<VariableLocation, Integer> variableIndices;
+  private List<VariableLocation> globals;
 
   public class BlockItem extends GenKillItem {
     private Liveness parent;
@@ -140,22 +143,26 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
+    this.globals = new ArrayList<VariableLocation>();
+
+    BitSet globalSet = new BitSet();
+    if (methodEnd.getLastStatement() != null) {
+      SymbolTable st = methodEnd.getLastStatement().getNode().getSymbolTable();
+      for (FieldDescriptor desc : st.getFields()) {
+        globals.add(desc.getLocation());
+        globalSet.set(getVarIndex(desc.getLocation()));
+      }
+    }
 
     // TODO Probably not in this visitor, but write a way to find the
     // 'last' basic block in a method. If there is no unique last block,
     // create one
     this.visit(methodStart);
-    BlockItem start = blockItems.get(methodEnd);
-    BitSet init = bottom();
-    for (VariableLocation loc : variableIndices.keySet()) {
-      if (loc.getLocationType() == LocationType.GLOBAL) {
-        init.set(variableIndices.get(loc));
-      }
-    }
+    BlockItem end = blockItems.get(methodEnd);
 
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
-    WorklistAlgorithm.runBackwards(blockItems.values(), this, start, init);
+    WorklistAlgorithm.runBackwards(blockItems.values(), this, end, globalSet);
   }
 
   @Override
@@ -304,10 +311,11 @@ implements Lattice<BitSet, BasicBlockNode> {
   }
 
   private List<VariableLocation> getDefinitionUses(CallStatement call) {
-    List<VariableLocation> ret = new ArrayList<VariableLocation>();
+    List<VariableLocation> ret = new ArrayList<VariableLocation>(globals);
 
     for (Argument arg : call.getArgs()) {
-      if (arg instanceof VariableArgument) {
+      if ((arg instanceof VariableArgument) && 
+          !(arg.getDesc() instanceof FieldDescriptor)) {
         ret.add(((VariableArgument) arg).getDesc().getLocation());
       }
     }
