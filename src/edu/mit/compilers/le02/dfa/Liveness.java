@@ -87,19 +87,21 @@ implements Lattice<BitSet, BasicBlockNode> {
       BitSet liveness = (BitSet) this.getOut().clone();
       Set<BasicStatement> ret = new HashSet<BasicStatement>();
       BasicStatement s;
-      int def;
+      Integer def;
 
       for (int i = statements.size() - 1; i >= 0; i--) {
         s = statements.get(i);
         def = parent.definitionIndices.get(s);
 
-        if (parent.isEliminable(s) && !liveness.get(def)) {
+        if (parent.isEliminable(s) && (def != null) && !liveness.get(def)) {
           // This variable is not live so this definition can be eliminated
           ret.add(s);
         } else {
           // This variable is currently live, so this definition cannot
           // be eliminated. Set and clear liveness bits for used and defd vars
-          liveness.clear(def);
+          if (def != null) {
+            liveness.clear(def);
+          }
           for (Integer use : parent.useIndices.get(s)) {
             liveness.set(use);
           }
@@ -130,7 +132,9 @@ implements Lattice<BitSet, BasicBlockNode> {
 
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockItems.get(pred);
-        ret.add(item);
+        if (item != null) {
+          ret.add(item);
+        }
       }
       return ret;
     }
@@ -167,7 +171,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       SymbolTable st = methodStart.getLastStatement().getNode().getSymbolTable();
       for (FieldDescriptor desc : st.getFields()) {
         globals.add(desc);
-        globalSet.set(getVarIndex(desc));
+        Integer index = getVarIndex(desc);
+        if (index != null) {
+          globalSet.set(index);
+        }
       }
     }
 
@@ -212,8 +219,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   }
 
   private Integer getVarIndex(TypedDescriptor loc) {
-    if ((loc.getType() == DecafType.INT_ARRAY) ||
-        (loc.getType() == DecafType.BOOLEAN_ARRAY)) {
+    if ((loc == null) || (loc.getType() == null) || loc.getType().isArray()) {
       return null;
     }
 
@@ -271,11 +277,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       case UNARY_MINUS:
       case NOT:
         return def.getResult();
-      case RETURN:
-        if ((def.getArg1() != null) &&
-            (def.getArg1() instanceof VariableArgument)) {
-          return (def.getArg1()).getDesc();
-        }
+      case RETURN: 
         return null;
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
@@ -322,6 +324,12 @@ implements Lattice<BitSet, BasicBlockNode> {
           ret.add((def.getArg2()).getDesc());
         }
         break;
+      case RETURN:
+        if ((def.getArg1() != null) &&
+            (def.getArg1() instanceof VariableArgument)) {
+          ret.add((def.getArg1()).getDesc());
+        }
+        return ret;
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get " +
         "variables used in a non definition!"));
