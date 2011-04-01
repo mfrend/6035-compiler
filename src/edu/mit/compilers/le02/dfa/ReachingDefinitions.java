@@ -47,10 +47,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
 
       this.genSet = new BitSet();
       this.killSet = new BitSet();
-      this.init();
     }
 
-    private void init() {
+    public void init() {
       int index;
       for (BasicStatement s : blockDefinitions) {
         if (s.getType() == BasicStatementType.CALL) {
@@ -152,6 +151,10 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.varDefinitions = new HashMap<VariableLocation, BitSet>();
     this.globalDefinitions = new BitSet();
     this.visit(methodRoot);
+
+    for (BlockItem bi : blockDefinitions.values()) {
+      bi.init();
+    }
 
     BlockItem start = blockDefinitions.get(methodRoot);
     BitSet init = bottom();

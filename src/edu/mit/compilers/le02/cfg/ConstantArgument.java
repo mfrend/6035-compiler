@@ -85,5 +85,10 @@ public final class ConstantArgument extends Argument implements CseVariable {
     }
   }
 
+  @Override
+  public boolean isVariable() {
+    return false;
+  }
+
 
 }

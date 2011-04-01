@@ -10,6 +10,7 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
+import edu.mit.compilers.le02.opt.GlobalCseVisitor;
 
 public class BasicBlockGraph {
   private static int id;
@@ -44,6 +45,7 @@ public class BasicBlockGraph {
       if (opts.contains(Optimization.COMMON_SUBEXPR)) {
         BasicBlockVisitor cse = new CseVisitor();
         cse.visit(methodEnter);
+        GlobalCseVisitor.performGlobalCse(methodEnter);
       }
 
       // Run local CP
