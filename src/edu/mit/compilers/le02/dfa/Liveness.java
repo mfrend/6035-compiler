@@ -93,16 +93,16 @@ implements Lattice<BitSet, BasicBlockNode> {
         s = statements.get(i);
         def = parent.definitionIndices.get(s);
 
-        if ((parent.isEliminable(s)) && (liveness.get(def))) {
+        if (parent.isEliminable(s) && !liveness.get(def)) {
+          // This variable is not live so this definition can be eliminated
+          ret.add(s);
+        } else {
           // This variable is currently live, so this definition cannot
           // be eliminated. Set and clear liveness bits for used and defd vars
           liveness.clear(def);
           for (Integer use : parent.useIndices.get(s)) {
             liveness.set(use);
           }
-        } else {
-          // This variable is not live so this definition can be eliminated
-          ret.add(s);
         }
       }
 
