@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
+import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -194,7 +195,10 @@ implements Lattice<BitSet, BasicBlockNode> {
 
         List<Integer> uses = new ArrayList<Integer>();
         for (TypedDescriptor use : getDefinitionUses(s)) {
-          uses.add(getVarIndex(use));
+          Integer index = getVarIndex(use);
+          if (index != null) {
+            uses.add(index);
+          }
         }
         useIndices.put(s, uses);
       }
@@ -207,7 +211,12 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  private int getVarIndex(TypedDescriptor loc) {
+  private Integer getVarIndex(TypedDescriptor loc) {
+    if ((loc.getType() == DecafType.INT_ARRAY) ||
+        (loc.getType() == DecafType.BOOLEAN_ARRAY)) {
+      return null;
+    }
+
     Integer index = variableIndices.get(loc);
     if (index == null) {
       index = new Integer(variableIndices.size());
