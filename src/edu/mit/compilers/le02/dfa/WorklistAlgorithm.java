@@ -74,7 +74,7 @@ public class WorklistAlgorithm {
     while (!worklist.isEmpty()) {
       WorklistItem<T> item = worklist.remove();
 
-      // Calculate the least upper bound of all the successors 
+      // Calculate the least upper bound of all the successors
       T sup = lattice.bottom();
       for(WorklistItem<T> succ : item.successors()) {
         sup = lattice.leastUpperBound(succ.getOut(), sup);
