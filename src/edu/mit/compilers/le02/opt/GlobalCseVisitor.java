@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.opt;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,7 +33,7 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
   private Pass pass;
 
   // See performSubstitution for why this is a Map, not a Set
-  private Map<OpStatement, OpStatement> statementsToUpdate;
+  private Map<Expression, List<OpStatement>> statementsToUpdate;
   private Map<Expression, LocalDescriptor> expressionToTemp;
 
   public enum Pass {
@@ -52,7 +53,7 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
 
   public GlobalCseVisitor(AvailableExpressions ae) {
     this.ae = ae;
-    this.statementsToUpdate = new HashMap<OpStatement, OpStatement>();
+    this.statementsToUpdate = new HashMap<Expression, List<OpStatement>>();
     this.expressionToTemp = new HashMap<Expression, LocalDescriptor>();
   }
 
@@ -73,17 +74,26 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
 
     for (BasicStatement s : node.getStatements()) {
 
+      if (!AvailableExpressions.isExpression(s)) {
+        // Keep the instruction and go on.
+        newStmts.add(s);
+        continue;
+      }
+
+      Expression expr = new Expression((OpStatement) s);
+
       // Replace the expressions with updated versions.
       // Note: two statements can be equal without being the same.
-      if (statementsToUpdate.containsKey(s)
-          && s == statementsToUpdate.get(s)) {
+      if (statementsToUpdate.containsKey(expr)
+          && statementsToUpdate.get(expr).contains(s)) {
 
-        Expression expr = new Expression((OpStatement) s);
+        System.out.println("Replacing " + s + " in node " + node.getId());
         LocalDescriptor tmp = expressionToTemp.get(expr);
-        TypedDescriptor dest = expr.getStatement().getResult();
+        TypedDescriptor dest = s.getResult();
 
-        // If this happens, our dest will be wrong
-        assert expr.getStatement().getOp() != AsmOp.MOVE:
+        // If this isn't true, our dest could be wrong
+        assert (s instanceof OpStatement
+                && ((OpStatement) s).getOp() != AsmOp.MOVE);
 
         newStmts.add(new OpStatement(s.getNode(), AsmOp.MOVE,
                                      Argument.makeArgument(tmp),
@@ -95,21 +105,18 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
       // If we've reached this point, we're not replacing the instruction
       newStmts.add(s);
 
-      if (s.getType() == BasicStatementType.OP) {
-        Expression expr = new Expression((OpStatement) s);
+      if (expressionToTemp.containsKey(expr)) {
+        LocalDescriptor ld = expressionToTemp.get(expr);
 
-        if (expressionToTemp.containsKey(expr)) {
-          LocalDescriptor ld = expressionToTemp.get(expr);
-
-          // Store the result of the computation in a temporary variable
-          newStmts.add(new OpStatement(s.getNode(), AsmOp.MOVE,
-                                       Argument.makeArgument(s.getResult()),
-                                       Argument.makeArgument(ld),
-                                       null));
-        }
+        // Store the result of the computation in a temporary variable
+        newStmts.add(new OpStatement(s.getNode(), AsmOp.MOVE,
+            Argument.makeArgument(s.getResult()),
+            Argument.makeArgument(ld),
+            null));
       }
 
     }
+    node.setStatements(newStmts);
   }
 
   private void findExpressions(BasicBlockNode node) {
@@ -118,47 +125,61 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
     Set<VariableLocation> clobberedVariables = new HashSet<VariableLocation>();
 
     for (BasicStatement s : node.getStatements()) {
+      if (getTarget(s) != null) {
+        clobberedVariables.add(getTarget(s));
+      }
+
       if (s.getType() == BasicStatementType.CALL) {
         globalsClobbered = true;
       }
       else if (s.getType() == BasicStatementType.OP) {
-        OpStatement expr = (OpStatement) s;
+        OpStatement opSt = (OpStatement) s;
 
-        if (!AvailableExpressions.isExpression(expr)) {
+
+        if (!AvailableExpressions.isExpression(opSt)) {
           continue;
         }
 
         // Check that the expression is available from other blocks, and also
         // that it has not been clobbered from this block.
-        if (aeInfo.expressionIsAvailable(expr)
-            && checkArg(expr.getArg1(), clobberedVariables, globalsClobbered)
-            && checkArg(expr.getArg2(), clobberedVariables, globalsClobbered)) {
-          statementsToUpdate.put(expr, expr);
+        if (aeInfo.expressionIsAvailable(opSt)
+            && checkArg(opSt.getArg1(), clobberedVariables, globalsClobbered)
+            && checkArg(opSt.getArg2(), clobberedVariables, globalsClobbered)) {
 
-          LocalDescriptor ld = CFGGenerator.makeTemp(expr.getNode(),
-                                   expr.getResult().getFlattenedType());
-          expressionToTemp.put(new Expression(expr), ld);
+          Expression expr = new Expression(opSt);
+          System.out.println("Found available expression: " + opSt);
+          List<OpStatement> stmts = statementsToUpdate.get(expr);
+          if (stmts == null) {
+            stmts = new ArrayList<OpStatement>();
+
+            LocalDescriptor ld = CFGGenerator.makeTemp(opSt.getNode(),
+                                     opSt.getResult().getFlattenedType());
+            System.out.println("Giving expression tmp: " + ld.getId());
+            expressionToTemp.put(new Expression(opSt), ld);
+          }
+          stmts.add(opSt);
+          statementsToUpdate.put(expr, stmts);
+          System.out.println("Adding expression to list, new size "
+                             + stmts.size());
         }
       }
 
-      clobberedVariables.add(getTarget(s));
     }
   }
 
   private boolean checkArg(Argument arg, Set<VariableLocation> clobbered,
                            boolean globalsClobbered) {
-    if (!arg.isVariable()) {
+    if (arg == null || !arg.isVariable()) {
       return true;
     }
 
     VariableArgument vArg = (VariableArgument) arg;
     if (globalsClobbered
-        && vArg.getDesc().getLocation().getLocationType()
-               == LocationType.GLOBAL) {
+        && vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
       return false;
     }
 
-    return clobbered.contains(vArg.getDesc().getLocation());
+    return !clobbered.contains(vArg.getDesc().getLocation());
   }
 
 
