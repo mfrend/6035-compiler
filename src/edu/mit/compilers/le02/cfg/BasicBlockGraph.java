@@ -43,8 +43,8 @@ public class BasicBlockGraph {
 
       // Run CSE
       if (opts.contains(Optimization.COMMON_SUBEXPR)) {
-        BasicBlockVisitor cse = new CseVisitor();
-        cse.visit(methodEnter);
+        //BasicBlockVisitor cse = new CseVisitor();
+        //cse.visit(methodEnter);
         GlobalCseVisitor.performGlobalCse(methodEnter);
         // We've changed the number of local variables.
         // That's okay - we don't call getLargestLocalOffset until after

@@ -27,7 +27,7 @@ public class AvailableExpressions extends BasicBlockVisitor
   private Set<Expression> expressionSet;
   private Map<Expression, Integer> exprIndices;
   private Map<BasicBlockNode, BlockItem> blockExpressions;
-  private Map<VariableLocation, BitSet> exprsFromVar;
+  private Map<VariableLocation, BitSet> exprsFromVar; 
   private BitSet callKill;
 
   public static class Expression {
@@ -52,9 +52,9 @@ public class AvailableExpressions extends BasicBlockVisitor
 
     @Override
     public int hashCode() {
-      return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) +
-             + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
-             + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
+      return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) + 
+      + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
+      + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
     }
   }
 
@@ -66,7 +66,7 @@ public class AvailableExpressions extends BasicBlockVisitor
     private BitSet killSet;
 
     public BlockItem(AvailableExpressions parent,
-                     BasicBlockNode node, List<BasicStatement> blockExprs) {
+        BasicBlockNode node, List<BasicStatement> blockExprs) {
       this.parent = parent;
       this.node = node;
       this.blockExprs = blockExprs;
@@ -90,7 +90,7 @@ public class AvailableExpressions extends BasicBlockVisitor
         this.genSet.set(index);
 
         BitSet killed = parent.exprsFromVar.get(
-                            parent.getExpressionTarget(expr.getStatement()));
+            parent.getExpressionTarget(expr.getStatement()));
 
         if (killed != null) {
           this.killSet.or(killed);
@@ -107,6 +107,18 @@ public class AvailableExpressions extends BasicBlockVisitor
      */
     public boolean expressionIsAvailable(OpStatement expr) {
       return getBitsetExpressions(this.getIn()).contains(new Expression(expr));
+    }
+
+    public void printDebugStuff() {
+      System.out.println("in: " + this.getIn() + " out: " + this.getOut());
+      System.out.println("gen: " + gen() + " kill: " + kill());
+      System.out.println("Available exprs: ");
+      if (this.getIn() != null) {
+        for (BasicStatement s : getBitsetStatements(this.getIn())) {
+          System.out.println("" + s);
+        }
+      }
+      System.out.println("");
     }
 
     private List<Expression> getBitsetExpressions(BitSet bs) {
@@ -223,6 +235,12 @@ public class AvailableExpressions extends BasicBlockVisitor
     // Run a fixed point algorithm on the definitions to calculate the
     // reaching definitions.
     WorklistAlgorithm.runForward(blockExpressions.values(), this, start, init);
+
+    for (BlockItem bi : blockExpressions.values()) {
+      System.out.println("--- " + bi.node.getId() + " ---");
+      bi.printDebugStuff();
+    }
+
   }
 
 
@@ -254,12 +272,10 @@ public class AvailableExpressions extends BasicBlockVisitor
         int index = expressions.size() - 1;
         exprIndices.put(expr, index);
 
-        VariableArgument vArg;
+        VariableArgument vArg; 
         if (opSt.getArg1().isVariable()) {
           vArg = (VariableArgument) opSt.getArg1();
-          if (vArg.getDesc().getLocation().getLocationType()
-                == LocationType.GLOBAL) {
-
+          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
             callKill.set(index);
           }
 
@@ -275,9 +291,7 @@ public class AvailableExpressions extends BasicBlockVisitor
 
         if (opSt.getArg2() != null && opSt.getArg2().isVariable()) {
           vArg = (VariableArgument) opSt.getArg2();
-          if (vArg.getDesc().getLocation().getLocationType()
-                == LocationType.GLOBAL) {
-
+          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
             callKill.set(index);
           }
 
@@ -308,28 +322,28 @@ public class AvailableExpressions extends BasicBlockVisitor
 
     OpStatement ops = (OpStatement) s;
     switch (ops.getOp()) {
-      case MOVE:
-      case RETURN:
-      case ENTER:
-        return false;
-      default:
-        return true;
+    case MOVE:
+    case RETURN:
+    case ENTER:
+      return false;
+    default:
+      return true;
     }
   }
 
   private VariableLocation getExpressionTarget(OpStatement expr) {
     switch (expr.getOp()) {
-      case MOVE:
-      case RETURN:
-      case ENTER:
-        ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
-        "of a non-expression!"));
+    case MOVE:
+    case RETURN:
+    case ENTER:
+      ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
+          "of a non-expression!"));
+      return null;
+    default:
+      if (expr.getResult() == null) {
         return null;
-      default:
-        if (expr.getResult() == null) {
-          return null;
-        }
-        return expr.getResult().getLocation();
+      }
+      return expr.getResult().getLocation();
     }
   }
 

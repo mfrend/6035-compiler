@@ -47,6 +47,7 @@ public final class OpStatement extends BasicStatement {
     return arg2;
   }
 
+  /*
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -56,6 +57,7 @@ public final class OpStatement extends BasicStatement {
     return expressionEquals(other) &&
       ((result != null) ? result.equals(other.result) : other.result == null);
   }
+  */
 
   public boolean expressionEquals(OpStatement other) {
     return op.equals(other.op) &&
@@ -63,6 +65,7 @@ public final class OpStatement extends BasicStatement {
       ((arg2 != null) ? arg2.equals(other.arg2) : (other.arg2 == null));
   }
 
+  /*
   @Override
   public int hashCode() {
     return ((op != null) ? 1 + op.hashCode() : 0) +
@@ -70,6 +73,7 @@ public final class OpStatement extends BasicStatement {
            ((arg2 != null) ? 1 + arg2.hashCode() : 0) +
            ((result != null) ? 1 + result.hashCode() : 0);
   }
+  */
 
   @Override
   public String toString() {
