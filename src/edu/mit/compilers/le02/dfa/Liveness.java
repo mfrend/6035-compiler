@@ -13,8 +13,10 @@ import java.util.HashSet;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
+import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
+import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
@@ -29,20 +31,21 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
+  private Map<BasicStatement, Boolean> eliminable;
   private Map<VariableLocation, Integer> variableIndices;
 
   public class BlockItem extends GenKillItem {
     private Liveness parent;
     private BasicBlockNode node;
-    private List<BasicStatement> blockDefs;
+    private List<BasicStatement> statements;
     private BitSet genSet;
     private BitSet killSet;
 
-    public BlockItem(Liveness parent,
-        BasicBlockNode node, List<BasicStatement> blockDefs) {
+    public BlockItem(Liveness parent, 
+        BasicBlockNode node, List<BasicStatement> statements) {
       this.parent = parent;
       this.node = node;
-      this.blockDefs = blockDefs;
+      this.statements = statements;
 
       this.genSet = new BitSet();
       this.killSet = new BitSet();
@@ -50,11 +53,11 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
 
     private void init() {
-      int index;
+      Integer index;
 
-      for (BasicStatement s : blockDefs) {
+      for (BasicStatement s : statements) {
         index = parent.definitionIndices.get(s);
-        if (!this.killSet.get(index)) {
+        if ((index != null) && (!this.killSet.get(index))) {
           this.genSet.set(index);
         }
 
@@ -70,11 +73,11 @@ implements Lattice<BitSet, BasicBlockNode> {
       BasicStatement s;
       int def;
 
-      for (int i = blockDefs.size() - 1; i >= 0; i--) {
-        s = blockDefs.get(i);
+      for (int i = statements.size() - 1; i >= 0; i--) {
+        s = statements.get(i);
         def = parent.definitionIndices.get(s);
 
-        if (liveness.get(def)) {
+        if ((parent.isEliminable(s)) && (liveness.get(def))) {
           // This variable is currently live, so this definition cannot
           // be eliminated. Set and clear liveness bits for used and defd vars
           liveness.clear(def);
@@ -136,6 +139,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
+    this.eliminable = new HashMap<BasicStatement, Boolean>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
 
     // TODO Probably not in this visitor, but write a way to find the
@@ -165,25 +169,25 @@ implements Lattice<BitSet, BasicBlockNode> {
   }
 
   private BlockItem calcDefinitions(BasicBlockNode node) {
-    List<BasicStatement> blockDefs = new ArrayList<BasicStatement>();
+    List<BasicStatement> statements = new ArrayList<BasicStatement>();
 
     for (BasicStatement s : node.getStatements()) {
-      if (isDefinition(s)) {
-        OpStatement def = (OpStatement) s;
-        blockDefs.add(s);
+      if ((isDefinition(s)) || (s instanceof CallStatement)) {
+        statements.add(s);
+        eliminable.put(s, isDefinition(s));
 
-        VariableLocation target = getDefinitionTarget(def);
+        VariableLocation target = getDefinitionTarget(s);
         definitionIndices.put(s, getVarIndex(target));
 
         List<Integer> uses = new ArrayList<Integer>();
-        for (VariableLocation use : getDefinitionUses(def)) {
+        for (VariableLocation use : getDefinitionUses(s)) {
           uses.add(getVarIndex(use));
         }
         useIndices.put(s, uses);
       }
     }
 
-    return new BlockItem(this, node, blockDefs);
+    return new BlockItem(this, node, statements);
   }
 
   private int getVarIndex(VariableLocation loc) {
@@ -217,6 +221,17 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
   }
 
+  private VariableLocation getDefinitionTarget(BasicStatement s) {
+    if (s instanceof OpStatement) {
+      return getDefinitionTarget((OpStatement) s);
+    } else if (s instanceof CallStatement) {
+      return getDefinitionTarget((CallStatement) s);
+    }
+    ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
+      "of a non-definition and a non-call"));
+    return null;
+  }
+
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
@@ -231,9 +246,24 @@ implements Lattice<BitSet, BasicBlockNode> {
         return def.getResult();
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
-        "of a non definition!"));
+        "of a non-definition"));
         return null;
     }
+  }
+
+  private VariableLocation getDefinitionTarget(CallStatement call) {
+    return call.getResult();
+  }
+
+  private List<VariableLocation> getDefinitionUses(BasicStatement s) {
+    if (s instanceof OpStatement) {
+      return getDefinitionUses((OpStatement) s);
+    } else if (s instanceof CallStatement) {
+      return getDefinitionUses((CallStatement) s);
+    }
+    ErrorReporting.reportErrorCompat(new Exception("Tried to get uses " +
+      "of a non-definition and a non-call"));
+    return null;
   }
 
   private List<VariableLocation> getDefinitionUses(OpStatement def) {
@@ -268,6 +298,18 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
+  private List<VariableLocation> getDefinitionUses(CallStatement call) {
+    List<VariableLocation> ret = new ArrayList<VariableLocation>();
+
+    for (Argument arg : call.getArgs()) {
+      if (arg instanceof VariableArgument) {
+        ret.add(((VariableArgument) arg).getLoc());
+      }
+    }
+
+    return ret;
+  }
+
   @Override
   public BitSet abstractionFunction(BasicBlockNode value) {
     // TODO Auto-generated method stub
@@ -297,6 +339,10 @@ implements Lattice<BitSet, BasicBlockNode> {
     BitSet ret = (BitSet) v1.clone();
     ret.or(v2);
     return ret;
+  }
+
+  public Boolean isEliminable(BasicStatement s) {
+    return eliminable.get(s);
   }
 
   public Map<BasicBlockNode, BlockItem> getBlockItems() {
