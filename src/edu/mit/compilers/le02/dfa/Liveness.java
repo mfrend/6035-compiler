@@ -244,7 +244,8 @@ implements Lattice<BitSet, BasicBlockNode> {
       case NOT:
         return def.getResult();
       case RETURN:
-        if (def.getArg1() instanceof VariableArgument) {
+        if ((def.getArg1 != null) &&
+            (def.getArg1() instanceof VariableArgument)) {
           return ((VariableArgument) def.getArg1()).getLoc();
         }
         return null;
