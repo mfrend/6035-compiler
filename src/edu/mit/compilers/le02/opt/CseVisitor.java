@@ -117,57 +117,23 @@ public class CseVisitor extends BasicBlockVisitor {
     varToVal.clear();
     expToVal.clear();
     expToTmp.clear();
+
     List<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     for (BasicStatement stmt : node.getStatements()) {
       if (stmt.getType() == BasicStatementType.CALL) {
         // Invalidate all cached global variable values.
         // This necessitates enumerating all globals and dropping em.
-        Iterator<CseVariable> it = varToVal.keySet().iterator();
-        while (it.hasNext()) {
-          if (it.next() instanceof FieldDescriptor) {
-            it.remove();
-          }
-        }
-        // If the result of the call is assigned somewhere, remove it from
-        // var to val mapping.
-        TypedDescriptor callResult = ((CallStatement)stmt).getResult();
-        if (callResult != null) {
-          varToVal.remove(callResult);
-        }
+        handleCall((CallStatement)stmt);
       }
       if (stmt.getType() != BasicStatementType.OP) {
         newStmts.add(stmt);
         continue;
       }
 
-      CseVariable storedVar = null;
       OpStatement op = (OpStatement)stmt;
-      switch (op.getOp()) {
-       case MOVE:
-        if (op.getArg1().equals(op.getArg2())) {
-          // We can silently drop a self-assignment.
-          continue;
-        }
-        if (op.getArg2().getDesc() != null &&
-            op.getArg2().getDesc() instanceof AnonymousDescriptor) {
-          // This is either an implicit conditional assignment for je or
-          // an implicit string MOV to push arguments for a callout.
-          // In either case, not cacheable.
-          newStmts.add(stmt);
-          continue;
-        }
-        if (op.getArg2() instanceof ArrayVariableArgument) {
-          storedVar = (ArrayVariableArgument)op.getArg2();
-        } else if (op.getArg2().getDesc() != null) {
-          storedVar = op.getArg2().getDesc();
-        }
-        break;
-       case RETURN:
-       case ENTER:
-        newStmts.add(stmt);
+      CseVariable storedVar = determineStoredVar(newStmts, stmt, op);
+      if (storedVar != null && storedVar instanceof SkipProcessing) {
         continue;
-       default:
-        storedVar = op.getResult();
       }
 
       ValExp valexp = new ValExp(op);
@@ -224,5 +190,57 @@ public class CseVisitor extends BasicBlockVisitor {
 
     // Finally, overwrite the list of basicblock statements with our new list.
     node.setStatements(newStmts);
+  }
+
+  private CseVariable determineStoredVar(List<BasicStatement> newStmts,
+      BasicStatement stmt, OpStatement op) {
+    switch (op.getOp()) {
+     case MOVE:
+      if (op.getArg1().equals(op.getArg2())) {
+        // We can silently drop a self-assignment.
+        return SkipProcessing.getInstance();
+      }
+      if (op.getArg2().getDesc() != null &&
+          op.getArg2().getDesc() instanceof AnonymousDescriptor) {
+        // This is either an implicit conditional assignment for je or
+        // an implicit string MOV to push arguments for a callout.
+        // In either case, not cacheable.
+        newStmts.add(stmt);
+        return SkipProcessing.getInstance();
+      }
+      if (op.getArg2() instanceof ArrayVariableArgument) {
+        return (ArrayVariableArgument)op.getArg2();
+      } else if (op.getArg2().getDesc() != null) {
+        return op.getArg2().getDesc();
+      }
+     case RETURN:
+     case ENTER:
+      newStmts.add(stmt);
+      return SkipProcessing.getInstance();
+     default:
+      return op.getResult();
+    }
+  }
+
+  /**
+   * Clears global mappings if a non-callout call is made.
+   */
+  private void handleCall(CallStatement call) {
+    if (call.isCallout()) {
+      // Callouts cannot tamper with global values.
+      return;
+    }
+    Iterator<CseVariable> it = varToVal.keySet().iterator();
+    while (it.hasNext()) {
+      if (it.next() instanceof FieldDescriptor) {
+        it.remove();
+      }
+    }
+    // If the result of the call is assigned somewhere, remove it from
+    // var to val mapping.
+    TypedDescriptor callResult = call.getResult();
+    if (callResult != null) {
+      varToVal.remove(callResult);
+    }
   }
 }

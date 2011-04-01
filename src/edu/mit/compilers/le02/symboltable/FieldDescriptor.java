@@ -18,11 +18,6 @@ public class FieldDescriptor extends TypedDescriptor {
     this.length = length;
   }
 
-  @Override
-  public String toString() {
-    return this.getType().toString();
-  }
-
   public int getLength() {
     return length;
   }

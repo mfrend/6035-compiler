@@ -71,7 +71,7 @@ public class AvailableExpressionsTest extends TestCase {
   public void testNullResultStatement() {
     BasicBlockNode node = new BasicBlockNode("main", "main");
 
-    node.addStatement(new CallStatement(null, "main", null, null));
+    node.addStatement(new CallStatement(null, "main", null, null, false));
 
     AvailableExpressions exprs = new AvailableExpressions(node);
   }

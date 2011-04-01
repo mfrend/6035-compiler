@@ -214,7 +214,7 @@ public class ReachingDefinitionsTest extends TestCase {
     top.addStatement(makeDef("var3", 30));
 
     List<Argument> args = Collections.emptyList();
-    CallStatement cs = new CallStatement(null, "dummy", args, null);
+    CallStatement cs = new CallStatement(null, "dummy", args, null, false);
 
     middle.addStatement(makeDef("dummyvar", 11));
     middle.addStatement(cs);

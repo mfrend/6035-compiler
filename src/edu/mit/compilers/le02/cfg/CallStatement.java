@@ -9,13 +9,15 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 public class CallStatement extends BasicStatement {
   private List<Argument> args;
   private String name;
+  private boolean callout;
 
   public CallStatement(ExpressionNode expr, String name, List<Argument> args,
-                       TypedDescriptor result) {
+                       TypedDescriptor result, boolean callout) {
     super(expr, result);
     this.name = name;
     this.args = args;
     this.type = BasicStatementType.CALL;
+    this.callout = callout;
   }
 
   public String getMethodName() {
@@ -24,6 +26,10 @@ public class CallStatement extends BasicStatement {
 
   public List<Argument> getArgs() {
     return new ArrayList<Argument>(args);
+  }
+
+  public boolean isCallout() {
+    return callout;
   }
 
   public void setArgs(List<Argument> newArgs) {

@@ -418,7 +418,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     }
 
     CallStatement s = new CallStatement(node,
-                                        node.getDesc().getId(), args, loc);
+                                        node.getDesc().getId(),
+                                        args, loc, false);
 
     if (frag != null) {
       return frag.append(new SimpleCFGNode(s));
@@ -446,7 +447,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     }
 
     CallStatement s = new CallStatement(node, node.getFuncName().getValue(),
-                                        args, loc);
+                                        args, loc, true);
 
     SimpleCFGNode cn = new SimpleCFGNode(s);
     if (frag == null) {
