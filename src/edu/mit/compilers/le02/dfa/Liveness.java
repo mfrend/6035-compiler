@@ -35,7 +35,9 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
   private Map<VariableLocation, Integer> variableIndices;
+
   private List<VariableLocation> globals;
+  private BitSet globalSet;
 
   public class BlockItem extends GenKillItem {
     private Liveness parent;
@@ -43,6 +45,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     private List<BasicStatement> statements;
     private BitSet genSet;
     private BitSet killSet;
+    private boolean returns;
 
     public BlockItem(Liveness parent, 
         BasicBlockNode node, List<BasicStatement> statements) {
@@ -57,6 +60,7 @@ implements Lattice<BitSet, BasicBlockNode> {
 
     private void init() {
       Integer index;
+      returns = false;
 
       for (BasicStatement s : statements) {
         index = parent.definitionIndices.get(s);
@@ -66,6 +70,13 @@ implements Lattice<BitSet, BasicBlockNode> {
 
         for (Integer i : parent.useIndices.get(s)) {
           this.killSet.set(i);
+        }
+
+        if ((s instanceof OpStatement) && 
+            (((OpStatement) s).getOp() == AsmOp.RETURN)) {
+          returns = true;
+          this.setOut(parent.getGlobalSet());
+          break;
         }
       }
     }
@@ -111,6 +122,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
 
+      if (returns) {
+        return ret;
+      }
+
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockItems.get(pred);
         ret.add(item);
@@ -138,40 +153,32 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
   }
 
-  public Liveness(BasicBlockNode methodStart, BasicBlockNode methodEnd) {
+  public Liveness(BasicBlockNode methodStart) {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
-    this.globals = new ArrayList<VariableLocation>();
 
-    BitSet globalSet = new BitSet();
-    if (methodEnd.getLastStatement() != null) {
-      SymbolTable st = methodEnd.getLastStatement().getNode().getSymbolTable();
+    this.globals = new ArrayList<VariableLocation>();
+    this.globalSet = new BitSet();
+    if (methodStart.getLastStatement() != null) {
+      SymbolTable st = methodStart.getLastStatement().getNode().getSymbolTable();
       for (FieldDescriptor desc : st.getFields()) {
         globals.add(desc.getLocation());
         globalSet.set(getVarIndex(desc.getLocation()));
       }
     }
 
-    // TODO Probably not in this visitor, but write a way to find the
-    // 'last' basic block in a method. If there is no unique last block,
-    // create one
     this.visit(methodStart);
-    BlockItem end = blockItems.get(methodEnd);
 
     // Run a fixed point algorithm on the basic blocks to calculate the
     // list of live variables for each block
-    WorklistAlgorithm.runBackwards(blockItems.values(), this, end, globalSet);
+    WorklistAlgorithm.runBackwards(blockItems.values(), this);
   }
 
   @Override
   protected void processNode(BasicBlockNode node) {
     this.blockItems.put(node, calcDefinitions(node));
-  }
-
-  public BlockItem getDefinitions(BasicBlockNode node) {
-    return blockItems.get(node);
   }
 
   private BlockItem calcDefinitions(BasicBlockNode node) {
@@ -192,7 +199,11 @@ implements Lattice<BitSet, BasicBlockNode> {
       }
     }
 
-    return new BlockItem(this, node, statements);
+    BlockItem ret = new BlockItem(this, node, statements);
+    if ((node.getNext() == null) && (node.getBranchTarget() == null)) {
+      ret.setOut(globalSet);
+    }
+    return ret;
   }
 
   private int getVarIndex(VariableLocation loc) {
@@ -359,6 +370,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       return ((OpStatement) s).getOp() != AsmOp.RETURN;
     }
     return false;
+  }
+
+  public BitSet getGlobalSet() {
+    return globalSet;
   }
 
   public Map<BasicBlockNode, BlockItem> getBlockItems() {
