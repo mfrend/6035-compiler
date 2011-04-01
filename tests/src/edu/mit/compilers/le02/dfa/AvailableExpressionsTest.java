@@ -37,7 +37,7 @@ public class AvailableExpressionsTest extends TestCase {
                            Argument.makeArgument(new AnonymousDescriptor(loc2)),
                            new FieldDescriptor(null, res, DecafType.INT));
   }
-  
+
 
   private OpStatement makeExpr(AsmOp op, int arg1, int arg2, String res) {
     StackLocation loc = new StackLocation(arg1);
@@ -57,7 +57,7 @@ public class AvailableExpressionsTest extends TestCase {
                            Argument.makeArgument(new AnonymousDescriptor(loc)),
                            null);
   }
-  
+
 
 
   private OpStatement makeDef(int name, int value) {
@@ -171,7 +171,7 @@ public class AvailableExpressionsTest extends TestCase {
     assertFalse(isAvailable(bi, AsmOp.DIVIDE, "y", "z"));
     assertTrue(isAvailable(bi, AsmOp.MODULO, "var1", "z"));
   }
-  
+
   /**
    * Test that expressions are clobbered by moves.
    * See cse-08
@@ -189,7 +189,7 @@ public class AvailableExpressionsTest extends TestCase {
 
     left.addStatement(makeExpr(AsmOp.ADD, -8, -16, "res2"));
     left.addStatement(makeDef(-8, 0));
-    
+
     end.addStatement(makeExpr(AsmOp.ADD, -8, -16, "res3"));
 
     AvailableExpressions exprs = new AvailableExpressions(top);
