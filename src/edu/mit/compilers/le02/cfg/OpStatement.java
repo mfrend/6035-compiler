@@ -47,33 +47,11 @@ public final class OpStatement extends BasicStatement {
     return arg2;
   }
 
-  /*
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof OpStatement)) return false;
-
-    OpStatement other = (OpStatement) o;
-    return expressionEquals(other) &&
-      ((result != null) ? result.equals(other.result) : other.result == null);
-  }
-  */
-
   public boolean expressionEquals(OpStatement other) {
     return op.equals(other.op) &&
       ((arg1 != null) ? arg1.equals(other.arg1) : (other.arg1 == null)) &&
       ((arg2 != null) ? arg2.equals(other.arg2) : (other.arg2 == null));
   }
-
-  /*
-  @Override
-  public int hashCode() {
-    return ((op != null) ? 1 + op.hashCode() : 0) +
-           ((arg1 != null) ? 1 + arg1.hashCode() : 0) +
-           ((arg2 != null) ? 1 + arg2.hashCode() : 0) +
-           ((result != null) ? 1 + result.hashCode() : 0);
-  }
-  */
 
   @Override
   public String toString() {

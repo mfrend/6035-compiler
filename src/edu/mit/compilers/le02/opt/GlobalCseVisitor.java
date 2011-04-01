@@ -88,7 +88,9 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
       if (statementsToUpdate.containsKey(expr)
           && statementsToUpdate.get(expr).contains(s)) {
 
-        System.out.println("Replacing " + s + " in node " + node.getId());
+        if (CLI.debug) {
+          System.out.println("Replacing " + s + " in node " + node.getId());
+        }
         LocalDescriptor tmp = expressionToTemp.get(expr);
         TypedDescriptor dest = s.getResult();
         
@@ -148,22 +150,30 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
             && checkArg(opSt.getArg2(), clobberedVariables, globalsClobbered)) {
           
           Expression expr = new Expression(opSt);
+          
           if (CLI.debug) {
-          System.out.println("Found available expression: " + opSt);
+            System.out.println("Found available expression: " + opSt);
           }
+          
           List<OpStatement> stmts = statementsToUpdate.get(expr);
           if (stmts == null) {
             stmts = new ArrayList<OpStatement>();
 
             LocalDescriptor ld = CFGGenerator.makeTemp(opSt.getNode(), 
                                      opSt.getResult().getFlattenedType());
-            System.out.println("Giving expression tmp: " + ld.getId());
+            if (CLI.debug) {
+              System.out.println("Giving expression tmp: " + ld.getId());
+            }
+            
             expressionToTemp.put(new Expression(opSt), ld);
           }
           stmts.add(opSt);
           statementsToUpdate.put(expr, stmts);
-          System.out.println("Adding expression to list, new size "
+          
+          if (CLI.debug) {
+            System.out.println("Adding expression to list, new size "
                              + stmts.size());
+          }
         }
       }
       
