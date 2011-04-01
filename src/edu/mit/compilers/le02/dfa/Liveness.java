@@ -18,6 +18,7 @@ import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 
@@ -31,7 +32,6 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
-  private Map<BasicStatement, Boolean> eliminable;
   private Map<VariableLocation, Integer> variableIndices;
 
   public class BlockItem extends GenKillItem {
@@ -139,7 +139,6 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
-    this.eliminable = new HashMap<BasicStatement, Boolean>();
     this.variableIndices = new HashMap<VariableLocation, Integer>();
 
     // TODO Probably not in this visitor, but write a way to find the
@@ -172,9 +171,8 @@ implements Lattice<BitSet, BasicBlockNode> {
     List<BasicStatement> statements = new ArrayList<BasicStatement>();
 
     for (BasicStatement s : node.getStatements()) {
-      if ((isDefinition(s)) || (s instanceof CallStatement)) {
+      if ((isDefinitionOp(s)) || (s instanceof CallStatement)) {
         statements.add(s);
-        eliminable.put(s, isDefinition(s));
 
         VariableLocation target = getDefinitionTarget(s);
         definitionIndices.put(s, getVarIndex(target));
@@ -200,7 +198,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     return index;
   }
 
-  private boolean isDefinition(BasicStatement s) {
+  private boolean isDefinitionOp(BasicStatement s) {
     if (!(s instanceof OpStatement)) {
       return false;
     }
@@ -215,6 +213,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       case MODULO:
       case UNARY_MINUS:
       case NOT:
+      case RETURN:
         return true;
       default:
         return false;
@@ -244,6 +243,11 @@ implements Lattice<BitSet, BasicBlockNode> {
       case UNARY_MINUS:
       case NOT:
         return def.getResult();
+      case RETURN:
+        if (def.getArg1() instanceof VariableArgument) {
+          return ((VariableArgument) def.getArg1()).getLoc();
+        }
+        return null;
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non-definition"));
@@ -341,8 +345,11 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  public Boolean isEliminable(BasicStatement s) {
-    return eliminable.get(s);
+  public boolean isEliminable(BasicStatement s) {
+    if (isDefinitionOp(s)) {
+      return ((OpStatement) s).getOp() != AsmOp.RETURN;
+    }
+    return false;
   }
 
   public Map<BasicBlockNode, BlockItem> getBlockItems() {
