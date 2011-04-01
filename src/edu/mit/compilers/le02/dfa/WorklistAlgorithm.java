@@ -15,8 +15,8 @@ public class WorklistAlgorithm {
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
-      item.setIn(item.transferFunction(lattice.bottom()));
-      item.setOut(lattice.bottom());
+      item.setIn(lattice.bottom());
+      item.setOut(item.transferFunction(lattice.bottom()));
     }
 
     // Initialize the first item
@@ -50,26 +50,21 @@ public class WorklistAlgorithm {
     }
   }
 
-  public static <T> void runBackwards(Collection<? extends WorklistItem<T>> items,
-      Lattice<T, ?> lattice,
-      WorklistItem<T> startItem,
-      T startInfo) {
+  public static <T> void runBackwards(
+      Collection<? extends WorklistItem<T>> items,
+      Lattice<T, ?> lattice) {
     LinkedList<WorklistItem<T>> worklist =
       new LinkedList<WorklistItem<T>>(items);
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
-      item.setIn(lattice.bottom());
-      item.setOut(item.transferFunction(lattice.bottom()));
+      if (item.getOut() == null) {
+        item.setOut(lattice.bottom());
+      } else {
+        worklist.remove(item);
+      }
+      item.setIn(item.transferFunction(item.getOut()));
     }
-
-    // Initialize the first item
-    startItem.setIn(startItem.transferFunction(startInfo));
-    startItem.setOut(startInfo);
-    boolean validItems = worklist.remove(startItem);
-
-    // Assert that startItem was in the given items
-    assert validItems;
 
     while (!worklist.isEmpty()) {
       WorklistItem<T> item = worklist.remove();
@@ -77,7 +72,7 @@ public class WorklistAlgorithm {
       // Calculate the least upper bound of all the successors
       T sup = lattice.bottom();
       for(WorklistItem<T> succ : item.successors()) {
-        sup = lattice.leastUpperBound(succ.getOut(), sup);
+        sup = lattice.leastUpperBound(succ.getIn(), sup);
       }
       item.setOut(sup);
 
