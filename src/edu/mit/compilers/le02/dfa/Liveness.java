@@ -11,8 +11,6 @@ import java.util.Set;
 import java.util.HashSet;
 
 import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.VariableLocation;
-import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
@@ -23,6 +21,7 @@ import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 /**
  *
@@ -34,9 +33,9 @@ implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
-  private Map<VariableLocation, Integer> variableIndices;
+  private Map<TypedDescriptor, Integer> variableIndices;
 
-  private List<VariableLocation> globals;
+  private List<TypedDescriptor> globals;
   private BitSet globalSet;
 
   public class BlockItem extends GenKillItem {
@@ -159,15 +158,15 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
-    this.variableIndices = new HashMap<VariableLocation, Integer>();
+    this.variableIndices = new HashMap<TypedDescriptor, Integer>();
 
-    this.globals = new ArrayList<VariableLocation>();
+    this.globals = new ArrayList<TypedDescriptor>();
     this.globalSet = new BitSet();
     if (methodStart.getLastStatement() != null) {
       SymbolTable st = methodStart.getLastStatement().getNode().getSymbolTable();
       for (FieldDescriptor desc : st.getFields()) {
-        globals.add(desc.getLocation());
-        globalSet.set(getVarIndex(desc.getLocation()));
+        globals.add(desc);
+        globalSet.set(getVarIndex(desc));
       }
     }
 
@@ -190,11 +189,11 @@ implements Lattice<BitSet, BasicBlockNode> {
       if ((isDefinitionOp(s)) || (s instanceof CallStatement)) {
         statements.add(s);
 
-        VariableLocation target = getDefinitionTarget(s);
+        TypedDescriptor target = getDefinitionTarget(s);
         definitionIndices.put(s, getVarIndex(target));
 
         List<Integer> uses = new ArrayList<Integer>();
-        for (VariableLocation use : getDefinitionUses(s)) {
+        for (TypedDescriptor use : getDefinitionUses(s)) {
           uses.add(getVarIndex(use));
         }
         useIndices.put(s, uses);
@@ -208,7 +207,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  private int getVarIndex(VariableLocation loc) {
+  private int getVarIndex(TypedDescriptor loc) {
     Integer index = variableIndices.get(loc);
     if (index == null) {
       index = new Integer(variableIndices.size());
@@ -240,7 +239,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
   }
 
-  private VariableLocation getDefinitionTarget(BasicStatement s) {
+  private TypedDescriptor getDefinitionTarget(BasicStatement s) {
     if (s instanceof OpStatement) {
       return getDefinitionTarget((OpStatement) s);
     } else if (s instanceof CallStatement) {
@@ -251,10 +250,10 @@ implements Lattice<BitSet, BasicBlockNode> {
     return null;
   }
 
-  private VariableLocation getDefinitionTarget(OpStatement def) {
+  private TypedDescriptor getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
-        return ((VariableArgument) def.getArg2()).getDesc().getLocation();
+        return (def.getArg2()).getDesc();
       case ADD:
       case SUBTRACT:
       case MULTIPLY:
@@ -262,11 +261,11 @@ implements Lattice<BitSet, BasicBlockNode> {
       case MODULO:
       case UNARY_MINUS:
       case NOT:
-        return def.getResult().getLocation();
+        return def.getResult();
       case RETURN:
         if ((def.getArg1() != null) &&
             (def.getArg1() instanceof VariableArgument)) {
-          return ((VariableArgument) def.getArg1()).getDesc().getLocation();
+          return (def.getArg1()).getDesc();
         }
         return null;
       default:
@@ -276,11 +275,11 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
   }
 
-  private VariableLocation getDefinitionTarget(CallStatement call) {
-    return call.getResult().getLocation();
+  private TypedDescriptor getDefinitionTarget(CallStatement call) {
+    return call.getResult();
   }
 
-  private List<VariableLocation> getDefinitionUses(BasicStatement s) {
+  private List<TypedDescriptor> getDefinitionUses(BasicStatement s) {
     if (s instanceof OpStatement) {
       return getDefinitionUses((OpStatement) s);
     } else if (s instanceof CallStatement) {
@@ -291,15 +290,15 @@ implements Lattice<BitSet, BasicBlockNode> {
     return null;
   }
 
-  private List<VariableLocation> getDefinitionUses(OpStatement def) {
-    List<VariableLocation> ret = new ArrayList<VariableLocation>();
+  private List<TypedDescriptor> getDefinitionUses(OpStatement def) {
+    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>();
 
     switch (def.getOp()) {
       case MOVE:
       case UNARY_MINUS:
       case NOT:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg1()).getDesc().getLocation());
+          ret.add((def.getArg1()).getDesc());
         }
         break;
       case ADD:
@@ -308,10 +307,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       case DIVIDE:
       case MODULO:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg1()).getDesc().getLocation());
+          ret.add((def.getArg1()).getDesc());
         }
         if (def.getArg2() instanceof VariableArgument) {
-          ret.add(((VariableArgument) def.getArg2()).getDesc().getLocation());
+          ret.add((def.getArg2()).getDesc());
         }
         break;
       default:
@@ -323,13 +322,13 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  private List<VariableLocation> getDefinitionUses(CallStatement call) {
-    List<VariableLocation> ret = new ArrayList<VariableLocation>(globals);
+  private List<TypedDescriptor> getDefinitionUses(CallStatement call) {
+    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>(globals);
 
     for (Argument arg : call.getArgs()) {
       if ((arg instanceof VariableArgument) && 
           !(arg.getDesc() instanceof FieldDescriptor)) {
-        ret.add(((VariableArgument) arg).getDesc().getLocation());
+        ret.add(arg.getDesc());
       }
     }
 
