@@ -313,7 +313,7 @@ public class AsmWriter {
     // prepareArgument loads an argument from memory/another register
     // into R10 or R11 and returns the reg it stored the argument in.
     String arg1 = "<error>";
-    if (op.getArg1() != null) {
+    if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
       arg1 = prepareArgument(op.getArg1(), true, methodName, sl);
     }
     String arg2 = "<error>";
