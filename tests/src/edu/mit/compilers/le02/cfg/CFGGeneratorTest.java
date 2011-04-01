@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.TestCase;
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.IntNode;
@@ -14,6 +13,7 @@ import edu.mit.compilers.le02.ast.MathOpNode.MathOp;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.stgenerator.ASTParentVisitor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class CFGGeneratorTest extends TestCase {
   private SymbolTable symbolTable;
@@ -72,7 +72,7 @@ public class CFGGeneratorTest extends TestCase {
     checkOpStatement(opSt, AsmOp.ADD,
                      Argument.makeArgument(1), Argument.makeArgument(2));
 
-    VariableLocation loc = opSt.getResult();
+    TypedDescriptor loc = opSt.getResult();
     bs = list.get(1);
     assertTrue(bs instanceof OpStatement);
     opSt = (OpStatement) bs;

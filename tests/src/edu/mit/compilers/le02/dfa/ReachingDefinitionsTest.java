@@ -20,6 +20,7 @@ import edu.mit.compilers.le02.cfg.ControlFlowGraph;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
+import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 
 
 public class ReachingDefinitionsTest extends TestCase {
@@ -36,7 +37,8 @@ public class ReachingDefinitionsTest extends TestCase {
     GlobalLocation loc = new GlobalLocation(name);
     return new OpStatement(null, AsmOp.MOVE,
                            Argument.makeArgument(value),
-                           Argument.makeArgument(loc), null);
+                           Argument.makeArgument(new AnonymousDescriptor(loc)),
+                           null);
   }
 
 
@@ -44,7 +46,8 @@ public class ReachingDefinitionsTest extends TestCase {
     StackLocation loc = new StackLocation(offset);
     return new OpStatement(null, AsmOp.MOVE,
                            Argument.makeArgument(value),
-                           Argument.makeArgument(loc), null);
+                           Argument.makeArgument(new AnonymousDescriptor(loc)),
+                           null);
   }
 
   /**

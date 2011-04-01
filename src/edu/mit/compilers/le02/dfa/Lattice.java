@@ -1,7 +1,5 @@
 package edu.mit.compilers.le02.dfa;
 
-import java.util.Collection;
-import java.util.HashMap;
 
 /**
  * The Lattice class represents a partially ordered set of items of type T,
