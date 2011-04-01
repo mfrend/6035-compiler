@@ -64,12 +64,14 @@ implements Lattice<BitSet, BasicBlockNode> {
 
       for (BasicStatement s : statements) {
         index = parent.definitionIndices.get(s);
-        if ((index != null) && (!this.killSet.get(index))) {
-          this.genSet.set(index);
+        if (index != null) {
+          this.killSet.set(index);
         }
 
         for (Integer i : parent.useIndices.get(s)) {
-          this.killSet.set(i);
+          if (!this.killSet.get(i)) {
+            this.genSet.set(i);
+          }
         }
 
         if ((s instanceof OpStatement) && 
