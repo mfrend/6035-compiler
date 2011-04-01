@@ -487,7 +487,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       index = Argument.makeArgument(indexTemp);
       indexFrag = indexFrag.append(new SimpleCFGNode(
         new OpStatement(node, AsmOp.MOVE, ava, index, null)));
-      
+
     }
     Argument array = Argument.makeArgument(node.getDesc(),
                                            index);

@@ -12,6 +12,7 @@ public abstract class Argument {
   }
 
   abstract public ArgType getType();
+  abstract public boolean isVariable();
 
   public TypedDescriptor getDesc() {
     return null;

@@ -66,9 +66,9 @@ public final class OpStatement extends BasicStatement {
   @Override
   public int hashCode() {
     return ((op != null) ? 1 + op.hashCode() : 0) +
-      ((arg1 != null) ? 1 + arg1.hashCode() : 0) +
-      ((arg2 != null) ? 1 + arg2.hashCode() : 0) +
-      ((result != null) ? 1 + result.hashCode() : 0);
+           ((arg1 != null) ? 1 + arg1.hashCode() : 0) +
+           ((arg2 != null) ? 1 + arg2.hashCode() : 0) +
+           ((result != null) ? 1 + result.hashCode() : 0);
   }
 
   @Override

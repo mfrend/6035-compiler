@@ -114,6 +114,9 @@ public class CseVisitor extends BasicBlockVisitor {
 
   @Override
   protected void processNode(BasicBlockNode node) {
+    varToVal.clear();
+    expToVal.clear();
+    expToTmp.clear();
     List<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     for (BasicStatement stmt : node.getStatements()) {
       CseVariable storedVar = null;
