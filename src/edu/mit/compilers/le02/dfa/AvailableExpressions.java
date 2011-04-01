@@ -56,20 +56,23 @@ public class AvailableExpressions extends BasicBlockVisitor
       + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
       + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
     }
+    
+    @Override
+    public String toString() {
+      return expr.getArg1() + " " + expr.getOp() + " " 
+             + ((expr.getArg2() != null) ? expr.getArg2() : "");
+    }
   }
 
   public class BlockItem extends GenKillItem {
     private AvailableExpressions parent;
     private BasicBlockNode node;
-    private List<BasicStatement> blockExprs;
     private BitSet genSet;
     private BitSet killSet;
 
-    public BlockItem(AvailableExpressions parent,
-        BasicBlockNode node, List<BasicStatement> blockExprs) {
+    public BlockItem(AvailableExpressions parent, BasicBlockNode node) {
       this.parent = parent;
       this.node = node;
-      this.blockExprs = blockExprs;
 
       this.genSet = new BitSet();
       this.killSet = new BitSet();
@@ -77,24 +80,29 @@ public class AvailableExpressions extends BasicBlockVisitor
 
     private void init() {
       int index;
-      for (BasicStatement s : blockExprs) {
+      for (BasicStatement s : node.getStatements()) {
+        
+        BitSet killed = parent.exprsFromVar.get(parent.getTarget(s));
+        System.out.println("node: " + node.getId() + " " + parent.getTarget(s)
+                           + " " + killed);
+        if (killed != null) {
+          this.genSet.andNot(killed);
+          this.killSet.or(killed);
+        }
+        
         if (s.getType() == BasicStatementType.CALL) {
           this.genSet.andNot(parent.callKill);
           this.killSet.or(parent.callKill);
           continue;
         }
-
+        if (!isExpression(s)) {
+          continue;
+        }
 
         Expression expr = new Expression((OpStatement) s);
         index = parent.exprIndices.get(expr);
         this.genSet.set(index);
 
-        BitSet killed = parent.exprsFromVar.get(
-            parent.getExpressionTarget(expr.getStatement()));
-
-        if (killed != null) {
-          this.killSet.or(killed);
-        }
       }
     }
 
@@ -236,6 +244,12 @@ public class AvailableExpressions extends BasicBlockVisitor
     // reaching definitions.
     WorklistAlgorithm.runForward(blockExpressions.values(), this, start, init);
 
+    System.out.println("\nExpressions: ");
+    for (int i = 0; i < expressions.size(); i++) {
+      Expression e = expressions.get(i);
+      System.out.println(i + ": " + e);
+    }
+    
     for (BlockItem bi : blockExpressions.values()) {
       System.out.println("--- " + bi.node.getId() + " ---");
       bi.printDebugStuff();
@@ -250,18 +264,16 @@ public class AvailableExpressions extends BasicBlockVisitor
 
   @Override
   protected void processNode(BasicBlockNode node) {
-    this.blockExpressions.put(node, calcExpressions(node));
+    calcExpressions(node);
+    this.blockExpressions.put(node, new BlockItem(this, node));
   }
 
-  private BlockItem calcExpressions(BasicBlockNode node) {
-    List<BasicStatement> blockExprs = new ArrayList<BasicStatement>();
+  private void calcExpressions(BasicBlockNode node) {
 
     for (BasicStatement s : node.getStatements()) {
       if (isExpression(s)) {
         OpStatement opSt = (OpStatement) s;
         Expression expr = new Expression(opSt);
-
-        blockExprs.add(opSt);
 
         if (expressionSet.contains(expr)) {
           continue;
@@ -306,13 +318,7 @@ public class AvailableExpressions extends BasicBlockVisitor
         }
 
       }
-      else if (s.getType() == BasicStatementType.CALL) {
-        blockExprs.add(s);
-      }
     }
-
-    return new BlockItem(this, node, blockExprs);
-
   }
 
   public static boolean isExpression(BasicStatement s) {
@@ -331,19 +337,26 @@ public class AvailableExpressions extends BasicBlockVisitor
     }
   }
 
-  private VariableLocation getExpressionTarget(OpStatement expr) {
-    switch (expr.getOp()) {
-    case MOVE:
-    case RETURN:
-    case ENTER:
-      ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
-          "of a non-expression!"));
-      return null;
-    default:
-      if (expr.getResult() == null) {
+  private VariableLocation getTarget(BasicStatement s) {
+    if (!(s instanceof OpStatement)) {
+      if (s.getResult() == null) {
         return null;
       }
-      return expr.getResult().getLocation();
+      return s.getResult().getLocation();
+    }
+    
+    OpStatement expr = (OpStatement) s;
+    switch (expr.getOp()) {
+    case MOVE:
+      return expr.getArg2().getDesc().getLocation();
+    case RETURN:
+    case ENTER:
+      return null;
+    default:
+      if (s.getResult() == null) {
+        return null;
+      }
+      return s.getResult().getLocation();
     }
   }
 

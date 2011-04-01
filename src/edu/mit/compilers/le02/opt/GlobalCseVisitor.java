@@ -75,6 +75,8 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
     for (BasicStatement s : node.getStatements()) {
       
       if (!AvailableExpressions.isExpression(s)) {
+        // Keep the instruction and go on.
+        newStmts.add(s);
         continue;
       }
       
@@ -123,11 +125,16 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
     Set<VariableLocation> clobberedVariables = new HashSet<VariableLocation>();
     
     for (BasicStatement s : node.getStatements()) {
+      if (getTarget(s) != null) {
+        clobberedVariables.add(getTarget(s));
+      }
+      
       if (s.getType() == BasicStatementType.CALL) {
         globalsClobbered = true;
       }
       else if (s.getType() == BasicStatementType.OP) {
         OpStatement opSt = (OpStatement) s;
+
         
         if (!AvailableExpressions.isExpression(opSt)) {
           continue;
@@ -157,7 +164,6 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
         }
       }
       
-      clobberedVariables.add(getTarget(s));
     } 
   }
   
