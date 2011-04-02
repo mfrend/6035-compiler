@@ -47,7 +47,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     private BitSet killSet;
     private boolean returns;
 
-    public BlockItem(Liveness parent, 
+    public BlockItem(Liveness parent,
         BasicBlockNode node, List<BasicStatement> statements) {
       this.parent = parent;
       this.node = node;
@@ -74,7 +74,7 @@ implements Lattice<BitSet, BasicBlockNode> {
           this.killSet.set(index);
         }
 
-        if ((s instanceof OpStatement) && 
+        if ((s instanceof OpStatement) &&
             (((OpStatement) s).getOp() == AsmOp.RETURN)) {
           returns = true;
           this.setOut(parent.getGlobalSet());
@@ -169,7 +169,8 @@ implements Lattice<BitSet, BasicBlockNode> {
     this.globals = new ArrayList<TypedDescriptor>();
     this.globalSet = new BitSet();
     if (methodStart.getLastStatement() != null) {
-      SymbolTable st = methodStart.getLastStatement().getNode().getSymbolTable();
+      SymbolTable st =
+        methodStart.getLastStatement().getNode().getSymbolTable();
       for (FieldDescriptor desc : st.getFields()) {
         globals.add(desc);
         Integer index = getVarIndex(desc);
@@ -198,7 +199,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       if ((isDefinitionOp(s)) || (s instanceof CallStatement)) {
         statements.add(s);
 
-        if (isDefinitionOp(s) && 
+        if (isDefinitionOp(s) &&
             !(node.isBranch() && (s == node.getLastStatement()))) {
           eliminable.put(s, ((OpStatement) s).getOp() != AsmOp.RETURN);
         } else {
@@ -219,10 +220,10 @@ implements Lattice<BitSet, BasicBlockNode> {
 
         // Handle two special cases: array indices are used in MOVE ops,
         // and all globals are used in CALL ops
-        if ((s instanceof OpStatement) && 
+        if ((s instanceof OpStatement) &&
             (((OpStatement) s).getOp() == AsmOp.MOVE)) {
           addArrayIndex(uses, (VariableArgument) ((OpStatement) s).getArg2());
-        } else if ((s instanceof CallStatement) && 
+        } else if ((s instanceof CallStatement) &&
             !((CallStatement) s).isCallout()) {
           for (TypedDescriptor desc : globals) {
             Integer index = getVarIndex(desc);
@@ -294,7 +295,7 @@ implements Lattice<BitSet, BasicBlockNode> {
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non-definition"));
         return null;
-      case RETURN: 
+      case RETURN:
         return null;
       default:
         return def.getResult();
