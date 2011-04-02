@@ -22,7 +22,7 @@ public class DeadCodeElimination extends BasicBlockVisitor {
   public DeadCodeElimination(BasicBlockNode methodStart,
                              Map<BasicBlockNode, BlockItem> blockItems) {
 
-    this.blockItems = blockItems; 
+    this.blockItems = blockItems;
     this.visit(methodStart);
   }
 

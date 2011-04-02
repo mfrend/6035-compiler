@@ -9,7 +9,7 @@ import edu.mit.compilers.le02.DecafType;
 public class SkipProcessing implements CseVariable {
 
   private SkipProcessing() {
-    
+
   }
 
   private static SkipProcessing instance = new SkipProcessing();

@@ -28,7 +28,7 @@ public class AvailableExpressions extends BasicBlockVisitor
   private Set<Expression> expressionSet;
   private Map<Expression, Integer> exprIndices;
   private Map<BasicBlockNode, BlockItem> blockExpressions;
-  private Map<VariableLocation, BitSet> exprsFromVar; 
+  private Map<VariableLocation, BitSet> exprsFromVar;
   private BitSet callKill;
 
   public static class Expression {
@@ -53,14 +53,14 @@ public class AvailableExpressions extends BasicBlockVisitor
 
     @Override
     public int hashCode() {
-      return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) + 
+      return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) +
       + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
       + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
     }
-    
+
     @Override
     public String toString() {
-      return expr.getArg1() + " " + expr.getOp() + " " 
+      return expr.getArg1() + " " + expr.getOp() + " "
              + ((expr.getArg2() != null) ? expr.getArg2() : "");
     }
   }
@@ -82,13 +82,13 @@ public class AvailableExpressions extends BasicBlockVisitor
     private void init() {
       int index;
       for (BasicStatement s : node.getStatements()) {
-        
+
         BitSet killed = parent.exprsFromVar.get(parent.getTarget(s));
         if (killed != null) {
           this.genSet.andNot(killed);
           this.killSet.or(killed);
         }
-        
+
         if (s.getType() == BasicStatementType.CALL) {
           this.genSet.andNot(parent.callKill);
           this.killSet.or(parent.callKill);
@@ -285,10 +285,11 @@ public class AvailableExpressions extends BasicBlockVisitor
         int index = expressions.size() - 1;
         exprIndices.put(expr, index);
 
-        VariableArgument vArg; 
+        VariableArgument vArg;
         if (opSt.getArg1().isVariable()) {
           vArg = (VariableArgument) opSt.getArg1();
-          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
+          if (vArg.getDesc().getLocation().getLocationType() ==
+                LocationType.GLOBAL) {
             callKill.set(index);
           }
 
@@ -304,7 +305,8 @@ public class AvailableExpressions extends BasicBlockVisitor
 
         if (opSt.getArg2() != null && opSt.getArg2().isVariable()) {
           vArg = (VariableArgument) opSt.getArg2();
-          if (vArg.getDesc().getLocation().getLocationType() == LocationType.GLOBAL) {
+          if (vArg.getDesc().getLocation().getLocationType() ==
+                LocationType.GLOBAL) {
             callKill.set(index);
           }
 
@@ -345,7 +347,7 @@ public class AvailableExpressions extends BasicBlockVisitor
       }
       return s.getResult().getLocation();
     }
-    
+
     OpStatement expr = (OpStatement) s;
     switch (expr.getOp()) {
     case MOVE:
