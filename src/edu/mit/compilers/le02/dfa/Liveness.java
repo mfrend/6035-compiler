@@ -237,13 +237,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       return false;
     }
 
-    OpStatement ops = (OpStatement) s;
-    switch (ops.getOp()) {
-      case ENTER:
-        return false;
-      default:
-        return true;
-    }
+    return (((OpStatement)s).getOp() != AsmOp.ENTER);
   }
 
   private TypedDescriptor getDefinitionTarget(BasicStatement s) {
