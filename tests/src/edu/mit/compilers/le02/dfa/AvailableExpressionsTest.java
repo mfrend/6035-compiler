@@ -39,8 +39,29 @@ public class AvailableExpressionsTest extends TestCase {
   }
 
 
-  private OpStatement makeLocalDef(int offset, int value) {
-    StackLocation loc = new StackLocation(offset);
+  private OpStatement makeExpr(AsmOp op, int arg1, int arg2, String res) {
+    StackLocation loc = new StackLocation(arg1);
+    StackLocation loc2 = new StackLocation(arg2);
+    return new OpStatement(null, op,
+                           Argument.makeArgument(new AnonymousDescriptor(loc)),
+                           Argument.makeArgument(new AnonymousDescriptor(loc2)),
+                           new FieldDescriptor(null, res, DecafType.INT));
+  }
+
+
+
+  private OpStatement makeDef(String name, int value) {
+    GlobalLocation loc = new GlobalLocation(name);
+    return new OpStatement(null, AsmOp.MOVE,
+                           Argument.makeArgument(value),
+                           Argument.makeArgument(new AnonymousDescriptor(loc)),
+                           null);
+  }
+
+
+
+  private OpStatement makeDef(int name, int value) {
+    StackLocation loc = new StackLocation(name);
     return new OpStatement(null, AsmOp.MOVE,
                            Argument.makeArgument(value),
                            Argument.makeArgument(new AnonymousDescriptor(loc)),
@@ -71,7 +92,7 @@ public class AvailableExpressionsTest extends TestCase {
   public void testNullResultStatement() {
     BasicBlockNode node = new BasicBlockNode("main", "main");
 
-    node.addStatement(new CallStatement(null, "main", null, null));
+    node.addStatement(new CallStatement(null, "main", null, null, false));
 
     AvailableExpressions exprs = new AvailableExpressions(node);
   }
@@ -151,6 +172,49 @@ public class AvailableExpressionsTest extends TestCase {
     assertTrue(isAvailable(bi, AsmOp.MODULO, "var1", "z"));
   }
 
+  /**
+   * Test that expressions are clobbered by moves.
+   * See cse-08
+   */
+  public void testBranch2() {
+    BasicBlockNode top = new BasicBlockNode("main", "main");
+    BasicBlockNode left = new BasicBlockNode("block1test", "main");
+    BasicBlockNode end = new BasicBlockNode("block2test", "main");
+
+    top.setNext(left);
+    top.setBranchTarget(end);
+    left.setNext(end);
+
+    top.addStatement(makeExpr(AsmOp.ADD, -8, -16, "res1"));
+
+    left.addStatement(makeExpr(AsmOp.ADD, -8, -16, "res2"));
+    left.addStatement(makeDef(-8, 0));
+
+    end.addStatement(makeExpr(AsmOp.ADD, -8, -16, "res3"));
+
+    AvailableExpressions exprs = new AvailableExpressions(top);
+
+    BlockItem bi;
+    List<BasicStatement> nodeDefs;
+
+    // Check top block
+    bi = exprs.getExpressions(top);
+    assertNotNull(bi);
+    nodeDefs = bi.getOutExpressions();
+    assertEquals(1, nodeDefs.size());
+
+    bi = exprs.getExpressions(left);
+    assertNotNull(bi);
+    nodeDefs = bi.getOutExpressions();
+    assertEquals(0, nodeDefs.size());
+    assertTrue(isAvailable(bi, AsmOp.ADD, -8, -16));
+
+    bi = exprs.getExpressions(end);
+    assertNotNull(bi);
+    assertFalse(isAvailable(bi, AsmOp.ADD, -8, -16));
+  }
+
+
   private boolean isAvailable(BlockItem bi,
                               AsmOp op, String arg1, String arg2) {
 
@@ -158,5 +222,14 @@ public class AvailableExpressionsTest extends TestCase {
 
     return bi.expressionIsAvailable(expr);
   }
+
+  private boolean isAvailable(BlockItem bi,
+                              AsmOp op, int arg1, int arg2) {
+
+    OpStatement expr = makeExpr(op, arg1, arg2, "dummy");
+
+    return bi.expressionIsAvailable(expr);
+  }
+
 
 }

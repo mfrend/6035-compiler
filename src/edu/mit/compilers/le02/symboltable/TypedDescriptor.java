@@ -30,7 +30,7 @@ public abstract class TypedDescriptor
 
   @Override
   public String toString() {
-    return this.getType().toString();
+    return "" + type + " [" + getId() + " / " + location + "]";
   }
 
   @Override
