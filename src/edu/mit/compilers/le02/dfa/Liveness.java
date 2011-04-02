@@ -239,18 +239,10 @@ implements Lattice<BitSet, BasicBlockNode> {
 
     OpStatement ops = (OpStatement) s;
     switch (ops.getOp()) {
-      case MOVE:
-      case ADD:
-      case SUBTRACT:
-      case MULTIPLY:
-      case DIVIDE:
-      case MODULO:
-      case UNARY_MINUS:
-      case NOT:
-      case RETURN:
-        return true;
-      default:
+      case ENTER:
         return false;
+      default:
+        return true;
     }
   }
 
@@ -269,20 +261,14 @@ implements Lattice<BitSet, BasicBlockNode> {
     switch (def.getOp()) {
       case MOVE:
         return (def.getArg2()).getDesc();
-      case ADD:
-      case SUBTRACT:
-      case MULTIPLY:
-      case DIVIDE:
-      case MODULO:
-      case UNARY_MINUS:
-      case NOT:
-        return def.getResult();
-      case RETURN: 
-        return null;
-      default:
+      case ENTER:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non-definition"));
         return null;
+      case RETURN: 
+        return null;
+      default:
+        return def.getResult();
     }
   }
 
@@ -317,6 +303,12 @@ implements Lattice<BitSet, BasicBlockNode> {
       case MULTIPLY:
       case DIVIDE:
       case MODULO:
+      case EQUAL:
+      case NOT_EQUAL:
+      case LESS_THAN:
+      case LESS_OR_EQUAL:
+      case GREATER_THAN:
+      case GREATER_OR_EQUAL:
         if (def.getArg1() instanceof VariableArgument) {
           ret.add((def.getArg1()).getDesc());
         }
