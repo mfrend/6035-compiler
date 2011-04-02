@@ -32,6 +32,7 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 public class Liveness extends BasicBlockVisitor
 implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
+  private Map<BasicStatement, Boolean> eliminable;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
   private Map<TypedDescriptor, Integer> variableIndices;
@@ -161,6 +162,7 @@ implements Lattice<BitSet, BasicBlockNode> {
 
   public Liveness(BasicBlockNode methodStart) {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
+    this.eliminable = new HashMap<BasicStatement, Boolean>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
     this.variableIndices = new HashMap<TypedDescriptor, Integer>();
@@ -196,6 +198,13 @@ implements Lattice<BitSet, BasicBlockNode> {
     for (BasicStatement s : node.getStatements()) {
       if ((isDefinitionOp(s)) || (s instanceof CallStatement)) {
         statements.add(s);
+
+        if (isDefinitionOp(s) && 
+            !(node.isBranch() && (s == node.getLastStatement()))) {
+          eliminable.put(s, ((OpStatement) s).getOp() != AsmOp.RETURN);
+        } else {
+          eliminable.put(s, false);
+        }
 
         TypedDescriptor target = getDefinitionTarget(s);
         definitionIndices.put(s, getVarIndex(target));
@@ -310,16 +319,16 @@ implements Lattice<BitSet, BasicBlockNode> {
       case GREATER_THAN:
       case GREATER_OR_EQUAL:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add((def.getArg1()).getDesc());
+          ret.add(def.getArg1().getDesc());
         }
         if (def.getArg2() instanceof VariableArgument) {
-          ret.add((def.getArg2()).getDesc());
+          ret.add(def.getArg2().getDesc());
         }
         break;
       case RETURN:
         if ((def.getArg1() != null) &&
             (def.getArg1() instanceof VariableArgument)) {
-          ret.add((def.getArg1()).getDesc());
+          ret.add(def.getArg1().getDesc());
         }
         return ret;
       default:
@@ -376,10 +385,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   }
 
   public boolean isEliminable(BasicStatement s) {
-    if (isDefinitionOp(s)) {
-      return ((OpStatement) s).getOp() != AsmOp.RETURN;
-    }
-    return false;
+    return eliminable.get(s);
   }
 
   public BitSet getGlobalSet() {
