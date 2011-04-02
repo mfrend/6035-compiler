@@ -3,14 +3,12 @@ package edu.mit.compilers.le02.dfa;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
-import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
@@ -65,15 +63,15 @@ implements Lattice<BitSet, BasicBlockNode> {
       returns = false;
 
       for (BasicStatement s : statements) {
-        index = parent.definitionIndices.get(s);
-        if (index != null) {
-          this.killSet.set(index);
-        }
-
         for (Integer i : parent.useIndices.get(s)) {
           if (!this.killSet.get(i)) {
             this.genSet.set(i);
           }
+        }
+
+        index = parent.definitionIndices.get(s);
+        if (index != null) {
+          this.killSet.set(index);
         }
 
         if ((s instanceof OpStatement) && 
