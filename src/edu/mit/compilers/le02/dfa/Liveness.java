@@ -224,10 +224,11 @@ implements Lattice<BitSet, BasicBlockNode> {
         if ((s instanceof OpStatement) && 
             (((OpStatement) s).getOp() == AsmOp.MOVE)) {
           addArrayIndex(uses, (VariableArgument) ((OpStatement) s).getArg2());
-        } else if (s instanceof CallStatement) {
+        } else if ((s instanceof CallStatement) && 
+            !((CallStatement) s).isCallout()) {
           for (TypedDescriptor desc : globals) {
             Integer index = getVarIndex(desc);
-            if (index != null) {
+            if ((index != null) && !uses.contains(index)) {
               uses.add(index);
             }
           }
@@ -365,8 +366,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     List<VariableArgument> ret = new ArrayList<VariableArgument>();
 
     for (Argument arg : call.getArgs()) {
-      if ((arg instanceof VariableArgument) && 
-          !(arg.getDesc() instanceof FieldDescriptor)) {
+      if (arg instanceof VariableArgument) {
         ret.add((VariableArgument) arg);
       }
     }
