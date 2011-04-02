@@ -13,6 +13,7 @@ import java.util.HashSet;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.cfg.Argument;
+import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
@@ -32,6 +33,7 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 public class Liveness extends BasicBlockVisitor
 implements Lattice<BitSet, BasicBlockNode> {
   private Map<BasicBlockNode, BlockItem> blockItems;
+  private Map<BasicStatement, Boolean> eliminable;
   private Map<BasicStatement, Integer> definitionIndices;
   private Map<BasicStatement, List<Integer>> useIndices;
   private Map<TypedDescriptor, Integer> variableIndices;
@@ -87,22 +89,24 @@ implements Lattice<BitSet, BasicBlockNode> {
       BitSet liveness = (BitSet) this.getOut().clone();
       Set<BasicStatement> ret = new HashSet<BasicStatement>();
       BasicStatement s;
-      int def;
+      Integer def;
 
       for (int i = statements.size() - 1; i >= 0; i--) {
         s = statements.get(i);
         def = parent.definitionIndices.get(s);
 
-        if ((parent.isEliminable(s)) && (liveness.get(def))) {
+        if (parent.isEliminable(s) && (def != null) && !liveness.get(def)) {
+          // This variable is not live so this definition can be eliminated
+          ret.add(s);
+        } else {
           // This variable is currently live, so this definition cannot
           // be eliminated. Set and clear liveness bits for used and defd vars
-          liveness.clear(def);
+          if (def != null) {
+            liveness.clear(def);
+          }
           for (Integer use : parent.useIndices.get(s)) {
             liveness.set(use);
           }
-        } else {
-          // This variable is not live so this definition can be eliminated
-          ret.add(s);
         }
       }
 
@@ -130,7 +134,9 @@ implements Lattice<BitSet, BasicBlockNode> {
 
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockItems.get(pred);
-        ret.add(item);
+        if (item != null) {
+          ret.add(item);
+        }
       }
       return ret;
     }
@@ -157,6 +163,7 @@ implements Lattice<BitSet, BasicBlockNode> {
 
   public Liveness(BasicBlockNode methodStart) {
     this.blockItems = new HashMap<BasicBlockNode, BlockItem>();
+    this.eliminable = new HashMap<BasicStatement, Boolean>();
     this.definitionIndices = new HashMap<BasicStatement, Integer>();
     this.useIndices = new HashMap<BasicStatement, List<Integer>>();
     this.variableIndices = new HashMap<TypedDescriptor, Integer>();
@@ -167,7 +174,10 @@ implements Lattice<BitSet, BasicBlockNode> {
       SymbolTable st = methodStart.getLastStatement().getNode().getSymbolTable();
       for (FieldDescriptor desc : st.getFields()) {
         globals.add(desc);
-        globalSet.set(getVarIndex(desc));
+        Integer index = getVarIndex(desc);
+        if (index != null) {
+          globalSet.set(index);
+        }
       }
     }
 
@@ -190,16 +200,40 @@ implements Lattice<BitSet, BasicBlockNode> {
       if ((isDefinitionOp(s)) || (s instanceof CallStatement)) {
         statements.add(s);
 
+        if (isDefinitionOp(s) && 
+            !(node.isBranch() && (s == node.getLastStatement()))) {
+          eliminable.put(s, ((OpStatement) s).getOp() != AsmOp.RETURN);
+        } else {
+          eliminable.put(s, false);
+        }
+
         TypedDescriptor target = getDefinitionTarget(s);
         definitionIndices.put(s, getVarIndex(target));
 
         List<Integer> uses = new ArrayList<Integer>();
-        for (TypedDescriptor use : getDefinitionUses(s)) {
-          Integer index = getVarIndex(use);
+        for (VariableArgument use : getDefinitionUses(s)) {
+          Integer index = getVarIndex(use.getDesc());
           if (index != null) {
             uses.add(index);
           }
+          addArrayIndex(uses, use);
         }
+
+        // Handle two special cases: array indices are used in MOVE ops,
+        // and all globals are used in CALL ops
+        if ((s instanceof OpStatement) && 
+            (((OpStatement) s).getOp() == AsmOp.MOVE)) {
+          addArrayIndex(uses, (VariableArgument) ((OpStatement) s).getArg2());
+        } else if ((s instanceof CallStatement) && 
+            !((CallStatement) s).isCallout()) {
+          for (TypedDescriptor desc : globals) {
+            Integer index = getVarIndex(desc);
+            if ((index != null) && !uses.contains(index)) {
+              uses.add(index);
+            }
+          }
+        }
+
         useIndices.put(s, uses);
       }
     }
@@ -211,9 +245,18 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
+  private void addArrayIndex(List<Integer> uses, VariableArgument arg) {
+    if ((arg != null) && (arg instanceof ArrayVariableArgument)) {
+      Integer index =
+          getVarIndex(((ArrayVariableArgument) arg).getIndex().getDesc());
+      if (index != null) {
+        uses.add(index);
+      }
+    }
+  }
+
   private Integer getVarIndex(TypedDescriptor loc) {
-    if ((loc.getType() == DecafType.INT_ARRAY) ||
-        (loc.getType() == DecafType.BOOLEAN_ARRAY)) {
+    if ((loc == null) || (loc.getType() == null) || loc.getType().isArray()) {
       return null;
     }
 
@@ -231,21 +274,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       return false;
     }
 
-    OpStatement ops = (OpStatement) s;
-    switch (ops.getOp()) {
-      case MOVE:
-      case ADD:
-      case SUBTRACT:
-      case MULTIPLY:
-      case DIVIDE:
-      case MODULO:
-      case UNARY_MINUS:
-      case NOT:
-      case RETURN:
-        return true;
-      default:
-        return false;
-    }
+    return (((OpStatement)s).getOp() != AsmOp.ENTER);
   }
 
   private TypedDescriptor getDefinitionTarget(BasicStatement s) {
@@ -263,24 +292,14 @@ implements Lattice<BitSet, BasicBlockNode> {
     switch (def.getOp()) {
       case MOVE:
         return (def.getArg2()).getDesc();
-      case ADD:
-      case SUBTRACT:
-      case MULTIPLY:
-      case DIVIDE:
-      case MODULO:
-      case UNARY_MINUS:
-      case NOT:
-        return def.getResult();
-      case RETURN:
-        if ((def.getArg1() != null) &&
-            (def.getArg1() instanceof VariableArgument)) {
-          return (def.getArg1()).getDesc();
-        }
-        return null;
-      default:
+      case ENTER:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non-definition"));
         return null;
+      case RETURN: 
+        return null;
+      default:
+        return def.getResult();
     }
   }
 
@@ -288,7 +307,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     return call.getResult();
   }
 
-  private List<TypedDescriptor> getDefinitionUses(BasicStatement s) {
+  private List<VariableArgument> getDefinitionUses(BasicStatement s) {
     if (s instanceof OpStatement) {
       return getDefinitionUses((OpStatement) s);
     } else if (s instanceof CallStatement) {
@@ -299,15 +318,15 @@ implements Lattice<BitSet, BasicBlockNode> {
     return null;
   }
 
-  private List<TypedDescriptor> getDefinitionUses(OpStatement def) {
-    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>();
+  private List<VariableArgument> getDefinitionUses(OpStatement def) {
+    List<VariableArgument> ret = new ArrayList<VariableArgument>();
 
     switch (def.getOp()) {
       case MOVE:
       case UNARY_MINUS:
       case NOT:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add((def.getArg1()).getDesc());
+          ret.add((VariableArgument) def.getArg1());
         }
         break;
       case ADD:
@@ -315,11 +334,23 @@ implements Lattice<BitSet, BasicBlockNode> {
       case MULTIPLY:
       case DIVIDE:
       case MODULO:
+      case EQUAL:
+      case NOT_EQUAL:
+      case LESS_THAN:
+      case LESS_OR_EQUAL:
+      case GREATER_THAN:
+      case GREATER_OR_EQUAL:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add((def.getArg1()).getDesc());
+          ret.add((VariableArgument) def.getArg1());
         }
         if (def.getArg2() instanceof VariableArgument) {
-          ret.add((def.getArg2()).getDesc());
+          ret.add((VariableArgument) def.getArg2());
+        }
+        break;
+      case RETURN:
+        if ((def.getArg1() != null) &&
+            (def.getArg1() instanceof VariableArgument)) {
+          ret.add((VariableArgument) def.getArg1());
         }
         break;
       default:
@@ -331,13 +362,12 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  private List<TypedDescriptor> getDefinitionUses(CallStatement call) {
-    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>(globals);
+  private List<VariableArgument> getDefinitionUses(CallStatement call) {
+    List<VariableArgument> ret = new ArrayList<VariableArgument>();
 
     for (Argument arg : call.getArgs()) {
-      if ((arg instanceof VariableArgument) && 
-          !(arg.getDesc() instanceof FieldDescriptor)) {
-        ret.add(arg.getDesc());
+      if (arg instanceof VariableArgument) {
+        ret.add((VariableArgument) arg);
       }
     }
 
@@ -376,10 +406,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   }
 
   public boolean isEliminable(BasicStatement s) {
-    if (isDefinitionOp(s)) {
-      return ((OpStatement) s).getOp() != AsmOp.RETURN;
-    }
-    return false;
+    return eliminable.get(s);
   }
 
   public BitSet getGlobalSet() {

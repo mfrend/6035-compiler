@@ -7,6 +7,8 @@ import java.util.Map;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.dfa.DeadCodeElimination;
+import edu.mit.compilers.le02.dfa.Liveness;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
@@ -54,9 +56,10 @@ public class BasicBlockGraph {
         cp.visit(methodEnter);
       }
 
-      // Run local dead code elimination.
+      // Run global dead code elimination.
       if (opts.contains(Optimization.DEAD_CODE)) {
-        // TODO(dkoh)
+        Liveness live = new Liveness(methodEnter);
+        new DeadCodeElimination(methodEnter, live.getBlockItems());
       }
 
       // All of these optimizations change the number of local variables.
