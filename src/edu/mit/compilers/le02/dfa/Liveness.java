@@ -13,6 +13,7 @@ import java.util.HashSet;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.cfg.Argument;
+import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
@@ -210,12 +211,28 @@ implements Lattice<BitSet, BasicBlockNode> {
         definitionIndices.put(s, getVarIndex(target));
 
         List<Integer> uses = new ArrayList<Integer>();
-        for (TypedDescriptor use : getDefinitionUses(s)) {
-          Integer index = getVarIndex(use);
+        for (VariableArgument use : getDefinitionUses(s)) {
+          Integer index = getVarIndex(use.getDesc());
           if (index != null) {
             uses.add(index);
           }
+          addArrayIndex(uses, use);
         }
+
+        // Handle two special cases: array indices are used in MOVE ops,
+        // and all globals are used in CALL ops
+        if ((s instanceof OpStatement) && 
+            (((OpStatement) s).getOp() == AsmOp.MOVE)) {
+          addArrayIndex(uses, (VariableArgument) ((OpStatement) s).getArg2());
+        } else if (s instanceof CallStatement) {
+          for (TypedDescriptor desc : globals) {
+            Integer index = getVarIndex(desc);
+            if (index != null) {
+              uses.add(index);
+            }
+          }
+        }
+
         useIndices.put(s, uses);
       }
     }
@@ -225,6 +242,16 @@ implements Lattice<BitSet, BasicBlockNode> {
       ret.setOut(globalSet);
     }
     return ret;
+  }
+
+  private void addArrayIndex(List<Integer> uses, VariableArgument arg) {
+    if ((arg != null) && (arg instanceof ArrayVariableArgument)) {
+      Integer index =
+          getVarIndex(((ArrayVariableArgument) arg).getIndex().getDesc());
+      if (index != null) {
+        uses.add(index);
+      }
+    }
   }
 
   private Integer getVarIndex(TypedDescriptor loc) {
@@ -279,7 +306,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     return call.getResult();
   }
 
-  private List<TypedDescriptor> getDefinitionUses(BasicStatement s) {
+  private List<VariableArgument> getDefinitionUses(BasicStatement s) {
     if (s instanceof OpStatement) {
       return getDefinitionUses((OpStatement) s);
     } else if (s instanceof CallStatement) {
@@ -290,15 +317,15 @@ implements Lattice<BitSet, BasicBlockNode> {
     return null;
   }
 
-  private List<TypedDescriptor> getDefinitionUses(OpStatement def) {
-    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>();
+  private List<VariableArgument> getDefinitionUses(OpStatement def) {
+    List<VariableArgument> ret = new ArrayList<VariableArgument>();
 
     switch (def.getOp()) {
       case MOVE:
       case UNARY_MINUS:
       case NOT:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add((def.getArg1()).getDesc());
+          ret.add((VariableArgument) def.getArg1());
         }
         break;
       case ADD:
@@ -313,18 +340,18 @@ implements Lattice<BitSet, BasicBlockNode> {
       case GREATER_THAN:
       case GREATER_OR_EQUAL:
         if (def.getArg1() instanceof VariableArgument) {
-          ret.add(def.getArg1().getDesc());
+          ret.add((VariableArgument) def.getArg1());
         }
         if (def.getArg2() instanceof VariableArgument) {
-          ret.add(def.getArg2().getDesc());
+          ret.add((VariableArgument) def.getArg2());
         }
         break;
       case RETURN:
         if ((def.getArg1() != null) &&
             (def.getArg1() instanceof VariableArgument)) {
-          ret.add(def.getArg1().getDesc());
+          ret.add((VariableArgument) def.getArg1());
         }
-        return ret;
+        break;
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get " +
         "variables used in a non definition!"));
@@ -334,13 +361,13 @@ implements Lattice<BitSet, BasicBlockNode> {
     return ret;
   }
 
-  private List<TypedDescriptor> getDefinitionUses(CallStatement call) {
-    List<TypedDescriptor> ret = new ArrayList<TypedDescriptor>(globals);
+  private List<VariableArgument> getDefinitionUses(CallStatement call) {
+    List<VariableArgument> ret = new ArrayList<VariableArgument>();
 
     for (Argument arg : call.getArgs()) {
       if ((arg instanceof VariableArgument) && 
           !(arg.getDesc() instanceof FieldDescriptor)) {
-        ret.add(arg.getDesc());
+        ret.add((VariableArgument) arg);
       }
     }
 
