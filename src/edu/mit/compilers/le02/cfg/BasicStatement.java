@@ -29,6 +29,10 @@ public abstract class BasicStatement {
     return result;
   }
 
+  public void setResult(TypedDescriptor desc) {
+    result = desc;
+  }
+
   public BasicStatementType getType() {
     return type;
   }
