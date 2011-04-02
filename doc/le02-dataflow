@@ -1,0 +1,94 @@
+=Dataflow Analysis=
+
+==Division of work==
+
+==Clarification/addition/assumptions==
+
+==Overview of design, analysis of alternatives, and design decisions==	 	
+==Implementation issues==
+
+==Commented test cases==
+
+TODO: all cases need generated code, both unoptimizied and optimized
+
+-- cse-01 --
+Replace second (a + b) computation with load from temporary variable
+
+-- cse-02 --
+Replace second (a + b) computation with load from temporary variable
+
+-- cse-03 --
+Replace all (a + b) computations after first with load from temporary variable
+
+-- cse-04 --
+Replace all (a + b) computations after first with load from temporary variable
+Do not replace (a + b) * (a + b) computation with temporary variable (liz, can 
+you elaborate on why not?)
+
+-- cse-05 --
+No CSE can be performed here, due to intermediate assignment to a.
+
+-- cse-06 --
+No CSE can be performed here, since first (a + b) calculation comes on only one 
+branch.
+
+-- cse-07 --
+Replace all (a + b) computations after first with load from temporary variable
+
+-- cse-08 --
+Do not replace (a + b) on branch with temp, due to intermediate assignment to a.
+Replace last (a + b) computation with load from temporary variable, because 
+expression is calculated on all paths.
+
+-- cse-09 --
+Replace (a + b) on branch with load from temporary variable.
+Do not replace (a + b) at end, due to assignment to a on branch.
+
+-- cse-10 --
+Replace (a + b) at end with load from temporary variable, because
+expression is calculated on all paths.
+
+-- cse-11 --
+Replace (a + b) at end with load from temporary variable, because
+expression is calculated on all paths.  The assignment to b does not
+change the validity of this transform, because we use the same temp
+on all paths, though the value may be different.
+
+-- cse-12 --
+No CSE can be performed here, due to intermediate assignment to b on one of
+the branches.
+
+-- cse-13 --
+No CSE can be performed here, because (a + b) is not calculated on all 
+branches.
+
+-- cse-14 --
+Replace (a + b) in loop with load from temporary variable.
+
+-- cse-15 --
+No CSE can be performed here, due the the assignment to a at the end of the
+loop.  This assignment means that (a + b) may differ from the previously
+calculated value, when we are at the beginning of the loop.
+
+-- cse-16 --
+Replace second (a + b) with load from temporary variable.
+
+-- cse-17 --
+No CSE can be performed, because the function call may (and in fact does)
+modify any globals, including a and/or b.
+
+-- cse-18 --
+Do not perform CSE because our bounds checking is generated as we translate
+our low-level IR, but CSE is performed on the low-level IR.  Later, after
+we have raised the array bounds checking into the low-level IR, this CSE
+should be performed.
+
+
+
+==Commented source code==
+See the README file for an index of what components are located in which
+packages, and the individual source files for commented code.
+
+==Known problems==
+Please see https://github.com/lizthegrey/6035-compiler/issues for an
+up-to-date list of known issues.
