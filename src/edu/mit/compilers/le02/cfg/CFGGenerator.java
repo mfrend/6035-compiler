@@ -187,19 +187,33 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(AssignNode node) {
+    // Assumption: location to assign, value to assign is evaluated, then
+    // assignment is performed.
     CFGFragment destFrag = node.getLoc().accept(this);
     Argument destArg = destFrag.getExit().getResult();
     assert (destArg instanceof VariableArgument);
 
-    CFGFragment frag = node.getValue().accept(this);
-    Argument src = frag.getExit().getResult();
-
-    BasicStatement st = new OpStatement(node, AsmOp.MOVE, src, destArg, null);
+    CFGFragment valueFrag = node.getValue().accept(this);
+    BasicStatement st = new OpStatement(node, AsmOp.MOVE,
+        valueFrag.getExit().getResult(), destArg, null);
     SimpleCFGNode cfgNode = new SimpleCFGNode(st);
 
-    // Assumption: value to assign is evaluated, then location to assign to
-    //             is evaluated, then assignment is performed
-    return frag.link(destFrag).append(cfgNode);
+    if ((node.getValue() instanceof VariableNode &&
+          ((VariableNode)node.getValue()).getType().isArray()) ||
+        destArg instanceof ArrayVariableArgument) {
+      return destFrag.link(valueFrag).append(cfgNode);
+    }
+
+    if (node.getValue() instanceof VariableNode ||
+        node.getValue() instanceof IntNode ||
+        node.getValue() instanceof BooleanNode) {
+      return new CFGFragment(cfgNode,cfgNode);
+    }
+
+    valueFrag.getExit().getStatement().setResult(destArg.getDesc());
+    valueFrag.getExit().setResult(destArg);
+
+    return destFrag.link(valueFrag);
   }
 
   @Override

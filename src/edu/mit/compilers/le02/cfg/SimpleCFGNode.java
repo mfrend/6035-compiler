@@ -80,6 +80,10 @@ public final class SimpleCFGNode implements CFGNode {
     return result;
   }
 
+  public void setResult(Argument result) {
+    this.result = result;
+  }
+
   public boolean hasMultipleEntrances() {
     return predecessors.size() > 1;
   }
