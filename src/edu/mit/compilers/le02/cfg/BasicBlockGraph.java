@@ -43,6 +43,12 @@ public class BasicBlockGraph {
         }
       }
 
+      // Run local CP
+      if (opts.contains(Optimization.COPY_PROPAGATION)) {
+        CpVisitor cp = new CpVisitor();
+        cp.visit(methodEnter);
+      }
+
       // Run local and global CSE
       if (opts.contains(Optimization.COMMON_SUBEXPR)) {
         BasicBlockVisitor cse = new CseVisitor();
