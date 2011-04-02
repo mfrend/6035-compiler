@@ -53,4 +53,5 @@ public final class SystemCallNode extends CallNode {
   public DecafType getType() {
     return DecafType.INT;
   }
+
 }
