@@ -158,7 +158,7 @@ public final class BasicBlockNode implements CFGNode {
     String nextStr = next.id.replace(".", "");
 
     String s = me + " " + getDotStringLabel() + "\n"
-               + me + " -> " + nextStr;
+               + me + ":s -> " + nextStr + ":n";
 
     if (!isBranch()) {
       s += "\n";
@@ -167,7 +167,7 @@ public final class BasicBlockNode implements CFGNode {
     else {
       s += " [label=\"false\"]\n";
       String branchStr = branchTarget.id.replace(".", "");
-      s += me + " -> " + branchStr + " [label=\"true\"]\n";
+      s += me + ":s -> " + branchStr + ":n [label=\"true\"]\n";
       return s + next.getDotString() + branchTarget.getDotString();
     }
   }
