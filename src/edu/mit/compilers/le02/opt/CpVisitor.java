@@ -65,18 +65,25 @@ public class CpVisitor extends BasicBlockVisitor {
       // Update if we are writing into a temporary for archiving.
       if (storedVar instanceof LocalDescriptor &&
           ((LocalDescriptor)storedVar).isLocalTemporary()) {
+        CseVariable var = null;
         if (op.getOp() == AsmOp.MOVE &&
-            op.getArg1() instanceof CseVariable) {
-          CseVariable var = (CseVariable)op.getArg1();
-          LocalDescriptor tmp = (LocalDescriptor)storedVar;
-          tmpToVar.put(tmp, var);
-          Set<LocalDescriptor> set = varToSet.get(var);
-          if (set == null) {
-            set = new HashSet<LocalDescriptor>();
-            varToSet.put(var, set);
-          }
-          set.add(tmp);
+            op.getArg1() instanceof ArrayVariableArgument) {
+          var = (CseVariable)convertArg(op.getArg1());
+        } else if (op.getOp() == AsmOp.MOVE &&
+            op.getArg1().getDesc() != null) {
+          var = op.getArg1().getDesc();
+        } else {
+          newStmts.add(stmt);
+          continue;
         }
+        LocalDescriptor tmp = (LocalDescriptor)storedVar;
+        tmpToVar.put(tmp, var);
+        Set<LocalDescriptor> set = varToSet.get(var);
+        if (set == null) {
+          set = new HashSet<LocalDescriptor>();
+          varToSet.put(var, set);
+        }
+        set.add(tmp);
       } else {
         // We are writing into a non-temporary. We need to clear out
         // all the places where its value was archived.
@@ -196,6 +203,11 @@ public class CpVisitor extends BasicBlockVisitor {
    * Converts an argument into a corresponding non-temp if available.
    */
   private Argument convertArg(Argument arg) {
+    if (arg instanceof ArrayVariableArgument) {
+      ArrayVariableArgument ava = (ArrayVariableArgument)arg;
+      arg = new ArrayVariableArgument(
+        arg.getDesc(), convertArg(ava.getIndex()));
+    }
     CseVariable result = tmpToVar.get(arg);
     if (result != null) {
       return Argument.makeArgument(result);
