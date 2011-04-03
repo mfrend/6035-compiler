@@ -103,12 +103,11 @@ public final class SimpleCFGNode implements CFGNode {
     if (visited.contains(this)) {
       return "";
     }
+    visited.add(this);
 
     if (next == null) {
       return this.hashCode() + "[label=\"" + statement.toString() + "\"]\n";
     }
-
-    visited.add(this);
 
     String me = "" + this.hashCode();
     String nextStr = "" + next.hashCode();
@@ -119,8 +118,7 @@ public final class SimpleCFGNode implements CFGNode {
     if (!isBranch()) {
       s += "\n";
       return s + next.getDotString();
-    }
-    else {
+    } else {
       s += " [label=\"false\"]\n";
       String branchStr = "" + branchTarget.hashCode();
       s += me + " -> " + branchStr + " [label=\"true\"]\n";
@@ -128,4 +126,27 @@ public final class SimpleCFGNode implements CFGNode {
     }
   }
 
+  @Override
+  public String getCfgListing() {
+    if (visited.contains(this)) {
+      return "";
+    }
+    visited.add(this);
+
+    if (next == null) {
+      return this.hashCode() + ":\n    " + statement.toString() +
+        "\n  [END] \n";
+    }
+
+    String s = this.hashCode() + ":\n    " + statement.toString() +
+      "\n  next: " + next.hashCode();
+
+    if (!isBranch()) {
+      s += "\n";
+      return s + next.getCfgListing();
+    } else {
+      s += ", branch: " + branchTarget.hashCode() + "\n";
+      return s + next.getCfgListing() + branchTarget.getCfgListing();
+    }
+  }
 }
