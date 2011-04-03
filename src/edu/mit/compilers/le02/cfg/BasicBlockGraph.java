@@ -7,6 +7,7 @@ import java.util.Map;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.dfa.DeadCodeElimination;
 import edu.mit.compilers.le02.dfa.Liveness;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
