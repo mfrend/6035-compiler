@@ -9,33 +9,38 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
+import edu.mit.compilers.tools.CLI;
 
 public class CpVisitor extends BasicBlockVisitor {
-  private Map<LocalDescriptor, CseVariable> tmpToVar =
-    new HashMap<LocalDescriptor, CseVariable>();
-  private Map<CseVariable, Set<LocalDescriptor>> varToSet =
-    new HashMap<CseVariable, Set<LocalDescriptor>>();
+  private Map<CseVariable, CseVariable> tmpToVar =
+    new HashMap<CseVariable, CseVariable>();
+  private Map<CseVariable, Set<CseVariable>> varToSet =
+    new HashMap<CseVariable, Set<CseVariable>>();
 
   @Override
   protected void processNode(BasicBlockNode node) {
     tmpToVar.clear();
     varToSet.clear();
+
     List<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     for (BasicStatement stmt : node.getStatements()) {
       if (stmt.getType() == BasicStatementType.CALL) {
-        handleCall((CallStatement)stmt);
+        stmt = handleCall((CallStatement)stmt);
       }
+      // Dealt with Calls above, Ops below; everything else doesn't affect CP.
       if (stmt.getType() != BasicStatementType.OP) {
         newStmts.add(stmt);
         continue;
@@ -50,54 +55,59 @@ public class CpVisitor extends BasicBlockVisitor {
 
       // Convert arguments.
       if (op.getArg1() != null) {
-        op.setArg1(convertArg(op.getArg1()));
+        Argument arg1 = convertArg(op.getArg1());
+        if (arg1 != null && !arg1.equals(op.getArg1())) {
+          op = new OpStatement(op.getNode(), op.getOp(),
+                               arg1, op.getArg2(), op.getResult());
+        }
       }
-      if (op.getArg2() != null) {
-        op.setArg2(convertArg(op.getArg2()));
+      if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
+        Argument arg2 = convertArg(op.getArg2());
+        if (arg2 != null && !arg2.equals(op.getArg2())) {
+          op = new OpStatement(op.getNode(), op.getOp(),
+                               op.getArg1(), arg2, op.getResult());
+        }
       }
 
-      if (storedVar instanceof ArrayVariableArgument) {
+      if (storedVar != null && storedVar instanceof ArrayVariableArgument) {
         // This is a global array that we've scribbled on.
         // Invalidate all previous references to that array.
         invalidateArray((ArrayVariableArgument)storedVar);
-      }
-
-      // Update if we are writing into a temporary for archiving.
-      if (storedVar instanceof LocalDescriptor &&
-          ((LocalDescriptor)storedVar).isLocalTemporary()) {
-        CseVariable var = null;
-        if (op.getOp() == AsmOp.MOVE &&
-            op.getArg1() instanceof ArrayVariableArgument) {
-          var = (CseVariable)convertArg(op.getArg1());
-        } else if (op.getOp() == AsmOp.MOVE &&
-            op.getArg1().getDesc() != null) {
-          var = op.getArg1().getDesc();
-        } else {
-          newStmts.add(stmt);
-          continue;
-        }
-        LocalDescriptor tmp = (LocalDescriptor)storedVar;
-        tmpToVar.put(tmp, var);
-        Set<LocalDescriptor> set = varToSet.get(var);
-        if (set == null) {
-          set = new HashSet<LocalDescriptor>();
-          varToSet.put(var, set);
-        }
-        set.add(tmp);
-      } else {
+      } else if (storedVar != null &&
+                 (!(storedVar instanceof LocalDescriptor) ||
+                  !((LocalDescriptor)storedVar).isLocalTemporary())) {
         // We are writing into a non-temporary. We need to clear out
         // all the places where its value was archived.
-        Set<LocalDescriptor> references = varToSet.get(storedVar);
+        // For temporaries, they're write-once and thus this is moot.
+        Set<CseVariable> references = varToSet.get(storedVar);
         if (references != null) {
-          for (LocalDescriptor tmp : references) {
-            tmpToVar.remove(tmp);
+          for (CseVariable temp : references) {
+            tmpToVar.remove(temp);
           }
           varToSet.remove(storedVar);
         }
       }
 
+      if (op.getOp() == AsmOp.MOVE &&
+          (op.getArg1() instanceof VariableArgument)) {
+        CseVariable var = null;
+        if (op.getArg1() instanceof ArrayVariableArgument) {
+          var = (CseVariable)convertArg(op.getArg1());
+        } else if (op.getArg1().getDesc() != null) {
+          var = op.getArg1().getDesc();
+        }
+  
+        tmpToVar.put(storedVar, var);
+        Set<CseVariable> set = varToSet.get(var);
+        if (set == null) {
+          set = new HashSet<CseVariable>();
+          varToSet.put(var, set);
+        }
+        set.add(storedVar);
+      }
+
       // Finally, write the op.
-      newStmts.add(stmt);
+      newStmts.add(op);
     }
 
     // Finally, overwrite the list of basicblock statements with our new list.
@@ -117,8 +127,12 @@ public class CpVisitor extends BasicBlockVisitor {
         // This is either an implicit conditional assignment for je or
         // an implicit string MOV to push arguments for a callout.
         // In either case, not cacheable.
-        op.setArg1(convertArg(op.getArg1()));
-        newStmts.add(stmt);
+        Argument arg1 = convertArg(op.getArg1());
+        if (arg1 != null && !arg1.equals(op.getArg1())) {
+          op = new OpStatement(op.getNode(), op.getOp(),
+                               arg1, op.getArg2(), op.getResult());
+        }
+        newStmts.add(op);
         return SkipProcessing.getInstance();
       }
       if (op.getArg2() instanceof ArrayVariableArgument) {
@@ -129,11 +143,15 @@ public class CpVisitor extends BasicBlockVisitor {
      case RETURN:
       Argument originalRetval = op.getArg1();
       if (originalRetval != null) {
-        op.setArg1(convertArg(op.getArg1()));
+        Argument arg1 = convertArg(op.getArg1());
+        if (arg1 != null && !arg1.equals(op.getArg1())) {
+          op = new OpStatement(op.getNode(), op.getOp(),
+                               arg1, op.getArg2(), op.getResult());
+        }
       }
       // Deliberately fall through and continue.
      case ENTER:
-      newStmts.add(stmt);
+      newStmts.add(op);
       return SkipProcessing.getInstance();
      default:
       return op.getResult();
@@ -153,10 +171,10 @@ public class CpVisitor extends BasicBlockVisitor {
         it.remove();
       }
     }
-    Iterator<Entry<LocalDescriptor, CseVariable>> it2 =
+    Iterator<Entry<CseVariable, CseVariable>> it2 =
       tmpToVar.entrySet().iterator();
     while (it2.hasNext()) {
-      Entry<LocalDescriptor, CseVariable> entry = it2.next();
+      Entry<CseVariable, CseVariable> entry = it2.next();
       if (entry.getValue() instanceof ArrayVariableArgument &&
           ((ArrayVariableArgument)entry.getValue()).getDesc().equals(
               storedVar.getDesc())) {
@@ -168,17 +186,18 @@ public class CpVisitor extends BasicBlockVisitor {
   /**
    * Handles substitution and invalidation for a method call.
    */
-  private void handleCall(CallStatement call) {
+  private CallStatement handleCall(CallStatement call) {
     // Replace all arguments with alternatives if available.
     List<Argument> args = new ArrayList<Argument>();
     for (Argument arg : call.getArgs()) {
       args.add(convertArg(arg));
     }
-    call.setArgs(args);
+    call = new CallStatement((ExpressionNode)call.getNode(),
+      call.getMethodName(), args, call.getResult(), call.isCallout());
 
     if (call.isCallout()) {
       // Callouts cannot tamper with our global variables.
-      return;
+      return call;
     }
 
     // Invalidate all cached global variable values.
@@ -189,27 +208,34 @@ public class CpVisitor extends BasicBlockVisitor {
         it.remove();
       }
     }
-    Iterator<Entry<LocalDescriptor, CseVariable>> it2 =
+    Iterator<Entry<CseVariable, CseVariable>> it2 =
       tmpToVar.entrySet().iterator();
     while (it2.hasNext()) {
-      Entry<LocalDescriptor, CseVariable> entry = it2.next();
+      Entry<CseVariable, CseVariable> entry = it2.next();
       if (entry.getValue() instanceof FieldDescriptor) {
         entry.setValue(entry.getKey());
       }
     }
+    return call;
   }
 
   /**
    * Converts an argument into a corresponding non-temp if available.
    */
   private Argument convertArg(Argument arg) {
+    CseVariable key;
     if (arg instanceof ArrayVariableArgument) {
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
-      arg = new ArrayVariableArgument(
+      key = new ArrayVariableArgument(
         arg.getDesc(), convertArg(ava.getIndex()));
+    } else {
+      key = arg.getDesc();
     }
-    CseVariable result = tmpToVar.get(arg);
+    CseVariable result = tmpToVar.get(key);
     if (result != null) {
+      if (CLI.debug) {
+        System.out.println("Substituted " + result + " for " + key);
+      }
       return Argument.makeArgument(result);
     } else {
       return arg;
