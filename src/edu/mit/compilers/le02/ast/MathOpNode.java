@@ -29,14 +29,14 @@ public final class MathOpNode extends BinaryOpNode {
     }
     MathOpNode other = (MathOpNode)o;
     boolean result = left.equals(other.left) &&
-    	right.equals(other.right) &&
-    	op.equals(other.getOp());
-    if(result){
-    	return true;
-    }else{
-    	ExtendedMathOpNode node1 = new ExtendedMathOpNode(null, this, null);
-    	ExtendedMathOpNode node2 = new ExtendedMathOpNode(null, other, null);
-    	return node1.equals(node2);
+      right.equals(other.right) &&
+      op.equals(other.getOp());
+    if (result) {
+      return true;
+    } else {
+      ExtendedMathOpNode node1 = new ExtendedMathOpNode(this, null);
+      ExtendedMathOpNode node2 = new ExtendedMathOpNode(other, null);
+      return node1.equals(node2);
     }
   }
 
