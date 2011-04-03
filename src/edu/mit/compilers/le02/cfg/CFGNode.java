@@ -18,6 +18,7 @@ public interface CFGNode {
    */
   public void prepDotString();
   public String getDotString();
+  public String getCfgListing();
 
   /**
    * Returns true if this instruction may branch.

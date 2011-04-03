@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;

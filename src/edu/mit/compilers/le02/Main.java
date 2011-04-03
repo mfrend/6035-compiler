@@ -367,11 +367,20 @@ public class Main {
       ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
 
-      if (CLI.debug) {
-        CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
-      }
-      else {
-        CFGVisualizer.writeToDotFile(CLI.outfile, cfg, false);
+      if (CLI.graphics) {
+        if (CLI.debug) {
+          CFGVisualizer.writeToDotFile(CLI.outfile, lowCfg, true);
+        }
+        else {
+          CFGVisualizer.writeToDotFile(CLI.outfile, cfg, false);
+        }
+      } else {
+        if (CLI.debug) {
+          CFGVisualizer.writeCfgToFile(CLI.outfile, lowCfg, true);
+        }
+        else {
+          CFGVisualizer.writeCfgToFile(CLI.outfile, cfg, false);
+        }
       }
 
     } catch (ANTLRException e) {
