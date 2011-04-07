@@ -6,12 +6,10 @@ import junit.framework.TestCase;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.StackLocation;
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
-import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.AvailableExpressions.BlockItem;
@@ -20,14 +18,6 @@ import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 
 
 public class AvailableExpressionsTest extends TestCase {
-
-  private VariableLocation makeLoc(String name) {
-    return new GlobalLocation(name);
-  }
-
-  private VariableLocation makeLocalLoc(int offset) {
-    return new StackLocation(offset);
-  }
 
   private OpStatement makeExpr(AsmOp op, String arg1, String arg2, String res) {
     GlobalLocation loc = new GlobalLocation(arg1);
@@ -47,18 +37,6 @@ public class AvailableExpressionsTest extends TestCase {
                            Argument.makeArgument(new AnonymousDescriptor(loc2)),
                            new FieldDescriptor(null, res, DecafType.INT));
   }
-
-
-
-  private OpStatement makeDef(String name, int value) {
-    GlobalLocation loc = new GlobalLocation(name);
-    return new OpStatement(null, AsmOp.MOVE,
-                           Argument.makeArgument(value),
-                           Argument.makeArgument(new AnonymousDescriptor(loc)),
-                           null);
-  }
-
-
 
   private OpStatement makeDef(int name, int value) {
     StackLocation loc = new StackLocation(name);
@@ -94,7 +72,7 @@ public class AvailableExpressionsTest extends TestCase {
 
     node.addStatement(new CallStatement(null, "main", null, null, false));
 
-    AvailableExpressions exprs = new AvailableExpressions(node);
+    new AvailableExpressions(node);
   }
 
   public void testUnaryStatements() {
@@ -111,7 +89,7 @@ public class AvailableExpressionsTest extends TestCase {
                           null,
                           new FieldDescriptor(null, "res", DecafType.INT)));
 
-    AvailableExpressions exprs = new AvailableExpressions(node);
+    new AvailableExpressions(node);
   }
 
 

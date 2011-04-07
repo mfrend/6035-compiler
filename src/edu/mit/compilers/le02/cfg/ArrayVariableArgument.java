@@ -39,7 +39,7 @@ public class ArrayVariableArgument
 
   @Override
   public String toString() {
-    return loc.toString() + "[" + index + "]";
+    return loc.toString() + " [" + index + "]";
   }
 
   @Override
