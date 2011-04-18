@@ -7,9 +7,12 @@ import java.util.Map;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.dfa.DeadCodeElimination;
+import edu.mit.compilers.le02.dfa.Liveness;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
+import edu.mit.compilers.le02.opt.GlobalCseVisitor;
 
 public class BasicBlockGraph {
   private static int id;
@@ -40,17 +43,34 @@ public class BasicBlockGraph {
         }
       }
 
-      // Run CSE
-      if (opts.contains(Optimization.COMMON_SUBEXPR)) {
-        BasicBlockVisitor cse = new CseVisitor();
-        cse.visit(methodEnter);
-      }
-
-      // Run CP
+      // Run local CP
       if (opts.contains(Optimization.COPY_PROPAGATION)) {
         CpVisitor cp = new CpVisitor();
         cp.visit(methodEnter);
       }
+
+      // Run local and global CSE
+      if (opts.contains(Optimization.COMMON_SUBEXPR)) {
+        BasicBlockVisitor cse = new CseVisitor();
+        cse.visit(methodEnter);
+        GlobalCseVisitor.performGlobalCse(methodEnter);
+      }
+
+      // Run local CP
+      if (opts.contains(Optimization.COPY_PROPAGATION)) {
+        CpVisitor cp = new CpVisitor();
+        cp.visit(methodEnter);
+      }
+
+      // Run global dead code elimination.
+      if (opts.contains(Optimization.DEAD_CODE)) {
+        Liveness live = new Liveness(methodEnter);
+        new DeadCodeElimination(methodEnter, live.getBlockItems());
+      }
+
+      // All of these optimizations change the number of local variables.
+      // That's okay - we don't call getLargestLocalOffset until after
+      // optimization is finished.
 
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();

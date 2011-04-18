@@ -14,7 +14,6 @@ import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
-import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
@@ -48,10 +47,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
 
       this.genSet = new BitSet();
       this.killSet = new BitSet();
-      this.init();
     }
 
-    private void init() {
+    public void init() {
       int index;
       for (BasicStatement s : blockDefinitions) {
         if (s.getType() == BasicStatementType.CALL) {
@@ -154,6 +152,10 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.globalDefinitions = new BitSet();
     this.visit(methodRoot);
 
+    for (BlockItem bi : blockDefinitions.values()) {
+      bi.init();
+    }
+
     BlockItem start = blockDefinitions.get(methodRoot);
     BitSet init = bottom();
 
@@ -229,7 +231,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
   private VariableLocation getDefinitionTarget(OpStatement def) {
     switch (def.getOp()) {
       case MOVE:
-        return ((VariableArgument) def.getArg2()).getLoc();
+        return ((VariableArgument) def.getArg2()).getDesc().getLocation();
       case ADD:
       case SUBTRACT:
       case MULTIPLY:
@@ -237,7 +239,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       case MODULO:
       case UNARY_MINUS:
       case NOT:
-        return def.getResult();
+        return def.getResult().getLocation();
       default:
         ErrorReporting.reportErrorCompat(new Exception("Tried to get target " +
         "of a non definition!"));

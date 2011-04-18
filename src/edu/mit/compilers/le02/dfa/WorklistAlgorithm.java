@@ -15,8 +15,8 @@ public class WorklistAlgorithm {
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
-      item.setIn(item.transferFunction(lattice.bottom()));
-      item.setOut(lattice.bottom());
+      item.setIn(lattice.bottom());
+      item.setOut(item.transferFunction(lattice.bottom()));
     }
 
     // Initialize the first item
@@ -50,4 +50,42 @@ public class WorklistAlgorithm {
     }
   }
 
+  public static <T> void runBackwards(
+      Collection<? extends WorklistItem<T>> items,
+      Lattice<T, ?> lattice) {
+    LinkedList<WorklistItem<T>> worklist =
+      new LinkedList<WorklistItem<T>>(items);
+
+    // Initialize edge maps
+    for (WorklistItem<T> item : items) {
+      if (item.getOut() == null) {
+        item.setOut(lattice.bottom());
+      } else {
+        worklist.remove(item);
+      }
+      item.setIn(item.transferFunction(item.getOut()));
+    }
+
+    while (!worklist.isEmpty()) {
+      WorklistItem<T> item = worklist.remove();
+
+      // Calculate the least upper bound of all the successors
+      T sup = lattice.bottom();
+      for(WorklistItem<T> succ : item.successors()) {
+        sup = lattice.leastUpperBound(succ.getIn(), sup);
+      }
+      item.setOut(sup);
+
+      // Calculate the new out value for this item
+      T newIn = item.transferFunction(sup);
+
+      // If the value has changed, update it and add predecessors
+      // to the worklist.
+      if (!newIn.equals(item.getIn())) {
+        item.setIn(newIn);
+
+        worklist.addAll(item.predecessors());
+      }
+    }
+  }
 }

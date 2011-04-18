@@ -146,6 +146,7 @@ public final class BasicBlockNode implements CFGNode {
     if (visited.contains(this)) {
       return "";
     }
+    visited.add(this);
 
     String me = id.replace(".", "");
 
@@ -153,12 +154,10 @@ public final class BasicBlockNode implements CFGNode {
       return me + " " + getDotStringLabel() + "\n";
     }
 
-    visited.add(this);
-
     String nextStr = next.id.replace(".", "");
 
     String s = me + " " + getDotStringLabel() + "\n"
-               + me + " -> " + nextStr;
+               + me + ":s -> " + nextStr + ":n";
 
     if (!isBranch()) {
       s += "\n";
@@ -167,8 +166,31 @@ public final class BasicBlockNode implements CFGNode {
     else {
       s += " [label=\"false\"]\n";
       String branchStr = branchTarget.id.replace(".", "");
-      s += me + " -> " + branchStr + " [label=\"true\"]\n";
+      s += me + ":s -> " + branchStr + ":n [label=\"true\"]\n";
       return s + next.getDotString() + branchTarget.getDotString();
+    }
+  }
+
+  @Override
+  public String getCfgListing() {
+    if (visited.contains(this)) {
+      return "";
+    }
+    visited.add(this);
+
+    if (next == null) {
+      return id + ":\n" + getCfgElements() + "  [END]\n";
+    }
+
+    String s = id + ":\n" + getCfgElements() +
+      "  next: " + next.id;
+
+    if (!isBranch()) {
+      s += "\n";
+      return s + next.getCfgListing();
+    } else {
+      s += ", branch: " + branchTarget.id + "\n";
+      return s + next.getCfgListing() + branchTarget.getCfgListing();
     }
   }
 
@@ -179,11 +201,19 @@ public final class BasicBlockNode implements CFGNode {
   private String getDotStringLabel() {
     String s = "[shape=none, margin=0, label=<<TABLE BORDER=\"0\" "
                + "CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">";
-    s += "<TR><TD><B>" + id.replace(".", "") + "</B></TD></TR>";
+    s += "<TR><TD><B>" + id.replace(".", "") + "</B></TD></TR>\n";
     for (BasicStatement st : statements) {
-      s += "<TR><TD>" + st + "</TD></TR>";
+      s += "<TR><TD>" + st + "</TD></TR>\n";
     }
     s += "</TABLE>>]";
+    return s;
+  }
+
+  private String getCfgElements() {
+    String s = "";
+    for (BasicStatement st : statements) {
+      s += "    " + st + "\n";
+    }
     return s;
   }
 

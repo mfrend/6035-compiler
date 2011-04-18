@@ -313,7 +313,7 @@ public class AsmWriter {
     // prepareArgument loads an argument from memory/another register
     // into R10 or R11 and returns the reg it stored the argument in.
     String arg1 = "<error>";
-    if (op.getArg1() != null) {
+    if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
       arg1 = prepareArgument(op.getArg1(), true, methodName, sl);
     }
     String arg2 = "<error>";
@@ -394,7 +394,7 @@ public class AsmWriter {
     }
     if (op.getResult() != null) {
       writeOp("movq", resultReg,
-        convertVariableLocation(op.getResult()), sl);
+        convertVariableLocation(op.getResult().getLocation()), sl);
     } else {
       ps.println("  /* Ignoring result assignment of conditional. */");
     }
@@ -565,7 +565,7 @@ public class AsmWriter {
 
     // Move RAX into the correct save location.
     writeOp("movq", Register.RAX,
-      convertVariableLocation(call.getResult()), sl);
+      convertVariableLocation(call.getResult().getLocation()), sl);
   }
 
   /**
@@ -592,18 +592,20 @@ public class AsmWriter {
       break;
      case VARIABLE:
       writeOp("movq",
-        convertVariableLocation(((VariableArgument)arg).getLoc()),
+        convertVariableLocation(
+          ((VariableArgument)arg).getDesc().getLocation()),
         tempStorage, sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
-      assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+      assert(ava.getDesc().getLocation().getLocationType() ==
+        LocationType.GLOBAL);
 
       // Prepare the symbol and index names. The index needs recursive
       // resolution since it might be a variable or another array.
       // Symbol will always be a global address.
-      String symbol = "." + ava.getLoc().getSymbol();
+      String symbol = "." + ava.getDesc().getLocation().getSymbol();
       // The index will be a temporary register (either R10 or R11).
       // As it happens, this is also our return register, but that's okay.
       String index = prepareArgument(ava.getIndex(), first, methodName, sl);
@@ -635,17 +637,19 @@ public class AsmWriter {
      case VARIABLE:
       writeOp("movq",
         Register.R11,
-        convertVariableLocation(((VariableArgument)arg).getLoc()), sl);
+        convertVariableLocation(
+          ((VariableArgument)arg).getDesc().getLocation()), sl);
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument)arg;
       // Arrays can only be declared as globals in decaf
-      assert(ava.getLoc().getLocationType() == LocationType.GLOBAL);
+      assert(ava.getDesc().getLocation().getLocationType() ==
+             LocationType.GLOBAL);
 
       // Prepare the symbol and index names. The index needs recursive
-      // resolution since it might be a variable or another array.
+      // resolution since it might be a variable.
       // Symbol will always be a global address.
-      String symbol = "." + ava.getLoc().getSymbol();
+      String symbol = "." + ava.getDesc().getLocation().getSymbol();
 
       // The index will be an unused register (R10).
       // We don't want to use R11, which would clobber the result to return.
