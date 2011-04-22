@@ -74,8 +74,7 @@ public class AsmBasicBlock implements AsmObject {
 		while (!nodesToProcess.isEmpty()) {
 			// Pop top element of queue to process.
 			BasicBlockNode node = nodesToProcess.remove(0);
-			// If we've seen this node already, we don't need to output it
-			// again.
+			// If we've seen this node already, we don't need to output it again.
 			if (processed.contains(node)) {
 				continue;
 			}
@@ -111,8 +110,7 @@ public class AsmBasicBlock implements AsmObject {
 			// Write the block trailer. There are three cases to consider:
 			// If the node is a branch, write the branch trailer.
 			// Otherwise, if there's a next node, write an unconditional
-			// jump.
-			// Finally, if there's no next node, insert an implicit return.
+			// jump. Finally, if there's no next node, insert an implicit return.
 			if (node.isBranch()) {
 				processBranch(node, branch, next, methodName, loc);
 			} else if (next != null) {
@@ -223,14 +221,12 @@ public class AsmBasicBlock implements AsmObject {
 		}
 
 		// Write the alternate unconditional jump to the next block since by
-		// this
-		// point we've failed the conditional jump check.
+		// this point we've failed the conditional jump check.
 		if (next != null) {
 			addInstruction(new AsmInstruction(AsmOpCode.JMP, next.getId(), loc));
 		} else {
 			// Insert an implicit return, since there are no more basicblocks
-			// left
-			// in this method to jump to.
+			// left in this method to jump to.
 			MethodDescriptor returnMethod = st.getMethod(methodName);
 			generateMethodReturn(null, returnMethod, loc);
 		}
@@ -272,8 +268,8 @@ public class AsmBasicBlock implements AsmObject {
 	protected void generateMethodReturn(String arg1, MethodDescriptor desc,
 			SourceLocation sl) {
 		if (desc.getType() != DecafType.VOID && arg1 == null) {
-			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$." + desc.getId()
-					+ "_name", Register.R12, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, 
+					"$." + desc.getId()	+ "_name", Register.R12, sl));
 			addInstruction(new AsmInstruction(
 					AsmOpCode.JLE, "nonvoid_noreturn_error_handler", sl));
 			return;
@@ -335,8 +331,7 @@ public class AsmBasicBlock implements AsmObject {
 		case SUBTRACT:
 			addInstruction(new AsmInstruction(AsmOpCode.SUBQ, arg2, arg1, sl));
 			// Subtract reverses the order of its arguments, so arg1 contains
-			// the
-			// modified result.
+			// the modified result.
 			resultReg = Register.R10;
 			break;
 		case MULTIPLY:
@@ -345,12 +340,10 @@ public class AsmBasicBlock implements AsmObject {
 		case DIVIDE:
 		case MODULO:
 			// Division needs to use RAX for the dividend, and overwrites
-			// RAX/RDX
-			// to store its outputs.
+			// RAX/RDX to store its outputs.
 			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, arg1, "%rax", sl));
 			// Unfortunately, RDX may contain the first argument to the
-			// function.
-			// We need to push it to memory to save it.
+			// function. We need to push it to memory to save it.
 			addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, "%rdx", sl));
 			addInstruction(new AsmInstruction(AsmOpCode.XORQ, "%rdx", "%rdx", sl));
 			addInstruction(new AsmInstruction(AsmOpCode.IDIVQ, arg2, sl));
@@ -475,8 +468,7 @@ public class AsmBasicBlock implements AsmObject {
 				Register.RAX, sl));
 
 		// Now we're ready to make the call.
-		// This automatically pushes the return address; callee removes return
-		// addr
+		// This automatically pushes the return address; callee removes return addr
 		addInstruction(new AsmInstruction(AsmOpCode.CALL, call.getMethodName(), sl));
 
 		// Pop arguments back off the stack.
