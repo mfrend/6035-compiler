@@ -17,7 +17,7 @@ import antlr.DumpASTVisitor;
 import antlr.Token;
 import antlr.TokenStreamRecognitionException;
 import antlr.debug.misc.ASTFrame;
-import edu.mit.compilers.le02.asm.AsmWriter;
+import edu.mit.compilers.le02.asm.AsmFile;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.AstPrettyPrinter;
 import edu.mit.compilers.le02.cfg.BasicBlockGraph;
@@ -412,7 +412,7 @@ public class Main {
       for (FieldDescriptor global : st.getFields()) {
         cfg.putGlobal("." + global.getId(), global);
       }
-      AsmWriter asm = new AsmWriter(cfg, st, new PrintStream(CLI.outfile));
+      AsmFile asm = new AsmFile(cfg, st, new PrintStream(CLI.outfile));
       asm.write();
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);

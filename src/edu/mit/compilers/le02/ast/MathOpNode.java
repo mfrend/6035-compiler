@@ -28,9 +28,16 @@ public final class MathOpNode extends BinaryOpNode {
       return false;
     }
     MathOpNode other = (MathOpNode)o;
-    return (left.equals(other.left) &&
-            right.equals(other.right) &&
-            op.equals(other.getOp()));
+    boolean result = left.equals(other.left) &&
+      right.equals(other.right) &&
+      op.equals(other.getOp());
+    if (result) {
+      return true;
+    } else {
+      ExtendedMathOpNode node1 = new ExtendedMathOpNode(this, null);
+      ExtendedMathOpNode node2 = new ExtendedMathOpNode(other, null);
+      return node1.equals(node2);
+    }
   }
 
   public enum MathOp {
