@@ -15,57 +15,24 @@ import edu.mit.compilers.tools.CLI;
  * 
  */
 
-public class AsmInstruction extends AsmObject {
+public class AsmInstruction implements AsmObject {
 
-	String opcode;
+	AsmOpCode opcode;
 	SourceLocation loc;
 	Object first_operand, second_operand;
+	
+	//TODO: Fix case enumeration (mfrend)
 
-	/**
-	 * Create an instruction with no operands
-	 * 
-	 * @param opCode
-	 *            The opCode to use
-	 * @param loc
-	 *            The SourceLocation associated with this instruction
-	 */
-	public AsmInstruction(String opCode, SourceLocation loc) {
-		this.opcode = opCode;
-		this.loc = loc;
+	public AsmInstruction(AsmOpCode opCode, SourceLocation loc) {
+		this(opCode,null,null,loc);
 	}
 
-	/**
-	 * Create an instruction with one operands
-	 * 
-	 * @param opCode
-	 *            The opCode to use
-	 * @param first_operand
-	 *            The location of the first operand
-	 * @param loc
-	 *            The SourceLocation associated with this instruction
-	 */
-	public AsmInstruction(String opCode, Object first_operand,
+	public AsmInstruction(AsmOpCode opCode, Object first_operand,
 			SourceLocation loc) {
-		assert (first_operand instanceof String || first_operand instanceof Register);
-
-		this.opcode = opCode;
-		this.first_operand = first_operand;
-		this.loc = loc;
+		this(opCode,first_operand,null,loc);
 	}
 
-	/**
-	 * Create an instruction with two operands
-	 * 
-	 * @param opCode
-	 *            The opCode to use
-	 * @param first_operand
-	 *            The location of the first operand
-	 * @param second_operand
-	 *            The location of the second operand
-	 * @param loc
-	 *            The SourceLocation associated with this instruction
-	 */
-	public AsmInstruction(String opCode, Object first_operand,
+	public AsmInstruction(AsmOpCode opCode, Object first_operand,
 			Object second_operand, SourceLocation loc) {
 		assert (first_operand instanceof String || first_operand instanceof Register);
 		assert (second_operand instanceof String || first_operand instanceof Register);
@@ -78,12 +45,12 @@ public class AsmInstruction extends AsmObject {
 
 	public String toString() {
 		if (this.first_operand == null) {
-			return "  " + opcode + getOriginalSource(loc);
+			return "  " + opcode.toString() + getOriginalSource(loc);
 		} else if (this.second_operand == null) {
-			return "  " + opcode + " " + first_operand + getOriginalSource(loc);
+			return "  " + opcode.toString() + " " + first_operand + getOriginalSource(loc);
 		} else {
-			return "  " + opcode + " " + first_operand + ", " + second_operand
-					+ getOriginalSource(loc);
+			return "  " + opcode.toString() + " " + first_operand + ", " + second_operand + 
+				getOriginalSource(loc);
 		}
 	}
 

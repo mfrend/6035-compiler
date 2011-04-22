@@ -7,5 +7,6 @@ package edu.mit.compilers.le02.asm;
  * 
  */
 
-public abstract class AsmObject {
+public interface AsmObject {
+	
 }

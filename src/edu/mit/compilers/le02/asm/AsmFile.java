@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.asm;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
@@ -26,7 +27,11 @@ public class AsmFile {
 	private ControlFlowGraph cfg;
 	private PrintStream ps;
 
-	private ArrayList<AsmObject> header, strings, globals, methods, errors;
+	private List<AsmObject> header = new ArrayList<AsmObject>();
+	private List<AsmObject> strings = new ArrayList<AsmObject>();
+	private List<AsmObject> globals = new ArrayList<AsmObject>();
+	private List<AsmObject> methods = new ArrayList<AsmObject>();
+	private List<AsmObject> errors = new ArrayList<AsmObject>();
 
 	private AsmBasicBlock current;
 
@@ -34,12 +39,6 @@ public class AsmFile {
 		cfg = graph;
 		ps = writer;
 		st = table;
-
-		header = new ArrayList<AsmObject>();
-		strings = new ArrayList<AsmObject>();
-		globals = new ArrayList<AsmObject>();
-		methods = new ArrayList<AsmObject>();
-		errors = new ArrayList<AsmObject>();
 
 		writeHeader();
 		writeStrings();
@@ -125,8 +124,8 @@ public class AsmFile {
 	public void writeMethods() {
 		methods.add(new AsmString(".section .rodata"));
 		for (String methodName : cfg.getMethods()) {
-			BasicBlockNode methodNode = (BasicBlockNode) cfg
-					.getMethod(methodName);
+			BasicBlockNode methodNode = 
+				(BasicBlockNode) cfg.getMethod(methodName);
 			MethodDescriptor thisMethod = st.getMethod(methodName);
 			
 			current = new AsmBasicBlock(methodName, methodNode, thisMethod, st);
@@ -152,14 +151,14 @@ public class AsmFile {
 	 */
 	protected void generateImmediateExit(String errmsgLabel) {
 		SourceLocation sl = SourceLocation.getSourceLocationWithoutDetails();
-		errors.add(new AsmInstruction("xorq", Register.RAX, Register.RAX, sl));
-		errors.add(new AsmInstruction("movq", Register.R12, Register.RSI, sl));
-		errors.add(new AsmInstruction("movq", "$." + errmsgLabel, Register.RDI,
+		errors.add(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
+		errors.add(new AsmInstruction(AsmOpCode.MOVQ, Register.R12, Register.RSI, sl));
+		errors.add(new AsmInstruction(AsmOpCode.MOVQ, "$." + errmsgLabel, Register.RDI,
 				sl));
-		errors.add(new AsmInstruction("call", "printf", sl));
-		errors.add(new AsmInstruction("xorq", Register.RAX, Register.RAX, sl));
-		errors.add(new AsmInstruction("xorq", Register.RDI, Register.RDI, sl));
-		errors.add(new AsmInstruction("call", "exit", sl));
+		errors.add(new AsmInstruction(AsmOpCode.CALL, "printf", sl));
+		errors.add(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
+		errors.add(new AsmInstruction(AsmOpCode.XORQ, Register.RDI, Register.RDI, sl));
+		errors.add(new AsmInstruction(AsmOpCode.CALL, "exit", sl));
 	}
 
 	/**

@@ -34,13 +34,13 @@ import edu.mit.compilers.le02.symboltable.SymbolTable;
  * 
  */
 
-public class AsmBasicBlock extends AsmObject {
+public class AsmBasicBlock implements AsmObject {
 	private String methodName;
 	private BasicBlockNode methodNode;
 	private MethodDescriptor thisMethod;
 	private SymbolTable st;
 
-	private ArrayList<AsmObject> instructions;
+	private List<AsmObject> instructions;
 
 	public AsmBasicBlock(String methodName, BasicBlockNode methodNode,
 			MethodDescriptor thisMethod, SymbolTable st) {
@@ -59,10 +59,10 @@ public class AsmBasicBlock extends AsmObject {
 	}
 
 	public void reorderInstructions() {
-		// TODO @mfrend Finish Method
+		// TODO @mfrend Finish Method and add optimization check
 	}
 
-	public ArrayList<AsmObject> getBlock() {
+	public List<AsmObject> getBlock() {
 		return this.instructions;
 	}
 
@@ -116,7 +116,7 @@ public class AsmBasicBlock extends AsmObject {
 			if (node.isBranch()) {
 				processBranch(node, branch, next, methodName, loc);
 			} else if (next != null) {
-				addInstruction(new AsmInstruction("jmp", next.getId(), loc));
+				addInstruction(new AsmInstruction(AsmOpCode.JMP, next.getId(), loc));
 			} else if (!(node.getLastStatement() instanceof OpStatement && ((OpStatement) node
 					.getLastStatement()).getOp() == AsmOp.RETURN)) {
 				// Insert an implicit return.
@@ -165,29 +165,29 @@ public class AsmBasicBlock extends AsmObject {
 		// or that a MOVE was executed specially to retrieve a value from memory
 		// or a register; if this is the case, the conditional value lives in
 		// R11.
-		String conditionalJump = "";
+		AsmOpCode conditionalJump = null;
 		Register resultRegister = null;
 
 		if (node.getConditional() instanceof OpStatement) {
 			OpStatement condition = (OpStatement) node.getConditional();
 			switch (condition.getOp()) {
 			case EQUAL:
-				conditionalJump = "je";
+				conditionalJump = AsmOpCode.JE;
 				break;
 			case NOT_EQUAL:
-				conditionalJump = "jne";
+				conditionalJump = AsmOpCode.JNE;
 				break;
 			case LESS_THAN:
-				conditionalJump = "jl";
+				conditionalJump = AsmOpCode.JL;
 				break;
 			case LESS_OR_EQUAL:
-				conditionalJump = "jle";
+				conditionalJump = AsmOpCode.JLE;
 				break;
 			case GREATER_THAN:
-				conditionalJump = "jg";
+				conditionalJump = AsmOpCode.JG;
 				break;
 			case GREATER_OR_EQUAL:
-				conditionalJump = "jge";
+				conditionalJump = AsmOpCode.JGE;
 				break;
 			case NOT:
 				// NOT leaves value in R10.
@@ -212,21 +212,21 @@ public class AsmBasicBlock extends AsmObject {
 		// If we had a CMP earlier, perform the conditional jump now.
 		// Otherwise, we need to compare the boolean to true and jump if it is
 		// in fact true ($1).
-		if (conditionalJump != "") {
+		if (conditionalJump != null) {
 			addInstruction(new AsmInstruction(conditionalJump, branch.getId(),
 					loc));
 		} else {
-			addInstruction(new AsmInstruction("movq", "$1", Register.R12, loc));
-			addInstruction(new AsmInstruction("cmpq", Register.R12,
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$1", Register.R12, loc));
+			addInstruction(new AsmInstruction(AsmOpCode.CMPQ, Register.R12,
 					resultRegister, loc));
-			addInstruction(new AsmInstruction("je", branch.getId(), loc));
+			addInstruction(new AsmInstruction(AsmOpCode.JE, branch.getId(), loc));
 		}
 
 		// Write the alternate unconditional jump to the next block since by
 		// this
 		// point we've failed the conditional jump check.
 		if (next != null) {
-			addInstruction(new AsmInstruction("jmp", next.getId(), loc));
+			addInstruction(new AsmInstruction(AsmOpCode.JMP, next.getId(), loc));
 		} else {
 			// Insert an implicit return, since there are no more basicblocks
 			// left
@@ -251,10 +251,10 @@ public class AsmBasicBlock extends AsmObject {
 	 */
 	protected void generateMethodHeader(MethodDescriptor desc, int numLocals) {
 		SourceLocation sl = desc.getSourceLocation();
-		addInstruction(new AsmInstruction("enter", "$" + numLocals, "$0", sl));
+		addInstruction(new AsmInstruction(AsmOpCode.ENTER, "$" + numLocals, "$0", sl));
 
 		for (Register reg : desc.getUsedCalleeRegisters()) {
-			addInstruction(new AsmInstruction("pushq", reg, sl)); // Save
+			addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl)); // Save
 																	// registers
 																	// used in
 			// method.
@@ -274,20 +274,20 @@ public class AsmBasicBlock extends AsmObject {
 	protected void generateMethodReturn(String arg1, MethodDescriptor desc,
 			SourceLocation sl) {
 		if (desc.getType() != DecafType.VOID && arg1 == null) {
-			addInstruction(new AsmInstruction("movq", "$." + desc.getId()
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$." + desc.getId()
 					+ "_name", Register.R12, sl));
-			addInstruction(new AsmInstruction("jle",
+			addInstruction(new AsmInstruction(AsmOpCode.JLE,
 					"nonvoid_noreturn_error_handler", sl));
 			return;
 		}
 		if (arg1 != null) {
 			// Save result in return register.
-			addInstruction(new AsmInstruction("movq", arg1, Register.RAX, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, arg1, Register.RAX, sl));
 		} else {
 			// Clear %rax to prevent confusion and non-zero exit codes since
 			// decaf allows main() to be either void or int and system reads
 			// the return value regardless of whether main is void.
-			addInstruction(new AsmInstruction("xorq", Register.RAX,
+			addInstruction(new AsmInstruction(AsmOpCode.XORQ, Register.RAX,
 					Register.RAX, sl));
 		}
 
@@ -295,13 +295,13 @@ public class AsmBasicBlock extends AsmObject {
 		List<Register> usedRegisters = desc.getUsedCalleeRegisters();
 		Collections.reverse(usedRegisters);
 		for (Register reg : usedRegisters) {
-			addInstruction(new AsmInstruction("popq", reg, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.POPQ, reg, sl));
 		}
 
 		// Push old base pointer.
-		addInstruction(new AsmInstruction("leave", sl));
+		addInstruction(new AsmInstruction(AsmOpCode.LEAVE, sl));
 		// Caller cleans up arguments.
-		addInstruction(new AsmInstruction("ret", sl));
+		addInstruction(new AsmInstruction(AsmOpCode.RET, sl));
 	}
 
 	/**
@@ -327,35 +327,35 @@ public class AsmBasicBlock extends AsmObject {
 		switch (op.getOp()) {
 		case MOVE:
 			arg2 = "" + Register.R11;
-			addInstruction(new AsmInstruction("movq", arg1, arg2, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, arg1, arg2, sl));
 			writeToArgument(op.getArg2(), methodName, sl);
 			// Stop here because we don't need to move result again.
 			return;
 		case ADD:
-			addInstruction(new AsmInstruction("addq", arg1, arg2, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.ADDQ, arg1, arg2, sl));
 			break;
 		case SUBTRACT:
-			addInstruction(new AsmInstruction("subq", arg2, arg1, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.SUBQ, arg2, arg1, sl));
 			// Subtract reverses the order of its arguments, so arg1 contains
 			// the
 			// modified result.
 			resultReg = Register.R10;
 			break;
 		case MULTIPLY:
-			addInstruction(new AsmInstruction("imulq", arg1, arg2, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.IMULQ, arg1, arg2, sl));
 			break;
 		case DIVIDE:
 		case MODULO:
 			// Division needs to use RAX for the dividend, and overwrites
 			// RAX/RDX
 			// to store its outputs.
-			addInstruction(new AsmInstruction("movq", arg1, "%rax", sl));
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, arg1, "%rax", sl));
 			// Unfortunately, RDX may contain the first argument to the
 			// function.
 			// We need to push it to memory to save it.
-			addInstruction(new AsmInstruction("pushq", "%rdx", sl));
-			addInstruction(new AsmInstruction("xorq", "%rdx", "%rdx", sl));
-			addInstruction(new AsmInstruction("idivq", arg2, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, "%rdx", sl));
+			addInstruction(new AsmInstruction(AsmOpCode.XORQ, "%rdx", "%rdx", sl));
+			addInstruction(new AsmInstruction(AsmOpCode.IDIVQ, arg2, sl));
 			if (op.getOp() == AsmOp.DIVIDE) {
 				// RDX is fixed to hold the quotient.
 				resultReg = Register.RAX;
@@ -366,11 +366,11 @@ public class AsmBasicBlock extends AsmObject {
 			break;
 		case UNARY_MINUS:
 			// Unary operations use R10 for input and output.
-			addInstruction(new AsmInstruction("negq", arg1, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.NEGQ, arg1, sl));
 			resultReg = Register.R10;
 			break;
 		case NOT:
-			addInstruction(new AsmInstruction("xorq", "$1", arg1, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.XORQ, "$1", arg1, sl));
 			resultReg = Register.R10;
 			break;
 		case EQUAL:
@@ -398,7 +398,7 @@ public class AsmBasicBlock extends AsmObject {
 			return;
 		}
 		if (op.getResult() != null) {
-			addInstruction(new AsmInstruction("movq", resultReg,
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, resultReg,
 					convertVariableLocation(op.getResult().getLocation()), sl));
 		} else {
 			addInstruction(new AsmString(
@@ -406,7 +406,7 @@ public class AsmBasicBlock extends AsmObject {
 		}
 		if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
 			// Restore the register we displaced for division/modulo.
-			addInstruction(new AsmInstruction("popq", "%rdx", sl));
+			addInstruction(new AsmInstruction(AsmOpCode.POPQ, "%rdx", sl));
 		}
 	}
 
@@ -416,31 +416,31 @@ public class AsmBasicBlock extends AsmObject {
 	 */
 	protected void processBoolean(AsmOp op, String arg1, String arg2,
 			SourceLocation sl) {
-		addInstruction(new AsmInstruction("xorq", Register.RAX, Register.RAX,
+		addInstruction(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX,
 				sl));
-		addInstruction(new AsmInstruction("cmpq", arg2, arg1, sl));
-		String cmovOp = "";
+		addInstruction(new AsmInstruction(AsmOpCode.CMPQ, arg2, arg1, sl));
+		AsmOpCode cmovOp = null;
 		switch (op) {
 		case EQUAL:
-			cmovOp = "cmoveq";
+			cmovOp = AsmOpCode.CMOVEQ;
 			break;
 		case NOT_EQUAL:
-			cmovOp = "cmovneq";
+			cmovOp = AsmOpCode.CMOVNEQ;
 			break;
 		case LESS_THAN:
-			cmovOp = "cmovlq";
+			cmovOp = AsmOpCode.CMOVLQ;
 			break;
 		case LESS_OR_EQUAL:
-			cmovOp = "cmovleq";
+			cmovOp = AsmOpCode.CMOVLEQ;
 			break;
 		case GREATER_THAN:
-			cmovOp = "cmovgq";
+			cmovOp = AsmOpCode.CMOVGQ;
 			break;
 		case GREATER_OR_EQUAL:
-			cmovOp = "cmovgeq";
+			cmovOp = AsmOpCode.CMOVGEQ;
 			break;
 		}
-		addInstruction(new AsmInstruction("movq", "$1", Register.R10, sl));
+		addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$1", Register.R10, sl));
 		addInstruction(new AsmInstruction(cmovOp, Register.R10, Register.RAX,
 				sl));
 	}
@@ -454,7 +454,7 @@ public class AsmBasicBlock extends AsmObject {
 		// Push caller-saved variables that we've used and need to keep.
 		List<Register> usedRegisters = thisMethod.getUsedCallerRegisters();
 		for (Register r : usedRegisters) {
-			addInstruction(new AsmInstruction("pushq", r, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, r, sl));
 		}
 
 		// Push arguments.
@@ -462,38 +462,38 @@ public class AsmBasicBlock extends AsmObject {
 		List<Argument> args = call.getArgs();
 		for (int ii = args.size() - 1; ii >= 0; ii--) {
 			if (ii >= 6) {
-				addInstruction(new AsmInstruction("pushq", prepareArgument(args
+				addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, prepareArgument(args
 						.get(ii), true, thisMethod.getId(), sl), sl));
 			} else {
-				addInstruction(new AsmInstruction("movq", prepareArgument(args
+				addInstruction(new AsmInstruction(AsmOpCode.MOVQ, prepareArgument(args
 						.get(ii), true, thisMethod.getId(), sl),
 						argumentRegisters[ii].toString(), sl));
 			}
 		}
 
 		// Empty %rax to cope with printf vararg issue
-		addInstruction(new AsmInstruction("xorq", Register.RAX, Register.RAX,
+		addInstruction(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX,
 				sl));
 
 		// Now we're ready to make the call.
 		// This automatically pushes the return address; callee removes return
 		// addr
-		addInstruction(new AsmInstruction("call", call.getMethodName(), sl));
+		addInstruction(new AsmInstruction(AsmOpCode.CALL, call.getMethodName(), sl));
 
 		// Pop arguments back off the stack.
 		if (args.size() > 6) {
-			addInstruction(new AsmInstruction("addq", "$" + (args.size() - 6)
+			addInstruction(new AsmInstruction(AsmOpCode.ADDQ, "$" + (args.size() - 6)
 					* 8, Register.RSP, sl));
 		}
 
 		// Pop the saved usedCallerRegisters back onto the stack.
 		Collections.reverse(usedRegisters);
 		for (Register r : usedRegisters) {
-			addInstruction(new AsmInstruction("popq", r, sl));
+			addInstruction(new AsmInstruction(AsmOpCode.POPQ, r, sl));
 		}
 
 		// Move RAX into the correct save location.
-		addInstruction(new AsmInstruction("movq", Register.RAX,
+		addInstruction(new AsmInstruction(AsmOpCode.MOVQ, Register.RAX,
 				convertVariableLocation(call.getResult().getLocation()), sl));
 	}
 
@@ -518,11 +518,11 @@ public class AsmBasicBlock extends AsmObject {
 			// this.
 			// We still need to load to registers since some ops only work on
 			// registers and not on immediates.
-			addInstruction(new AsmInstruction("movq", "$"
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$"
 					+ ((ConstantArgument) arg).getInt(), tempStorage, sl));
 			break;
 		case VARIABLE:
-			addInstruction(new AsmInstruction("movq",
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
 					convertVariableLocation(((VariableArgument) arg).getDesc()
 							.getLocation()), tempStorage, sl));
 			break;
@@ -540,34 +540,20 @@ public class AsmBasicBlock extends AsmObject {
 			String index = prepareArgument(ava.getIndex(), first, methodName,
 					sl);
 
-			/*
-			 * assert (ava.getDesc() instanceof FieldDescriptor); switch
-			 * (ava.getIndex().getType()) { case ArgType.ARRAY_VARIABLE:
-			 * 
-			 * case ArgType.CONST_BOOL: assert (false); break; case
-			 * ArgType.CONST_INT: assert (((ConstantArgument)
-			 * ava.getIndex()).getInt() >= 0); assert (((ConstantArgument)
-			 * ava.getIndex()).getInt() < ((FieldDescriptor) ava
-			 * .getDesc()).getLength()); case ArgType.VARIABLE:
-			 * assert(((VariableArgument)ava.getIndex()).getType()==) } assert
-			 * (((FieldDescriptor) ava.getDesc()).getLength() > ava
-			 * .getIndex()); assert (Integer.parseInt(index) >= 0);
-			 */
-
 			// Perform array bounds check. TODO(lizf): fix code duplication.
-			addInstruction(new AsmInstruction("cmpq", index, symbol + "_size",
+			addInstruction(new AsmInstruction(AsmOpCode.CMPQ, index, symbol + "_size",
 					sl));
-			addInstruction(new AsmInstruction("movq", "$." + methodName
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$." + methodName
 					+ "_name", Register.R12, sl));
-			addInstruction(new AsmInstruction("jle", "array_oob_error_handler",
+			addInstruction(new AsmInstruction(AsmOpCode.JLE, "array_oob_error_handler",
 					sl));
 
 			// Use R12 to store the global name to access.
-			addInstruction(new AsmInstruction("movq", "$" + symbol,
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$" + symbol,
 					Register.R12, sl));
 
 			// Finally, perform the indirection to look up from memory+offset.
-			addInstruction(new AsmInstruction("movq", "(" + Register.R12 + ", "
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "(" + Register.R12 + ", "
 					+ index + ", 8)", tempStorage, sl));
 			break;
 		}
@@ -582,7 +568,7 @@ public class AsmBasicBlock extends AsmObject {
 			SourceLocation sl) {
 		switch (arg.getType()) {
 		case VARIABLE:
-			addInstruction(new AsmInstruction("movq", Register.R11,
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, Register.R11,
 					convertVariableLocation(((VariableArgument) arg).getDesc()
 							.getLocation()), sl));
 			break;
@@ -602,19 +588,19 @@ public class AsmBasicBlock extends AsmObject {
 			String index = prepareArgument(ava.getIndex(), true, methodName, sl);
 
 			// Perform array bounds check. TODO(lizf): fix code duplication.
-			addInstruction(new AsmInstruction("cmpq", index, symbol + "_size",
+			addInstruction(new AsmInstruction(AsmOpCode.CMPQ, index, symbol + "_size",
 					sl));
-			addInstruction(new AsmInstruction("movq", "$." + methodName
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$." + methodName
 					+ "_name", Register.R12, sl));
-			addInstruction(new AsmInstruction("jle", "array_oob_error_handler",
+			addInstruction(new AsmInstruction(AsmOpCode.JLE, "array_oob_error_handler",
 					sl));
 
 			// Use R12 to store the global name to access.
-			addInstruction(new AsmInstruction("movq", "$" + symbol,
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$" + symbol,
 					Register.R12, sl));
 
 			// Finally, perform the indirection to save to memory+offset.
-			addInstruction(new AsmInstruction("movq", Register.R11, "("
+			addInstruction(new AsmInstruction(AsmOpCode.MOVQ, Register.R11, "("
 					+ Register.R12 + ", " + index + ", 8)", sl));
 			break;
 		}
