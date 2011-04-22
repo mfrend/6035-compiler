@@ -51,8 +51,8 @@ public class AsmFile {
 	 * Writes the necessary header information
 	 */
 	private void writeHeader() {
-		header.add(new AsmString("# Assembly output generated from "
-				+ CLI.getInputFilename()));
+		header.add(new AsmString("# Assembly output generated from " + 
+				CLI.getInputFilename()));
 		header.add(new AsmString(".global main"));
 	}
 
@@ -67,7 +67,7 @@ public class AsmFile {
 
 		// Strings from the string table.
 		for (String name : cfg.getAllStringData()) {
-			strings.add(new AsmString(writeLabel(name)));
+			strings.add(writeLabel(name));
 			StringNode node = cfg.getStringData(name);
 			// We want the explicitly escaped version.
 			strings.add(new AsmString("  .string " + node.toString()));
@@ -75,17 +75,17 @@ public class AsmFile {
 
 		// Method names.
 		for (String methodName : cfg.getMethods()) {
-			strings.add(new AsmString(writeLabel("." + methodName + "_name")));
+			strings.add(writeLabel("." + methodName + "_name"));
 			strings.add(new AsmString("  .string \"" + methodName + "\""));
 		}
 
 		// Error handler messages.
-		strings.add(new AsmString(writeLabel(".aoob_msg")));
-		strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: "
-				+ "Array out of Bounds access in method \\\"%s\\\"\\n\""));
-		strings.add(new AsmString(writeLabel(".nonvoid_noreturn_msg")));
-		strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: "
-				+ "No return value from non-void method \\\"%s\\\"\\n\""));
+		strings.add(writeLabel(".aoob_msg"));
+		strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: " + 
+				"Array out of Bounds access in method \\\"%s\\\"\\n\""));
+		strings.add(writeLabel(".nonvoid_noreturn_msg"));
+		strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: " +
+				"No return value from non-void method \\\"%s\\\"\\n\""));
 	}
 
 	/**
@@ -95,7 +95,7 @@ public class AsmFile {
 		for (String globalName : cfg.getGlobals()) {
 			// Globals belong in bss (zero-initialized, writeable memory)
 			globals.add(new AsmString(".bss"));
-			globals.add(new AsmString(writeLabel(globalName)));
+			globals.add(writeLabel(globalName));
 			FieldDescriptor desc = cfg.getGlobal(globalName);
 			switch (desc.getType()) {
 			case INT:
@@ -112,7 +112,7 @@ public class AsmFile {
 				globals.add(new AsmString("  .endr"));
 				// Save the read-only size of the array for array index checks.
 				globals.add(new AsmString(".section .rodata"));
-				globals.add(new AsmString(writeLabel(globalName + "_size")));
+				globals.add(writeLabel(globalName + "_size"));
 				globals.add(new AsmString("  .quad " + size));
 			}
 		}
@@ -138,9 +138,9 @@ public class AsmFile {
 	 * Writes the necessary error information
 	 */
 	private void writeErrors() {
-		errors.add(new AsmString(writeLabel("array_oob_error_handler")));
+		errors.add(writeLabel("array_oob_error_handler"));
 		generateImmediateExit("aoob_msg");
-		errors.add(new AsmString(writeLabel("nonvoid_noreturn_error_handler")));
+		errors.add(writeLabel("nonvoid_noreturn_error_handler"));
 		generateImmediateExit("nonvoid_noreturn_msg");
 	}
 
@@ -153,7 +153,7 @@ public class AsmFile {
 		SourceLocation sl = SourceLocation.getSourceLocationWithoutDetails();
 		errors.add(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
 		errors.add(new AsmInstruction(AsmOpCode.MOVQ, Register.R12, Register.RSI, sl));
-		errors.add(new AsmInstruction(AsmOpCode.MOVQ, "$." + errmsgLabel, Register.RDI,
+		errors.add(new AsmInstruction(AsmOpCode.MOVQ, "$." + errmsgLabel, Register.RDI, 
 				sl));
 		errors.add(new AsmInstruction(AsmOpCode.CALL, "printf", sl));
 		errors.add(new AsmInstruction(AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
@@ -164,8 +164,8 @@ public class AsmFile {
 	/**
 	 * Writes a label to the ASM output stream.
 	 */
-	protected static String writeLabel(String label) {
-		return label + ":";
+	protected static AsmString writeLabel(String label) {
+		return new AsmString(label + ":");
 	}
 	
 	/**
@@ -181,19 +181,19 @@ public class AsmFile {
 	}
 	
 	private void printHeader() {
-		for (AsmObject s : this.header) {
+		for (AsmObject s : header) {
 			ps.println(s.toString());
 		}
 	}
 
 	private void printStrings() {
-		for (AsmObject s : this.strings) {
+		for (AsmObject s : strings) {
 			ps.println(s.toString());
 		}
 	}
 
 	private void printGlobals() {
-		for (AsmObject s : this.globals) {
+		for (AsmObject s : globals) {
 			ps.println(s.toString());
 		}
 	}
@@ -211,7 +211,7 @@ public class AsmFile {
 	}
 
 	private void printErrors() {
-		for (AsmObject s : this.errors) {
+		for (AsmObject s : errors) {
 			ps.println(s.toString());
 		}
 	}

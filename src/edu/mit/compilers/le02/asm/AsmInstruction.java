@@ -27,17 +27,19 @@ public class AsmInstruction implements AsmObject {
 
 	public AsmInstruction(AsmOpCode opCode, String first_operand,
 			SourceLocation loc) {
+		
 		this(opCode, first_operand, "", loc);
 	}
 
 	public AsmInstruction(AsmOpCode opCode, Register first_operand,
 			SourceLocation loc) {
+		
 		this(opCode, first_operand.toString(), "", loc);
 	}
 
 	public AsmInstruction(AsmOpCode opCode, Register first_operand,
 			Register second_operand, SourceLocation loc) {
-
+		
 		this(opCode, first_operand.toString(), second_operand.toString(), loc);
 	}
 
@@ -64,9 +66,9 @@ public class AsmInstruction implements AsmObject {
 
 	public String toString() {
 		String result = "  " + opcode.toString();
-		if (this.first_operand != "") {
+		if (first_operand != "") {
 			result += " " + first_operand;
-			if (this.second_operand != "") {
+			if (second_operand != "") {
 				result += ", " + second_operand;
 			}
 		}
@@ -80,16 +82,16 @@ public class AsmInstruction implements AsmObject {
 		if (loc.getLine() >= 0 && loc.getCol() >= 0
 				&& !loc.getFilename().equals(CLI.STDIN)) {
 			try {
-				BufferedReader reader = new BufferedReader(new FileReader(loc
-						.getFilename()));
+				BufferedReader reader = new BufferedReader(
+						new FileReader(loc.getFilename()));
 				int line = 0;
 				String lineContents = "";
 				while (line < loc.getLine()) {
 					lineContents = reader.readLine();
 					line++;
 				}
-				return " # " + lineContents.substring(0, loc.getCol()) + "@"
-						+ lineContents.substring(loc.getCol());
+				return " # " + lineContents.substring(0, loc.getCol()) + 
+					"@"	+ lineContents.substring(loc.getCol());
 			} catch (IOException ioe) {
 				return "";
 			} catch (StringIndexOutOfBoundsException oob) {

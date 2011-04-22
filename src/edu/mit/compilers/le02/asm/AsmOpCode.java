@@ -28,10 +28,9 @@ public enum AsmOpCode {
 	RET,
 	SUBQ,
 	XORQ;
-	
-	
+
 	public String toString() {
-		  return name().toLowerCase();
-		 }
+		return name().toLowerCase();
+	}
 
 }

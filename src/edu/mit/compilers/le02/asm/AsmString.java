@@ -15,7 +15,7 @@ public class AsmString implements AsmObject {
 	}
 
 	public String toString() {
-		return this.line;
+		return line;
 	}
 
 }
