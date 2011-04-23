@@ -96,7 +96,7 @@ public class CpVisitor extends BasicBlockVisitor {
         } else if (op.getArg1().getDesc() != null) {
           var = op.getArg1().getDesc();
         }
-  
+
         tmpToVar.put(storedVar, var);
         Set<CseVariable> set = varToSet.get(var);
         if (set == null) {

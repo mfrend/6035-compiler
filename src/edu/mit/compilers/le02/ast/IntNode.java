@@ -16,56 +16,56 @@ import edu.mit.compilers.le02.SourceLocation;
  */
 public final class IntNode extends ExpressionNode {
 
-	private int value;
-	private boolean invert;
+  private int value;
+  private boolean invert;
 
-	public IntNode(SourceLocation sl, int value) {
-		this(sl, value, false);
-	}
+  public IntNode(SourceLocation sl, int value) {
+    this(sl, value, false);
+  }
 
-	public IntNode(SourceLocation sl, int value, boolean invert) {
-		super(sl);
-		this.value = value;
-		this.invert = invert;
-	}
+  public IntNode(SourceLocation sl, int value, boolean invert) {
+    super(sl);
+    this.value = value;
+    this.invert = invert;
+  }
 
-	@Override
-	public List<ASTNode> getChildren() {
-		return Collections.emptyList();
-	}
+  @Override
+  public List<ASTNode> getChildren() {
+    return Collections.emptyList();
+  }
 
-	public int getValue() {
-		if (invert == true) {
-			return -value;
-		} else {
-			return value;
-		}
-	}
+  public int getValue() {
+    if (invert == true) {
+      return -value;
+    } else {
+      return value;
+    }
+  }
 
-	@Override
-	public String toString() {
-		return "" + getValue();
-	}
+  @Override
+  public String toString() {
+    return "" + getValue();
+  }
 
-	@Override
-	public boolean equals(Object o) {
-		if (!(o instanceof IntNode)) {
-			return false;
-		}
-		return getValue() == ((IntNode) o).getValue();
-	}
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof IntNode)) {
+      return false;
+    }
+    return getValue() == ((IntNode) o).getValue();
+  }
 
-	public boolean isInverted() {
-		return invert;
-	}
+  public boolean isInverted() {
+    return invert;
+  }
 
-	@Override
-	public <T> T accept(ASTNodeVisitor<T> v) {
-		return v.visit(this);
-	}
+  @Override
+  public <T> T accept(ASTNodeVisitor<T> v) {
+    return v.visit(this);
+  }
 
-	@Override
-	public DecafType getType() {
-		return DecafType.INT;
-	}
+  @Override
+  public DecafType getType() {
+    return DecafType.INT;
+  }
 }
