@@ -114,7 +114,7 @@ public class AsmFile {
         // Save the read-only size of the array for array index checks.
         globals.add(new AsmString(".section .rodata"));
         globals.add(writeLabel(globalName + "_size"));
-        globals.add(new AsmString("  .quad " + size));
+        globals.add(new AsmString("  .long " + size));
       }
     }
   }
@@ -155,7 +155,7 @@ public class AsmFile {
     errors.add(new AsmInstruction(
         AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
     errors.add(new AsmInstruction(
-        AsmOpCode.MOVQ, Register.R12, Register.RSI, sl));
+        AsmOpCode.MOVSXD, Register.R12D, Register.RSI, sl));
     errors.add(new AsmInstruction(
         AsmOpCode.MOVQ, "$." + errmsgLabel, Register.RDI, sl));
     errors.add(new AsmInstruction(AsmOpCode.CALL, "printf", sl));

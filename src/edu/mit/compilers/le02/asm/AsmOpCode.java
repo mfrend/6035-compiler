@@ -2,17 +2,18 @@ package edu.mit.compilers.le02.asm;
 
 public enum AsmOpCode {
   ADDQ,
-  CMOVEQ,
-  CMOVGEQ,
-  CMOVGQ,
-  CMOVLEQ,
-  CMOVLQ,
-  CMOVNEQ,
-  CMPQ,
+  ADDL,
+  CMOVEL,
+  CMOVGEL,
+  CMOVGL,
+  CMOVLEL,
+  CMOVLL,
+  CMOVNEL,
+  CMPL,
   CALL,
   ENTER,
-  IDIVQ,
-  IMULQ,
+  IDIVL,
+  IMULL,
   JE,
   JG,
   JGE,
@@ -22,12 +23,15 @@ public enum AsmOpCode {
   JNE,
   LEAVE,
   MOVQ,
-  NEGQ,
+  MOVL,
+  MOVSXD,
+  NEGL,
   POPQ,
   PUSHQ,
   RET,
-  SUBQ,
-  XORQ;
+  SUBL,
+  XORQ,
+  XORL;
 
   public String toString() {
     return name().toLowerCase();

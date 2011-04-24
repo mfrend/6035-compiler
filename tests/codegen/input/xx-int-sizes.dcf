@@ -6,6 +6,8 @@ class Program {
     y = 2;
     if (x * y != -2147483648) {
       callout("printf", "Error: 1073741824 * 2 != -2147483648\n");
+    } else {
+      callout("printf", "Success!\n");
     }
   }
 }
