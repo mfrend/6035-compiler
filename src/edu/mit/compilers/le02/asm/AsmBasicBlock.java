@@ -354,7 +354,7 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(
         AsmOpCode.PUSHQ, Register.RDX, sl));
       addInstruction(new AsmInstruction(
-        AsmOpCode.XORQ, Register.RDX, Register.RDX, sl));
+        AsmOpCode.CDQ, sl));
       addInstruction(new AsmInstruction(AsmOpCode.IDIVL, arg2, sl));
       if (op.getOp() == AsmOp.DIVIDE) {
         // RDX is fixed to hold the quotient.

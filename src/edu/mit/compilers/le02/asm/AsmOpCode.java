@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.asm;
 public enum AsmOpCode {
   ADDQ,
   ADDL,
+  CDQ,
   CMOVEL,
   CMOVGEL,
   CMOVGL,
