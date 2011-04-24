@@ -275,7 +275,10 @@ public class AsmBasicBlock implements AsmObject {
       return;
     }
     if (arg1 != null) {
-      // Save result in return register.
+      // Save result in return register. If it's a literal, we can plop
+      // directly into RAX with MOV to obey the 64-bit calling convention.
+      // However, otherwise we need to sign extend for correctness if we are
+      // using a 32-bit variable from program execution.
       if (arg1.startsWith("$")) {
         addInstruction(new AsmInstruction(
           AsmOpCode.MOVQ, arg1, Register.RAX, sl));
@@ -554,6 +557,8 @@ public class AsmBasicBlock implements AsmObject {
           Register.R12, sl));
 
       // Finally, perform the indirection to look up from memory+offset.
+      // We have to upcast to 64-bit and perform sign extension since we are
+      // performing memory access using a 64-bit offset.
       if (index.startsWith("%")) {
         Register indexReg =
           Register.valueOf(index.substring(1).toUpperCase());
