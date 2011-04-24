@@ -14,7 +14,6 @@ import edu.mit.compilers.le02.cfg.CFGGenerator;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.OpStatement;
-import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
@@ -61,10 +60,15 @@ public class CseVisitor extends BasicBlockVisitor {
       this.op = stmt.getOp();
 
       CseVariable left;
-      if (stmt.getArg1().getType() == ArgType.CONST_INT ||
-          stmt.getArg1().getType() == ArgType.CONST_BOOL) {
+      switch (stmt.getArg1().getType()) {
+       case CONST_INT:
+       case CONST_BOOL:
         left = (ConstantArgument)stmt.getArg1();
-      } else {
+        break;
+       case ARRAY_VARIABLE:
+        left = (ArrayVariableArgument)stmt.getArg1();
+        break;
+       default:
         left = stmt.getArg1().getDesc();
       }
       if (!varToVal.containsKey(left)) {
@@ -76,10 +80,15 @@ public class CseVisitor extends BasicBlockVisitor {
         return;
       }
       CseVariable right;
-      if (stmt.getArg2().getType() == ArgType.CONST_INT ||
-          stmt.getArg2().getType() == ArgType.CONST_BOOL) {
+      switch (stmt.getArg2().getType()) {
+       case CONST_INT:
+       case CONST_BOOL:
         right = (ConstantArgument)stmt.getArg2();
-      } else {
+        break;
+       case ARRAY_VARIABLE:
+        right = (ArrayVariableArgument)stmt.getArg2();
+        break;
+       default:
         right = stmt.getArg2().getDesc();
       }
       if (!varToVal.containsKey(right)) {
