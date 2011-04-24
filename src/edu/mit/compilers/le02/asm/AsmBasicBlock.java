@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.asm;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -10,6 +11,7 @@ import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.Argument;
@@ -24,6 +26,7 @@ import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.tools.CLI;
 
 /**
  * Represents the asm instructions corresponding to a BasicBlock.
@@ -41,15 +44,19 @@ public class AsmBasicBlock implements AsmObject {
   private SymbolTable st;
 
   private List<AsmObject> instructions;
+  private EnumSet<Optimization> opts;
+  private OpStatement lastStatement = null;
 
   public AsmBasicBlock(String methodName, BasicBlockNode methodNode,
-      MethodDescriptor thisMethod, SymbolTable st) {
+      MethodDescriptor thisMethod, SymbolTable st,
+      EnumSet<Optimization> opts) {
     instructions = new ArrayList<AsmObject>();
 
     this.methodName = methodName;
     this.methodNode = methodNode;
     this.thisMethod = thisMethod;
     this.st = st;
+    this.opts = opts;
 
     processBlock();
   }
@@ -94,6 +101,9 @@ public class AsmBasicBlock implements AsmObject {
       // Start the output.
       instructions.add(AsmFile.writeLabel(node.getId()));
 
+      // Clear the peephole statement cache.
+      lastStatement = null;
+
       // Process each statement.
       for (BasicStatement stmt : node.getStatements()) {
         processStatement(stmt, methodName, thisMethod);
@@ -136,9 +146,11 @@ public class AsmBasicBlock implements AsmObject {
     }
 
     if (stmt instanceof OpStatement) {
-      processOpStatement((OpStatement) stmt, methodName, thisMethod, sl);
+      processOpStatement((OpStatement)stmt, methodName, thisMethod, sl);
+      lastStatement = (OpStatement)stmt;
     } else if (stmt instanceof CallStatement) {
       generateCall((CallStatement) stmt, thisMethod);
+      lastStatement = null;
     } else if (stmt instanceof NOPStatement) {
       // This is a nop; ignore it and continue onwards.
       return;
@@ -309,42 +321,62 @@ public class AsmBasicBlock implements AsmObject {
    */
   protected void processOpStatement(OpStatement op, String methodName,
       MethodDescriptor thisMethod, SourceLocation sl) {
-    // Default to saving results in R10; we can pull results from a
-    // different register if the CPU spec mandates it.
-    Register resultReg = Register.R11D;
-
     // prepareArgument loads an argument from memory/another register
     // into R10 or R11 and returns the reg it stored the argument in.
     String arg1 = "<error>";
     if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
-      arg1 = prepareArgument(op.getArg1(), true, methodName, false, sl);
+      if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
+          lastStatement != null && lastStatement.getTarget() != null &&
+          (op.getOp() == AsmOp.MOVE ||
+              getResultRegister(lastStatement.getOp()) != Register.R11D) &&
+          (!(lastStatement.getTarget() instanceof VariableArgument) ||
+          ((VariableArgument)lastStatement.getTarget()).getDesc() != null) &&
+          lastStatement.getTarget().equals(op.getArg1())) {
+        if (CLI.debug) {
+          System.out.println("CC: Matched " + lastStatement.getTarget() +
+            " against " + op.getArg1());
+        }
+        arg1 = "" + getResultRegister(lastStatement.getOp());
+      } else {
+        arg1 = prepareArgument(op.getArg1(), true, methodName, false, sl);
+      }
     }
     String arg2 = "<error>";
     if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
-      arg2 = prepareArgument(op.getArg2(), false, methodName, false, sl);
+      if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
+          lastStatement != null && lastStatement.getTarget() != null &&
+          getResultRegister(lastStatement.getOp()) != Register.R10D &&
+          (!(lastStatement.getTarget() instanceof VariableArgument) ||
+            ((VariableArgument)lastStatement.getTarget()).getDesc() != null) &&
+          lastStatement.getTarget().equals(op.getArg2())) {
+        if (CLI.debug) {
+          System.out.println("CC: Matched " + lastStatement.getTarget() +
+            " against " + op.getArg2());
+        }
+        arg2 = "" + getResultRegister(lastStatement.getOp());
+      } else {
+        arg2 = prepareArgument(op.getArg2(), false, methodName, false, sl);
+      }
     }
 
     switch (op.getOp()) {
-    case MOVE:
+     case MOVE:
       arg2 = "" + Register.R11D;
       addInstruction(new AsmInstruction(AsmOpCode.MOVL, arg1, arg2, sl));
       writeToArgument(op.getArg2(), methodName, true, sl);
       // Stop here because we don't need to move result again.
       return;
-    case ADD:
+     case ADD:
       addInstruction(new AsmInstruction(AsmOpCode.ADDL, arg1, arg2, sl));
       break;
-    case SUBTRACT:
+     case SUBTRACT:
       addInstruction(new AsmInstruction(AsmOpCode.SUBL, arg2, arg1, sl));
-      // Subtract reverses the order of its arguments, so arg1 contains
-      // the modified result.
-      resultReg = Register.R10D;
       break;
-    case MULTIPLY:
+     case MULTIPLY:
       addInstruction(new AsmInstruction(AsmOpCode.IMULL, arg1, arg2, sl));
       break;
-    case DIVIDE:
-    case MODULO:
+     case DIVIDE:
+     case MODULO:
       // Division needs to use EAX for the dividend, and overwrites
       // EAX/EDX to store its outputs.
       addInstruction(new AsmInstruction(
@@ -356,47 +388,38 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(
         AsmOpCode.CDQ, sl));
       addInstruction(new AsmInstruction(AsmOpCode.IDIVL, arg2, sl));
-      if (op.getOp() == AsmOp.DIVIDE) {
-        // RDX is fixed to hold the quotient.
-        resultReg = Register.EAX;
-      } else {
-        // RDX is fixed to hold the remainder.
-        resultReg = Register.EDX;
-      }
       break;
-    case UNARY_MINUS:
+     case UNARY_MINUS:
       // Unary operations use R10 for input and output.
       addInstruction(new AsmInstruction(AsmOpCode.NEGL, arg1, sl));
-      resultReg = Register.R10D;
       break;
-    case NOT:
+     case NOT:
       addInstruction(new AsmInstruction(AsmOpCode.XORL, "$1", arg1, sl));
-      resultReg = Register.R10D;
       break;
-    case EQUAL:
-    case NOT_EQUAL:
-    case LESS_THAN:
-    case LESS_OR_EQUAL:
-    case GREATER_THAN:
-    case GREATER_OR_EQUAL:
+     case EQUAL:
+     case NOT_EQUAL:
+     case LESS_THAN:
+     case LESS_OR_EQUAL:
+     case GREATER_THAN:
+     case GREATER_OR_EQUAL:
       processBoolean(op.getOp(), arg1, arg2, sl);
-      resultReg = Register.EAX;
       break;
-    case RETURN:
+     case RETURN:
       if (op.getArg1() != null) {
         generateMethodReturn(arg1, thisMethod, sl);
       } else {
         generateMethodReturn(null, thisMethod, sl);
       }
       return;
-    case ENTER:
+     case ENTER:
       generateMethodHeader(thisMethod,
           ((ConstantArgument) op.getArg1()).getInt());
       return;
-    default:
+     default:
       ErrorReporting.reportError(new AsmException(sl, "Unknown opcode."));
       return;
     }
+    Register resultReg = getResultRegister(op.getOp());
     if (op.getResult() != null) {
       addInstruction(new AsmInstruction(AsmOpCode.MOVL, resultReg,
           convertVariableLocation(op.getResult().getLocation(), true), sl));
@@ -407,6 +430,35 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
       // Restore the register we displaced for division/modulo.
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, Register.RDX, sl));
+    }
+  }
+
+  /**
+   * Retrieves the correct result register for a given opcode.
+   */
+  protected Register getResultRegister(AsmOp op) {
+    switch (op) {
+     case SUBTRACT:
+      // Subtract reverses the order of its arguments, so arg1 contains
+      // the modified result.
+     case NOT:
+     case UNARY_MINUS:
+      return Register.R10D;
+     case DIVIDE:
+      // RDX is fixed to hold the quotient.
+     case EQUAL:
+     case NOT_EQUAL:
+     case LESS_THAN:
+     case LESS_OR_EQUAL:
+     case GREATER_THAN:
+     case GREATER_OR_EQUAL:
+      return Register.EAX;
+     case MODULO:
+      // RDX is fixed to hold the remainder.
+      return Register.EDX;
+     case MOVE:
+     default:
+      return Register.R11D;
     }
   }
 

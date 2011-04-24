@@ -2,9 +2,11 @@ package edu.mit.compilers.le02.asm;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -36,7 +38,7 @@ public class AsmFile {
   private AsmBasicBlock current;
 
   public AsmFile(ControlFlowGraph graph, SymbolTable table,
-      PrintStream writer) {
+      PrintStream writer, EnumSet<Optimization> opts) {
     cfg = graph;
     ps = writer;
     st = table;
@@ -44,7 +46,7 @@ public class AsmFile {
     writeHeader();
     writeStrings();
     writeGlobals();
-    writeMethods();
+    writeMethods(opts);
     writeErrors();
   }
 
@@ -122,14 +124,15 @@ public class AsmFile {
   /**
    * Writes the blocks associated with each method to the assembly file.
    */
-  public void writeMethods() {
+  public void writeMethods(EnumSet<Optimization> opts) {
     methods.add(new AsmString(".section .rodata"));
     for (String methodName : cfg.getMethods()) {
       BasicBlockNode methodNode =
         (BasicBlockNode) cfg.getMethod(methodName);
       MethodDescriptor thisMethod = st.getMethod(methodName);
 
-      current = new AsmBasicBlock(methodName, methodNode, thisMethod, st);
+      current = new AsmBasicBlock(
+        methodName, methodNode, thisMethod, st, opts);
       current.reorderInstructions();
       methods.add(current);
     }

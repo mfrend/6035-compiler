@@ -65,7 +65,8 @@ public class Main {
   public enum Optimization {
     COMMON_SUBEXPR("cse"),
     COPY_PROPAGATION("cp"),
-    DEAD_CODE("dc");
+    DEAD_CODE("dc"),
+    CONSECUTIVE_COPY("cc");
     private String flagName;
 
     private Optimization(String flag) {
@@ -412,7 +413,7 @@ public class Main {
       for (FieldDescriptor global : st.getFields()) {
         cfg.putGlobal("." + global.getId(), global);
       }
-      AsmFile asm = new AsmFile(cfg, st, new PrintStream(CLI.outfile));
+      AsmFile asm = new AsmFile(cfg, st, new PrintStream(CLI.outfile), opts);
       asm.write();
     } catch (ANTLRException e) {
       ErrorReporting.reportErrorCompat(e);

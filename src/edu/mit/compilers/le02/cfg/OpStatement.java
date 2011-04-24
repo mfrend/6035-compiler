@@ -47,6 +47,14 @@ public final class OpStatement extends BasicStatement {
     return arg2;
   }
 
+  public Argument getTarget() {
+    if (op == AsmOp.MOVE) {
+      return arg2;
+    } else {
+      return Argument.makeArgument(result);
+    }
+  }
+
   public boolean expressionEquals(OpStatement other) {
     return op.equals(other.op) &&
       ((arg1 != null) ? arg1.equals(other.arg1) : (other.arg1 == null)) &&
