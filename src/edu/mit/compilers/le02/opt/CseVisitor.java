@@ -169,6 +169,12 @@ public class CseVisitor extends BasicBlockVisitor {
         varToVal.put(storedVar, val);
         expToVal.put(valexp, val);
 
+        if (op.getOp() == AsmOp.MOVE &&
+            op.getArg1() instanceof ConstantArgument) {
+          // No point in caching $1234 immediates in memory.
+          continue;
+        }
+
         if (storedVar instanceof LocalDescriptor &&
             ((LocalDescriptor)storedVar).isLocalTemporary()) {
           // This is an immutable temporary, but need to register the

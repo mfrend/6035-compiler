@@ -53,14 +53,14 @@ public class AvailableExpressions extends BasicBlockVisitor
     @Override
     public int hashCode() {
       return ((expr.getOp() != null) ? expr.getOp().hashCode() + 1 : 0) +
-      + ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0)
-      + ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
+        ((expr.getArg1() != null) ? expr.getArg1().hashCode() + 1 : 0) +
+        ((expr.getArg2() != null) ? expr.getArg2().hashCode() + 1 : 0);
     }
 
     @Override
     public String toString() {
-      return expr.getArg1() + " " + expr.getOp() + " "
-             + ((expr.getArg2() != null) ? expr.getArg2() : "");
+      return expr.getArg1() + " " + expr.getOp() + " " +
+        ((expr.getArg2() != null) ? expr.getArg2() : "");
     }
   }
 
