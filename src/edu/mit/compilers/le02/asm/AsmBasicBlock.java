@@ -328,12 +328,20 @@ public class AsmBasicBlock implements AsmObject {
     // into R10 or R11 and returns the reg it stored the argument in.
     String arg1 = "<error>";
     if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
+      // If the consecutive copy optimization is on, we should:
+      // * Check that the last statement exists and had a non-null target.
+      // * Check that we aren't trying to use a register that will be clobbered
+      //   by trying to resolve arg2. Specifically, R11D is clobbered by arg2
+      //   resolution (which happens for all non-MOVE operations).
+      // * Finally, check that the last target is present; if it is a
+      //   VariableArgument, make sure its descriptor is not null.
+      // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
           (op.getOp() == AsmOp.MOVE ||
-              getResultRegister(lastStatement.getOp()) != Register.R11D) &&
+                getResultRegister(lastStatement.getOp()) != Register.R11D) &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
-          ((VariableArgument)lastStatement.getTarget()).getDesc() != null) &&
+                lastStatement.getTarget().getDesc() != null) &&
           lastStatement.getTarget().equals(op.getArg1())) {
         if (CLI.debug) {
           System.out.println("CC: Matched " + lastStatement.getTarget() +
@@ -346,11 +354,19 @@ public class AsmBasicBlock implements AsmObject {
     }
     String arg2 = "<error>";
     if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
+      // If the consecutive copy optimization is on, we should:
+      // * Check that the last statement exists and had a non-null target.
+      // * Check that we aren't trying to use a register that will be clobbered
+      //   by trying to resolve arg1. Specifically, R10D is clobbered by arg1
+      //   resolution.
+      // * Finally, check that the last target is present; if it is a
+      //   VariableArgument, make sure its descriptor is not null.
+      // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
           getResultRegister(lastStatement.getOp()) != Register.R10D &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
-            ((VariableArgument)lastStatement.getTarget()).getDesc() != null) &&
+                lastStatement.getTarget().getDesc() != null) &&
           lastStatement.getTarget().equals(op.getArg2())) {
         if (CLI.debug) {
           System.out.println("CC: Matched " + lastStatement.getTarget() +
