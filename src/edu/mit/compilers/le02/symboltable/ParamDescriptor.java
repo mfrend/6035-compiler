@@ -10,6 +10,7 @@ import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.StackLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.VariableLocation;
 
 public class ParamDescriptor extends TypedDescriptor {
 
