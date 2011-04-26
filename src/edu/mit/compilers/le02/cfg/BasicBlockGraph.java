@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.cfg;
 
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
@@ -37,9 +38,12 @@ public class BasicBlockGraph {
       visited.clear();
       BasicBlockNode methodEnter = makeBasicBlocks(methodName, enter);
 
-      for (BasicBlockNode n : visited.values()) {
+      for (Iterator<BasicBlockNode> iter = visited.values().iterator();
+          iter.hasNext();) {
+        BasicBlockNode n = iter.next();
         if (n.getStatements().isEmpty()) {
           n.removeFromCFG();
+          iter.remove();
         }
       }
 
@@ -66,6 +70,13 @@ public class BasicBlockGraph {
       if (opts.contains(Optimization.DEAD_CODE)) {
         Liveness live = new Liveness(methodEnter);
         new DeadCodeElimination(methodEnter, live.getBlockItems());
+      }
+
+      // Remove any BasicBlockNodes that are empty after optimizations
+      for (BasicBlockNode n : visited.values()) {
+        if (n.getStatements().isEmpty()) {
+          n.removeFromCFG();
+        }
       }
 
       // All of these optimizations change the number of local variables.
