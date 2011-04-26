@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -273,10 +274,7 @@ public class RegisterVisitor extends BasicBlockVisitor {
           }
         }
         continue;
-      }
-      
-      // Only ops are in def-use chains
-      else if (stmt.getType() != BasicStatementType.OP) {
+      } else if (stmt.getType() != BasicStatementType.OP) {
         continue;
       }
 
@@ -308,41 +306,56 @@ public class RegisterVisitor extends BasicBlockVisitor {
 
   private void generateInterferenceGraph(BasicBlockNode node) {
     WebLiveness wl = blockLiveness.get(node);
-    HashMap<TypedDescriptor, Web> currentlyActive = 
+    HashMap<TypedDescriptor, Web> currentlyLive = 
       new HashMap<TypedDescriptor, Web>();
     
     assert wl != null;
 
-    // Link all starting nodes at beginning
-    int size = wl.liveOnEnter.size();
+    // Link all ending nodes
+    int size = wl.liveOnExit.size();
     for (int i = 0; i < size; i++) {
-      Web w1 = wl.liveOnEnter.get(i);
-      currentlyActive.put(w1.desc(), w1);
+      Web w1 = wl.liveOnExit.get(i);
+      currentlyLive.put(w1.desc(), w1);
       for (int j = i+1; j < size; j++) {
-        Web w2 = wl.liveOnEnter.get(j);
+        Web w2 = wl.liveOnExit.get(j);
         ig.linkNodes(w1, w2);
       }
     }
     
-    for (BasicStatement stmt : node.getStatements()) {
-      // Only ops are in def-use chains
+    List<BasicStatement> stmts = node.getStatements();
+    ListIterator<BasicStatement> li = stmts.listIterator(stmts.size());
+    
+    if (stmts.isEmpty()) {
+      return;
+    }
+    
+    for (BasicStatement stmt = li.previous(); li.hasPrevious(); 
+         stmt = li.previous()) {
+      
       if (stmt.getType() != BasicStatementType.OP
           && stmt.getType() != BasicStatementType.CALL) {
         continue;
       }
       
       Web web = defUses.get(stmt);
-      if (web == null) {
+      if (web != null) {
+        currentlyLive.remove(web.desc());
+      }
+      
+      List<Web> webs = useToDefs.get(stmt);
+      if (webs == null) {
         continue;
       }
       
-      Web oldWeb = currentlyActive.get(web.desc());
-      if (web.find() != oldWeb) {
-        Web newWeb = web.find();
-        currentlyActive.put(newWeb.desc(), newWeb);
-        
-        for (Web w : currentlyActive.values()) {
-          ig.linkNodes(newWeb, w);
+      for (Web w : webs) {
+        Web oldWeb = currentlyLive.get(w.desc());
+        if (w.find() != oldWeb) {
+          Web newWeb = w.find();
+          currentlyLive.put(newWeb.desc(), newWeb);
+          
+          for (Web w2 : currentlyLive.values()) {
+            ig.linkNodes(newWeb, w2);
+          }
         }
       }
     }
