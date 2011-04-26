@@ -13,6 +13,7 @@ import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
 import edu.mit.compilers.le02.opt.GlobalCseVisitor;
+import edu.mit.compilers.le02.opt.RegisterVisitor;
 
 public class BasicBlockGraph {
   private static int id;
@@ -66,6 +67,11 @@ public class BasicBlockGraph {
       if (opts.contains(Optimization.DEAD_CODE)) {
         Liveness live = new Liveness(methodEnter);
         new DeadCodeElimination(methodEnter, live.getBlockItems());
+      }
+
+      // Run register allocation.
+      if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
+        RegisterVisitor.runRegisterAllocation(methodEnter);
       }
 
       // All of these optimizations change the number of local variables.
