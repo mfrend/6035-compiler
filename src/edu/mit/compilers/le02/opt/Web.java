@@ -1,9 +1,10 @@
 package edu.mit.compilers.le02.opt;
 
-import java.util.LinkedList;
+import java.util.HashSet;
+import java.util.Set;
 
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.cfg.BasicStatement;
+import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 /**
  * 
@@ -25,17 +26,18 @@ import edu.mit.compilers.le02.cfg.BasicStatement;
  * @author David Koh (dkoh@mit.edu)
  */
 public class Web {
+  private int color;
   private Web rep;
   private int _rank;
-  private VariableLocation loc;
-  private LinkedList<BasicStatement> stmts;
+  private TypedDescriptor desc;
+  private HashSet<BasicStatement> stmts;
   
   
-  public Web(VariableLocation loc, BasicStatement def) {
+  public Web(TypedDescriptor loc, BasicStatement def) {
     this.rep = this;
     this._rank = 0;
-    this.loc = loc;
-    this.stmts = new LinkedList<BasicStatement>();
+    this.desc = loc;
+    this.stmts = new HashSet<BasicStatement>();
     
     this.stmts.add(def);
   }
@@ -55,18 +57,23 @@ public class Web {
       return;
     }
     
-    assert this.loc == other.loc;
+    assert this.desc == other.desc;
     Web thisRoot = this.find();
     Web otherRoot = other.find();
+    
+    
     if (this.rank() > other.rank()) {
       otherRoot.rep = thisRoot;
+      otherRoot.stmts.addAll(thisRoot.stmts);
     }
     else if (other.rank() > this.rank()) {
       thisRoot.rep = otherRoot;
+      thisRoot.stmts.addAll(otherRoot.stmts);
     }
     else {
       // other.rank() == this.rank()
       thisRoot.rep = otherRoot;
+      thisRoot.stmts.addAll(otherRoot.stmts);
       thisRoot._rank++;
     }
   }
@@ -75,12 +82,29 @@ public class Web {
     return this.find()._rank;
   }
   
-  public VariableLocation loc() {
-    return this.loc;
+  public TypedDescriptor desc() {
+    return this.desc;
   }
   
   public void addStmt(BasicStatement stmt) {
     stmts.add(stmt);
+  }
+
+  public Set<BasicStatement> getStmts() {
+    return this.find().stmts;
+  }
+
+  public int getColor() {
+    return color;
+  }
+
+  public void setColor(int color) {
+    this.color = color;
+  }
+  
+  // TODO: Include loop nesting in spill cost
+  public int getSpillCost() {
+    return this.stmts.size();
   }
 
 }

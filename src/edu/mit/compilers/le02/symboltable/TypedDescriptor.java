@@ -14,7 +14,7 @@ public abstract class TypedDescriptor
     this.type = type;
     this.location = null;
   }
-
+  
   public DecafType getType() {
     return type;
   }
