@@ -38,8 +38,8 @@ public class BasicBlockGraph {
       visited.clear();
       BasicBlockNode methodEnter = makeBasicBlocks(methodName, enter);
 
-      for (Iterator<BasicBlockNode> iter = visited.values().iterator();
-          iter.hasNext();) {
+      Iterator<BasicBlockNode> iter = visited.values().iterator();
+      while (iter.hasNext()) {
         BasicBlockNode n = iter.next();
         if (n.getStatements().isEmpty()) {
           n.removeFromCFG();
