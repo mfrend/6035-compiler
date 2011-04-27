@@ -19,6 +19,11 @@ public final class StringNode extends ASTNode {
     return Collections.emptyList();
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
   public String getValue() {
     return value;
   }

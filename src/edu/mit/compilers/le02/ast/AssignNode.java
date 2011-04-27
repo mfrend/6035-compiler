@@ -21,6 +21,20 @@ public class AssignNode extends StatementNode {
     return Util.makeList(loc, value);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((loc == prev) && (next instanceof LocationNode)) {
+      loc = (LocationNode)next;
+      loc.setParent(this);
+      return true;
+    } else if ((value == prev) && (next instanceof ExpressionNode)) {
+      value = (ExpressionNode)next;
+      value.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public LocationNode getLoc() {
     return loc;
   }

@@ -41,6 +41,24 @@ public final class IfNode extends StatementNode {
     return children;
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((condition == prev) && (next instanceof ExpressionNode)) {
+      condition = (ExpressionNode)next;
+      condition.setParent(this);
+      return true;
+    } else if ((thenBlock == prev) && (next instanceof BlockNode)) {
+      thenBlock = (BlockNode)next;
+      thenBlock.setParent(this);
+      return true;
+    } else if (hasElse && (elseBlock == prev) && (next instanceof BlockNode)) {
+      elseBlock = (BlockNode)next;
+      elseBlock.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public ExpressionNode getCondition() {
     return condition;
   }

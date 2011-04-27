@@ -35,5 +35,6 @@ public abstract class ASTNode {
     return parent.getSymbolTable();
   }
   abstract public List<ASTNode> getChildren();
+  abstract public boolean replaceChild(ASTNode prev, ASTNode next);
   abstract public <T> T accept(ASTNodeVisitor<T> v);
 }

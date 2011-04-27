@@ -19,6 +19,11 @@ public final class VarDeclNode extends FieldDeclNode {
   }
 
   @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
+  @Override
   public String toString() {
     return super.toString() + " " + type + " " + name;
   }

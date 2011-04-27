@@ -20,6 +20,16 @@ public final class CallStatementNode extends StatementNode {
     return children;
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((call == prev) && (next instanceof CallNode)) {
+      call = (CallNode)next;
+      call.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public CallNode getCall() {
     return call;
   }

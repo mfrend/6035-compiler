@@ -19,6 +19,16 @@ public final class ArrayLocationNode extends LocationNode {
     return Util.makeList((ASTNode)index);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((index == prev) && (next instanceof ExpressionNode)) {
+      index = (ExpressionNode)next;
+      index.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public void setIndex(ExpressionNode index) {
     this.index = index;
   }

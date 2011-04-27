@@ -24,6 +24,20 @@ public abstract class BinaryOpNode extends ExpressionNode {
     return Util.makeList((ASTNode)left, right);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((left == prev) && (next instanceof ExpressionNode)) {
+      left = (ExpressionNode)next;
+      left.setParent(this);
+      return true;
+    } else if ((right == prev) && (next instanceof ExpressionNode)) {
+      right = (ExpressionNode)next;
+      right.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public ExpressionNode getLeft() {
     return left;
   }
