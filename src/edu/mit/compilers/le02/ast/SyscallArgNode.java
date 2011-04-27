@@ -40,7 +40,8 @@ public final class SyscallArgNode extends ASTNode {
       str = (StringNode)next;
       str.setParent(this);
       return true;
-    } else if (!isString && (expr == prev) && (next instanceof ExpressionNode)) {
+    } else if (!isString && (expr == prev) &&
+               (next instanceof ExpressionNode)) {
       expr = (ExpressionNode)next;
       expr.setParent(this);
       return true;

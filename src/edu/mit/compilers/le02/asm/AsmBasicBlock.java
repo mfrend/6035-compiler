@@ -330,6 +330,7 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
       // If the consecutive copy optimization is on, we should:
       // * Check that the last statement exists and had a non-null target.
+      // * Check that the last statement wasn't a modulo (%rdx is clobbered)
       // * Check that we aren't trying to use a register that will be clobbered
       //   by trying to resolve arg2. Specifically, R11D is clobbered by arg2
       //   resolution (which happens for all non-MOVE operations).
@@ -338,6 +339,7 @@ public class AsmBasicBlock implements AsmObject {
       // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
+          lastStatement.getOp() != AsmOp.MODULO &&
           (op.getOp() == AsmOp.MOVE ||
                 getResultRegister(lastStatement.getOp()) != Register.R11D) &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
@@ -356,6 +358,7 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
       // If the consecutive copy optimization is on, we should:
       // * Check that the last statement exists and had a non-null target.
+      // * Check that the last statement wasn't a modulo (%rdx is clobbered)
       // * Check that we aren't trying to use a register that will be clobbered
       //   by trying to resolve arg1. Specifically, R10D is clobbered by arg1
       //   resolution.
@@ -364,6 +367,7 @@ public class AsmBasicBlock implements AsmObject {
       // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
+          lastStatement.getOp() != AsmOp.MODULO &&
           getResultRegister(lastStatement.getOp()) != Register.R10D &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
                 lastStatement.getTarget().getDesc() != null) &&
