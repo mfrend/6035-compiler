@@ -29,6 +29,16 @@ public final class ReturnNode extends StatementNode {
     return Util.makeList((ASTNode)retValue);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if (hasValue && (retValue == prev) && (next instanceof ExpressionNode)) {
+      retValue = (ExpressionNode)next;
+      retValue.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public boolean hasValue() {
     return hasValue;
   }

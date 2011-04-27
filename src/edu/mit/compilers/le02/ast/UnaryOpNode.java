@@ -18,6 +18,16 @@ public abstract class UnaryOpNode extends ExpressionNode {
     return Util.makeList((ASTNode)expr);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((expr == prev) && (next instanceof ExpressionNode)) {
+      expr = (ExpressionNode)next;
+      expr.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public void setExpr(ExpressionNode expr) {
     this.expr = expr;
   }

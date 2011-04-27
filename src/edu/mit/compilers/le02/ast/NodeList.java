@@ -27,6 +27,20 @@ public class NodeList<T extends ASTNode> extends ASTNode implements List<T> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    for (ListIterator<T> iter = this.listIterator();
+        iter.hasNext();) {
+      if (iter.next() == prev) {
+        next.setParent(this);
+        iter.set((T)next);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
   public boolean add(T e) {
     return list.add(e);
   }

@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
@@ -25,6 +26,24 @@ public final class MethodDeclNode extends DeclNode {
     List<ASTNode> children = new ArrayList<ASTNode>(params);
     children.add(body);
     return children;
+  }
+
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    for (ListIterator<VarDeclNode> iter = params.listIterator();
+        iter.hasNext();) {
+      if ((iter.next() == prev) && (next instanceof VarDeclNode)) {
+        next.setParent(this);
+        iter.set((VarDeclNode)next);
+        return true;
+      }
+    }
+    if ((body == prev) && (next instanceof BlockNode)) {
+      body = (BlockNode)next;
+      body.setParent(this);
+      return true;
+    }
+    return false;
   }
 
   public List<VarDeclNode> getParams() {

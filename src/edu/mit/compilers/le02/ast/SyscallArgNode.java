@@ -35,6 +35,20 @@ public final class SyscallArgNode extends ASTNode {
   }
 
   @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if (isString && (str == prev) && (next instanceof StringNode)) {
+      str = (StringNode)next;
+      str.setParent(this);
+      return true;
+    } else if (!isString && (expr == prev) && (next instanceof ExpressionNode)) {
+      expr = (ExpressionNode)next;
+      expr.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof SyscallArgNode)) {
       return false;

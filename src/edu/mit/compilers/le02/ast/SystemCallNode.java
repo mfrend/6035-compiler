@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
@@ -24,6 +25,24 @@ public final class SystemCallNode extends CallNode {
     children.add(funcName);
     children.addAll(args);
     return children;
+  }
+
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((funcName == prev) && (next instanceof StringNode)) {
+      funcName = (StringNode)next;
+      funcName.setParent(this);
+      return true;
+    }
+    for (ListIterator<SyscallArgNode> iter = args.listIterator();
+        iter.hasNext();) {
+      if ((iter.next() == prev) && (next instanceof SyscallArgNode)) {
+        next.setParent(this);
+        iter.set((SyscallArgNode)next);
+        return true;
+      }
+    }
+    return false;
   }
 
   public StringNode getFuncName() {
