@@ -35,8 +35,8 @@ public final class MethodCallNode extends CallNode {
 
   @Override
   public boolean replaceChild(ASTNode prev, ASTNode next) {
-    for (ListIterator<ExpressionNode> iter = args.listIterator();
-        iter.hasNext();) {
+    ListIterator<ExpressionNode> iter = args.listIterator();
+    while (iter.hasNext()) {
       if ((iter.next() == prev) && (next instanceof ExpressionNode)) {
         next.setParent(this);
         iter.set((ExpressionNode)next);

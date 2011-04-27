@@ -38,20 +38,20 @@ public final class ClassNode extends ASTNode {
 
   @Override
   public boolean replaceChild(ASTNode prev, ASTNode next) {
-    for (ListIterator<FieldDeclNode> iter = fields.listIterator();
-        iter.hasNext();) {
-      if ((iter.next() == prev) && (next instanceof FieldDeclNode)) {
+    ListIterator<FieldDeclNode> fieldIter = fields.listIterator();
+    while (fieldIter.hasNext()) {
+      if ((fieldIter.next() == prev) && (next instanceof FieldDeclNode)) {
         next.setParent(this);
-        iter.set((FieldDeclNode)next);
+        fieldIter.set((FieldDeclNode)next);
         return true;
       }
     }
 
-    for (ListIterator<MethodDeclNode> iter = methods.listIterator();
-        iter.hasNext();) {
-      if ((iter.next() == prev) && (next instanceof MethodDeclNode)) {
+    ListIterator<MethodDeclNode> methodIter = methods.listIterator();
+    while (methodIter.hasNext()) {
+      if ((methodIter.next() == prev) && (next instanceof MethodDeclNode)) {
         next.setParent(this);
-        iter.set((MethodDeclNode)next);
+        methodIter.set((MethodDeclNode)next);
         return true;
       }
     }

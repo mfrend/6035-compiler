@@ -30,8 +30,8 @@ public final class MethodDeclNode extends DeclNode {
 
   @Override
   public boolean replaceChild(ASTNode prev, ASTNode next) {
-    for (ListIterator<VarDeclNode> iter = params.listIterator();
-        iter.hasNext();) {
+    ListIterator<VarDeclNode> iter = params.listIterator();
+    while (iter.hasNext()) {
       if ((iter.next() == prev) && (next instanceof VarDeclNode)) {
         next.setParent(this);
         iter.set((VarDeclNode)next);

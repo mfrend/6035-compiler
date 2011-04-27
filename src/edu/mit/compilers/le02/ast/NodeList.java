@@ -29,8 +29,8 @@ public class NodeList<T extends ASTNode> extends ASTNode implements List<T> {
   @Override
   @SuppressWarnings("unchecked")
   public boolean replaceChild(ASTNode prev, ASTNode next) {
-    for (ListIterator<T> iter = this.listIterator();
-        iter.hasNext();) {
+    ListIterator<T> iter = this.listIterator();
+    while (iter.hasNext()) {
       if (iter.next() == prev) {
         next.setParent(this);
         iter.set((T)next);

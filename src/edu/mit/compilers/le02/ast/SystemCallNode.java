@@ -34,8 +34,8 @@ public final class SystemCallNode extends CallNode {
       funcName.setParent(this);
       return true;
     }
-    for (ListIterator<SyscallArgNode> iter = args.listIterator();
-        iter.hasNext();) {
+    ListIterator<SyscallArgNode> iter = args.listIterator();
+    while (iter.hasNext()) {
       if ((iter.next() == prev) && (next instanceof SyscallArgNode)) {
         next.setParent(this);
         iter.set((SyscallArgNode)next);

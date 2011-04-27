@@ -29,20 +29,20 @@ public final class BlockNode extends StatementNode {
 
   @Override
   public boolean replaceChild(ASTNode prev, ASTNode next) {
-    for (ListIterator<VarDeclNode> iter = decls.listIterator();
-        iter.hasNext();) {
-      if ((iter.next() == prev) && (next instanceof VarDeclNode)) {
+    ListIterator<VarDeclNode> varIter = decls.listIterator();
+    while (varIter.hasNext()) {
+      if ((varIter.next() == prev) && (next instanceof VarDeclNode)) {
         next.setParent(this);
-        iter.set((VarDeclNode)next);
+        varIter.set((VarDeclNode)next);
         return true;
       }
     }
 
-    for (ListIterator<StatementNode> iter = statements.listIterator();
-        iter.hasNext();) {
-      if ((iter.next() == prev) && (next instanceof StatementNode)) {
+    ListIterator<StatementNode> stIter = statements.listIterator();
+    while (stIter.hasNext()) {
+      if ((stIter.next() == prev) && (next instanceof StatementNode)) {
         next.setParent(this);
-        iter.set((StatementNode)next);
+        stIter.set((StatementNode)next);
         return true;
       }
     }
