@@ -25,7 +25,7 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
  * 
  * @author David Koh (dkoh@mit.edu)
  */
-public class Web {
+public class Web implements Comparable<Web> {
   private int color;
   private Web rep;
   private int _rank;
@@ -122,6 +122,38 @@ public class Web {
     }
 
     return str;
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    else if (!(o instanceof Web)) return false;
+    
+    Web other = (Web) o;
+    return this.desc.equals(other.desc) &&
+           this.stmts.equals(other.stmts);
+  }
+  
+  @Override
+  public int hashCode() {
+    return desc.hashCode() * stmts.size();
+  }
+
+  @Override
+  public int compareTo(Web w) {
+    int ret = this.desc.getId().compareTo(w.desc.getId());
+    
+    if (ret != 0) {
+      return ret;
+    }
+    
+    ret = this.stmts.size() - w.stmts.size();
+    
+    if (ret != 0) { 
+      return ret;
+    }
+    
+    return this.hashCode() - w.hashCode();
   }
 
 }

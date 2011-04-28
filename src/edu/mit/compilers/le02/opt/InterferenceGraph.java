@@ -1,13 +1,18 @@
 package edu.mit.compilers.le02.opt;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.Stack;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class InterferenceGraph {
-  private HashMap<Web, IGNode> nodes = new HashMap<Web, IGNode>();
+  // Trying to keep things deterministic
+  private SortedMap<Web, IGNode> nodes = new TreeMap<Web, IGNode>();
   
   public boolean isEmpty() {
     return nodes.isEmpty();
@@ -29,21 +34,21 @@ public class InterferenceGraph {
     n2.addNeighbor(n1);
   }
   
-  private IGNode removeHighestDegree() {
-    int max = -1;
-    IGNode maxNode = null;
+  private IGNode removeLowestDegree() {
+    int min = Integer.MAX_VALUE;
+    IGNode minNode = null;
     for (IGNode node : nodes.values()) {
       if (node.wasRemoved()) {
         continue;
       }
-      if (node.getDegree() > max) {
-        max = node.getDegree();
-        maxNode = node;
+      if (node.getDegree() < min) {
+        min = node.getDegree();
+        minNode = node;
       }
     }
     
-    maxNode.simulateRemove();
-    return maxNode;
+    minNode.simulateRemove();
+    return minNode;
   }
   
   private int colorNode(IGNode node) {
@@ -66,25 +71,26 @@ public class InterferenceGraph {
     int numColors = 0;
     
     for (int i = 0; i < nodes.size(); i++) {
-      stack.push(removeHighestDegree());
+      stack.push(removeLowestDegree());
     }
     
     int color;
     while (!stack.empty()) {
       color = colorNode(stack.pop());
       if (color >= numColors) {
-        numColors = color += 1;
+        numColors = color + 1;
       }
     }
     return numColors;
   }
 
-  public static class IGNode {
+  public static class IGNode implements Comparable<IGNode> {
     private Web web;
     private int color = -1;
     private int degree = 0;
     private boolean removed = false;
-    private Set<IGNode> neighbors = new HashSet<IGNode>();
+    // Trying to keep things deterministic
+    private SortedSet<IGNode> neighbors = new TreeSet<IGNode>();
     
     public IGNode(Web web) {
       this.web = web;
@@ -146,6 +152,24 @@ public class InterferenceGraph {
            + "color: " + color + "\n"
            + "removed: " + removed + "\n"
            + "# neighbors: " + neighbors.size() + "\n";
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof IGNode)) return false;
+      IGNode other = (IGNode) o;
+      return this.web.equals(other.web);
+    }
+    
+    @Override
+    public int hashCode() {
+      return this.web.hashCode();
+    }
+
+    @Override
+    public int compareTo(IGNode node) {
+      return this.web.compareTo(node.web);
     }
 
   };

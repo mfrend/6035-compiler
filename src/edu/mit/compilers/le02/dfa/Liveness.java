@@ -85,12 +85,21 @@ implements Lattice<BitSet, BasicBlockNode> {
     
     public boolean isLiveOnExit(TypedDescriptor desc) {
       BitSet liveness = (BitSet) this.getOut();
-      return liveness.get(parent.variableIndices.get(desc));
+      Integer index = parent.variableIndices.get(desc);
+      if (index == null) {
+        return false;
+      }
+      return liveness.get(index);
     }
     
     public boolean isLiveOnEntrance(TypedDescriptor desc) {
       BitSet liveness = (BitSet) this.getIn();
-      return liveness.get(parent.variableIndices.get(desc));
+
+      Integer index = parent.variableIndices.get(desc);
+      if (index == null) {
+        return false;
+      }
+      return liveness.get(index);
     }
 
     public Set<BasicStatement> getEliminationSet() {

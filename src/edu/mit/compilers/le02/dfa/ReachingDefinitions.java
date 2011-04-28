@@ -123,7 +123,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
         new ArrayList<WorklistItem<BitSet>>();
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockDefinitions.get(pred);
-        ret.add(item);
+        if (item != null) {
+          ret.add(item);
+        }
       }
       return ret;
     }
