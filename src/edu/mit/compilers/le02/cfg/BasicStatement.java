@@ -9,9 +9,12 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public abstract class BasicStatement {
   private ASTNode node;
+  protected int uid;
   protected TypedDescriptor result;
   protected BasicStatementType type;
   protected RegisterLiveness registerLiveness;
+  
+  private static int nextUid = 0;
 
   public enum BasicStatementType {
     ARGUMENT,
@@ -22,6 +25,7 @@ public abstract class BasicStatement {
   }
 
   public BasicStatement(ASTNode node, TypedDescriptor result) {
+    this.uid = nextUid++;
     this.node = node;
     this.result = result;
     this.registerLiveness = new RegisterLiveness();

@@ -1,5 +1,6 @@
 package edu.mit.compilers.le02.cfg;
 
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
@@ -63,12 +64,18 @@ public final class OpStatement extends BasicStatement {
 
   @Override
   public String toString() {
-    return "OpStatement(" + op +
+    String s = "OpStatement" + uid + "(" + op +
       ((arg1 != null) ? ", " + arg1 : "") +
       ((arg2 != null && op != AsmOp.MOVE) ? ", " + arg2 : "") +
       ")" +
       ((result != null) ? ": " + result : "") +
       ((op == AsmOp.MOVE) ? ": " + arg2 : "");
+    
+    s += " LIVE: ";
+    for (Register r : registerLiveness.getLiveRegisters()) {
+      s += r + " ";
+    }
+    return s;
   }
 
 }

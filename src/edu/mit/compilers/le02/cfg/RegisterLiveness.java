@@ -92,6 +92,10 @@ public class RegisterLiveness {
   public Set<Register> getLiveRegisters() {
     return Collections.unmodifiableSet(liveRegisters);
   }
+
+  public Set<Register> getDyingRegisters() {
+    return Collections.unmodifiableSet(dyingRegisters);
+  }
   
   public Set<Register> getNonDyingRegisters() {
     HashSet<Register> set = new HashSet<Register>(liveRegisters);
