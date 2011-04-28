@@ -8,7 +8,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -27,7 +26,6 @@ import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.GenKillItem;
 import edu.mit.compilers.le02.dfa.Lattice;
-import edu.mit.compilers.le02.dfa.Liveness;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions;
 import edu.mit.compilers.le02.dfa.WorklistAlgorithm;
 import edu.mit.compilers.le02.dfa.WorklistItem;
@@ -48,7 +46,6 @@ public class RegisterVisitor extends BasicBlockVisitor
   private Map<TypedDescriptor, Register> allocatedGlobals;
   private InterferenceGraph ig;
   private ReachingDefinitions rd;
-  private Liveness liveness;
   private Pass pass;
   
   public static final int NUM_REGISTERS = 11;
@@ -65,8 +62,7 @@ public class RegisterVisitor extends BasicBlockVisitor
 
   public static void runRegisterAllocation(BasicBlockNode methodHead) {
     ReachingDefinitions rd = new ReachingDefinitions(methodHead);
-    Liveness liveness = new Liveness(methodHead);
-    RegisterVisitor visitor = new RegisterVisitor(rd, liveness);
+    RegisterVisitor visitor = new RegisterVisitor(rd);
 
     
     // == STAGE 1 ==
@@ -80,11 +76,13 @@ public class RegisterVisitor extends BasicBlockVisitor
     // the same uses.
     visitor.combineWebs();
     
+    /*
     if (CLI.debug) {
       for (Web w : visitor.finalWebs) {
         System.out.println(w);      
       }
     }
+    */
     
     // == STAGE 3 ==
     // In order to generate the interference graph in stage 4, we need
@@ -92,6 +90,26 @@ public class RegisterVisitor extends BasicBlockVisitor
     // webs are live in which blocks.
     visitor.pass = Pass.GENERATE_WEB_LIVENESS;
     visitor.visit(methodHead);
+    
+    if (CLI.debug) {
+      System.out.println("== WEB LIVENESS ==");
+      for (BasicBlockNode n : visitor.blockLiveness.keySet()) {
+        System.out.println("----- " + n.getId() + " -----");
+        for (BasicStatement st : n.getStatements()) {
+          System.out.println(st);
+        }
+        WebLiveness wl = visitor.blockLiveness.get(n);
+        System.out.println("*** GEN ***");
+        for (Web w : wl.theGen) {
+          System.out.println("  " + w.desc());
+        }
+        System.out.println("*** KILL ***");
+        for (Web w : wl.theKill) {
+          System.out.println("  " + w.desc());
+        }
+      }
+    }
+    
     WorklistAlgorithm.runBackwards(visitor.blockLiveness.values(), visitor);
     
     // == STAGE 4 ==
@@ -101,27 +119,29 @@ public class RegisterVisitor extends BasicBlockVisitor
     visitor.initInterferenceGraph();
     visitor.pass = Pass.GENERATE_IG;
     visitor.visit(methodHead);
+
     
     // == STAGE 5 ==
     // Now that we have an interference graph, we color the interference graph
     // and do a spill cost analysis on each of the webs to determing which
     visitor.allocateRegisters();
-    
+
+    /*
     if (CLI.debug) {
       System.out.println("== AFTER COLORING ==");
       for (Web w : visitor.finalWebs) {
         System.out.println(w);      
       }
     }
+    */
     
     // == STAGE 6 ==
     visitor.pass = Pass.INSERT_REGISTERS;
     visitor.visit(methodHead);
   }
   
-  public RegisterVisitor(ReachingDefinitions rd, Liveness liveness) {
+  public RegisterVisitor(ReachingDefinitions rd) {
     this.rd = rd;
-    this.liveness = liveness;
     
     this.defUses = new HashMap<BasicStatement, Web>();
     this.useToDefs = new HashMap<BasicStatement, List<Web>>();
@@ -234,7 +254,8 @@ public class RegisterVisitor extends BasicBlockVisitor
         addDefUse(op, desc, defs, localDefs);
       }
       
-      if (op.getArg2() != null && op.getArg2().getType() == ArgType.VARIABLE) {
+      if (op.getOp() != AsmOp.MOVE && 
+          op.getArg2() != null && op.getArg2().getType() == ArgType.VARIABLE) {
         desc = op.getArg2().getDesc();
         if (ALLOCATE_GLOBALS &&
             desc.getLocation().getLocationType() == LocationType.GLOBAL) {
@@ -426,6 +447,12 @@ public class RegisterVisitor extends BasicBlockVisitor
       new HashMap<TypedDescriptor, Web>();
     
     assert wl != null;
+    
+    /*
+    if (CLI.debug) {
+      System.out.println("Generating IG for " + node.getId());
+    }
+    */
 
     // Link all ending nodes
     int size = liveOnExit.size();
@@ -438,17 +465,13 @@ public class RegisterVisitor extends BasicBlockVisitor
       }
     }
     
+
+    // Traverse backwards through the statement list to compute liveness
     List<BasicStatement> stmts = node.getStatements();
-    ListIterator<BasicStatement> li = stmts.listIterator(stmts.size());
-    
-    if (stmts.isEmpty()) {
-      return;
-    }
+    Collections.reverse(stmts);
 
     ArrayList<Web> dying = new ArrayList<Web>();
-    // Traverse backwards through the statement list to compute liveness
-    for (BasicStatement stmt = li.previous(); li.hasPrevious(); 
-         stmt = li.previous()) {
+    for (BasicStatement stmt : stmts) {
       
       // We only care about Op and Call statements.
       if (stmt.getType() != BasicStatementType.OP
@@ -487,6 +510,15 @@ public class RegisterVisitor extends BasicBlockVisitor
           dyingWebsAtStatement.put(stmt, new ArrayList<Web>(dying));
         }
       }
+
+      /*
+      if (CLI.debug) {
+        System.out.println("Live at " + stmt + ":");
+        for (TypedDescriptor d : currentlyLive.keySet()) {
+          System.out.println(d);
+        }
+      }
+      */
       
       // Record liveness info
       liveWebsAtStatement.put(stmt, new ArrayList<Web>(currentlyLive.values()));
@@ -606,7 +638,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         List<Web> webs = useToDefs.get(stmt);
         List<Argument> args = call.getArgs();
         if (CLI.debug) {
-          System.out.println("Checking call " + call);
+          //System.out.println("Checking call " + call);
         }
         if (webs != null) {
           for (int i = 0; i < args.size(); i++) {
@@ -648,7 +680,7 @@ public class RegisterVisitor extends BasicBlockVisitor
       
       List<Web> webs = useToDefs.get(stmt);
       if (CLI.debug) {
-        System.out.println("Checking op " + op);
+        //System.out.println("Checking op " + op);
       }
       if (webs != null) {
         arg1 = convertArg(webs, op.getArg1());
@@ -675,6 +707,10 @@ public class RegisterVisitor extends BasicBlockVisitor
   
   private void setRegisterLivenessInfo(BasicStatement oldStatement, 
                                        BasicStatement newStatement) {
+    
+    if (CLI.debug) {
+      //System.out.println("Processing " + oldStatement + " and " + newStatement);
+    }
 
     Collection<Web> dyingWebs = dyingWebsAtStatement.get(oldStatement);
     Collection<Web> liveWebs = liveWebsAtStatement.get(oldStatement);
@@ -683,7 +719,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         Register r = registerMap.get(w.find().getColor());
         if (r != null) {
           if (CLI.debug) {
-            System.out.println("Setting " + r + " live at " + newStatement);
+            //System.out.println("Setting " + r + " live at " + newStatement);
           }
           newStatement.setRegisterLiveness(r, true);
         }
@@ -694,7 +730,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         Register r = registerMap.get(w.find().getColor());
         if (r != null) {
           if (CLI.debug) {
-            System.out.println("Setting " + r + " dying at " + newStatement);
+            //System.out.println("Setting " + r + " dying at " + newStatement);
           }
           newStatement.setRegisterDying(r, true);
         }
@@ -710,12 +746,12 @@ public class RegisterVisitor extends BasicBlockVisitor
     Register reg;
     for (Web w : webs) {
       if (CLI.debug) {
-        System.out.println("Desc: " + w.desc());
+        //System.out.println("Desc: " + w.desc());
       }
       if (w.desc().equals(arg.getDesc())) {
         reg = registerMap.get(w.find().getColor());
         if (CLI.debug) {
-          System.out.println("Found arg " + arg + " reg: " + reg);
+          //System.out.println("Found arg " + arg + " reg: " + reg);
         }
         if (reg != null) {
           return Argument.makeArgument(new AnonymousDescriptor(
@@ -730,6 +766,8 @@ public class RegisterVisitor extends BasicBlockVisitor
   
   
   private static class WebLiveness extends GenKillItem {
+    public Collection<Web> theGen;
+    public Collection<Web> theKill;
     private BitSet genSet = new BitSet();
     private BitSet killSet = new BitSet();
     private BasicBlockNode node;
@@ -743,6 +781,10 @@ public class RegisterVisitor extends BasicBlockVisitor
       this.node = node;
       setGen(gen);
       setKill(kill);
+      
+      // XXX: Debug only
+      theGen = new ArrayList<Web>(gen);
+      theKill =  new ArrayList<Web>(kill);
     }
     
     public void setGen(Collection<Web> gen) {
