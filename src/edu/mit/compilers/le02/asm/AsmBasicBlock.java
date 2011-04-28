@@ -9,10 +9,10 @@ import java.util.Set;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.SourceLocation;
-import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.SourceLocation;
+import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
@@ -22,8 +22,8 @@ import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
-import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.tools.CLI;
@@ -34,6 +34,7 @@ import edu.mit.compilers.tools.CLI;
  *
  * @author lizfong@mit.edu (Liz Fong)
  * @author mfrend@mit.edu (Maria Frendberg)
+ * @author dkoh@mit.edu (David Koh)
  *
  */
 
@@ -251,7 +252,7 @@ public class AsmBasicBlock implements AsmObject {
       Register.R8, // 5th arg
       Register.R9, // 6th arg
   };
-
+  
   /**
    * Generates the header for a method entry. Requires the method descriptor
    * and the number of locals to initialize.
@@ -400,6 +401,10 @@ public class AsmBasicBlock implements AsmObject {
       break;
      case DIVIDE:
      case MODULO:
+      // TODO: Get register liveness information here and check before reg spill
+      // Save the existing value in RAX
+      addInstruction(new AsmInstruction(
+        AsmOpCode.PUSHQ, Register.RAX, sl));
       // Division needs to use EAX for the dividend, and overwrites
       // EAX/EDX to store its outputs.
       addInstruction(new AsmInstruction(
@@ -442,6 +447,7 @@ public class AsmBasicBlock implements AsmObject {
       ErrorReporting.reportError(new AsmException(sl, "Unknown opcode."));
       return;
     }
+    
     Register resultReg = getResultRegister(op.getOp());
     if (op.getResult() != null) {
       addInstruction(new AsmInstruction(AsmOpCode.MOVL, resultReg,
@@ -450,9 +456,11 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(
           new AsmString("  /* Ignoring result assignment of conditional. */"));
     }
+    
     if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
-      // Restore the register we displaced for division/modulo.
+      // Restore the registers we displaced for division/modulo.
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, Register.RDX, sl));
+      addInstruction(new AsmInstruction(AsmOpCode.POPQ, Register.RAX, sl));
     }
   }
 
@@ -468,7 +476,7 @@ public class AsmBasicBlock implements AsmObject {
      case UNARY_MINUS:
       return Register.R10D;
      case DIVIDE:
-      // RDX is fixed to hold the quotient.
+      // RAX is fixed to hold the quotient.
      case EQUAL:
      case NOT_EQUAL:
      case LESS_THAN:
@@ -484,7 +492,7 @@ public class AsmBasicBlock implements AsmObject {
       return Register.R11D;
     }
   }
-
+  
   /**
    * Performs a boolean comparison of two arguments. The arguments must have
    * already been pulled out of memory.
@@ -527,24 +535,52 @@ public class AsmBasicBlock implements AsmObject {
   protected void generateCall(CallStatement call, MethodDescriptor thisMethod) {
     SourceLocation sl = call.getNode().getSourceLoc();
     // Push caller-saved variables that we've used and need to keep.
-    List<Register> usedRegisters = thisMethod.getUsedCallerRegisters();
+    List<Register> usedRegisters = call.getNonDyingCallerSavedRegisters();
+    if (CLI.debug) {
+      System.out.println("Used Registers: " + usedRegisters);
+    }
     for (Register r : usedRegisters) {
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, r, sl));
     }
-
+    
     // Push arguments.
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
-    for (int ii = args.size() - 1; ii >= 0; ii--) {
-      if (ii >= 6) {
+    
+    /*
+    boolean[] savedRegs= new boolean[6];
+    // TODO: check liveness of argument registers before saving
+    for (int ii = Math.min(args.size() - 1, 5); ii >= 0; ii--) {
+      Argument arg = args.get(ii);
+      if (!arg.isRegister() || 
+          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii]) {
         addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
-            prepareArgument(args.get(ii), true, thisMethod.getId(),
-              true, sl), sl));
-      } else {
-        addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
-            prepareArgument(args.get(ii), true, thisMethod.getId(),
-              true, sl), argumentRegisters[ii].toString(), sl));
+            argumentRegisters[ii].toString(), sl));
+        savedRegs[ii] = true;
       }
+    }
+    */
+    
+    for (int ii = args.size() - 1; ii >= 0; ii--) {
+      addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
+          prepareArgument(args.get(ii), true, thisMethod.getId(),
+              true, sl), sl));
+    }
+    
+    // XXX: For now, we push all the registers onto the stack and then
+    //      pop them into their registers, since we could have the %rdi
+    //      value be in %rsi, and the %rsi value be in %rdi.  We should
+    //      do this more efficiently in general, though.
+    for (int ii = 0; ii < Math.min(args.size(), 6); ii++) {
+      Argument arg = args.get(ii);
+      
+      // If the argument is already in the right place, do nothing
+      if (arg.isRegister() &&
+          arg.getDesc().getLocation().getRegister() == argumentRegisters[ii]) {
+        continue;
+      }
+      addInstruction(new AsmInstruction(AsmOpCode.POPQ,
+          argumentRegisters[ii].toString(), sl));
     }
 
     // Empty %rax to cope with printf vararg issue
@@ -555,12 +591,16 @@ public class AsmBasicBlock implements AsmObject {
     // This automatically pushes the return address; callee removes return addr
     addInstruction(new AsmInstruction(
         AsmOpCode.CALL, call.getMethodName(), sl));
-
+    
     // Pop arguments back off the stack.
     if (args.size() > 6) {
       addInstruction(new AsmInstruction(AsmOpCode.ADDQ,
           "$"  + (args.size() - 6) * 8, Register.RSP, sl));
     }
+
+    // Move RAX into the correct save location.
+    addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
+      convertVariableLocation(call.getResult().getLocation(), true), sl));
 
     // Pop the saved usedCallerRegisters back onto the stack.
     Collections.reverse(usedRegisters);
@@ -568,9 +608,6 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, r, sl));
     }
 
-    // Move RAX into the correct save location.
-    addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
-      convertVariableLocation(call.getResult().getLocation(), true), sl));
   }
 
   /**
@@ -579,6 +616,7 @@ public class AsmBasicBlock implements AsmObject {
    */
   protected String prepareArgument(Argument arg, boolean first,
       String methodName, boolean signExtend, SourceLocation sl) {
+
     Register tempStorage = first ? Register.R10 : Register.R11;
     switch (arg.getType()) {
      case CONST_BOOL:
@@ -596,10 +634,10 @@ public class AsmBasicBlock implements AsmObject {
           "$"  + ((ConstantArgument) arg).getInt(), tempStorage, sl));
       break;
      case VARIABLE:
-      addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
-        convertVariableLocation(
-          ((VariableArgument) arg).getDesc().getLocation(), false),
-          tempStorage, sl));
+        addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
+                    convertVariableLocation(
+                      ((VariableArgument) arg).getDesc().getLocation(), false),
+                    tempStorage, sl));
       break;
      case ARRAY_VARIABLE:
       ArrayVariableArgument ava = (ArrayVariableArgument) arg;
@@ -656,6 +694,9 @@ public class AsmBasicBlock implements AsmObject {
     switch (arg.getType()) {
      case VARIABLE:
       if (signExtend) {
+        if(CLI.debug) {
+          System.out.println(arg);
+        }
         addInstruction(new AsmInstruction(AsmOpCode.MOVQ, Register.R11,
           convertVariableLocation(
             ((VariableArgument) arg).getDesc().getLocation(), false), sl));

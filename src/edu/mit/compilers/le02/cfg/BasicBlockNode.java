@@ -231,5 +231,10 @@ public final class BasicBlockNode implements CFGNode {
   public String getMethod() {
     return method;
   }
+  
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
 
 }
