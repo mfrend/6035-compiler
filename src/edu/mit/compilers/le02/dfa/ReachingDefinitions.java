@@ -9,14 +9,20 @@ import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
+import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
+import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
+import edu.mit.compilers.le02.symboltable.MethodDescriptor;
+import edu.mit.compilers.le02.symboltable.ParamDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
  *
@@ -30,7 +36,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
   private Map<VariableLocation, BitSet> varDefinitions;
   private BitSet globalDefinitions;
   private List<BasicStatement> definitions;
-
+  private BasicBlockNode methodRoot;
 
   public class BlockItem extends GenKillItem {
     private ReachingDefinitions parent;
@@ -63,8 +69,12 @@ public class ReachingDefinitions extends BasicBlockVisitor
         index = parent.definitionIndices.get(s);
         this.genSet.set(index);
 
+        if (s.getType() == BasicStatementType.NOP) {
+          return;
+        }
+        
         this.killSet.or(parent.varDefinitions.get(
-            parent.getDefinitionTarget(s)));
+            parent.getDefinitionTarget(s)));  
       }
     }
 
@@ -158,6 +168,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.blockDefinitions = new HashMap<BasicBlockNode, BlockItem>();
     this.varDefinitions = new HashMap<VariableLocation, BitSet>();
     this.globalDefinitions = new BitSet();
+    this.methodRoot = methodRoot; 
+    
+    setupMethod();
     this.visit(methodRoot);
 
     for (BlockItem bi : blockDefinitions.values()) {
@@ -175,6 +188,40 @@ public class ReachingDefinitions extends BasicBlockVisitor
   @Override
   protected void processNode(BasicBlockNode node) {
     this.blockDefinitions.put(node, calcDefinitions(node));
+  }
+  
+  // Adds first statement in method as definition for arguments
+  private void setupMethod() {
+
+    ArrayList<BasicStatement> fakeDefs = new ArrayList<BasicStatement>();
+    
+    BasicStatement methodStart = methodRoot.getStatements().get(0);
+    
+    if (methodStart.getNode() == null) {
+      return;
+    }
+    
+    SymbolTable st = methodStart.getNode().getSymbolTable();
+    MethodDescriptor md = st.getMethod(methodRoot.getMethod());
+    List<ParamDescriptor> args = md.getParams();
+    for (ParamDescriptor arg : args) {
+      BasicStatement fakeDef = new FakeDefStatement(methodStart.getNode(), arg);
+      fakeDefs.add(fakeDef);
+      definitions.add(fakeDef);
+      int index = definitions.size() - 1;
+      definitionIndices.put(fakeDef, index);
+      BitSet bs = varDefinitions.get(arg.getLocation());
+      if (bs == null) {
+        bs = new BitSet();
+        varDefinitions.put(arg.getLocation(), bs);
+      }
+      bs.set(index);
+    }
+    
+    ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
+    newStmts.addAll(fakeDefs);
+    newStmts.addAll(methodRoot.getStatements());
+    methodRoot.setStatements(newStmts);
   }
 
   public BlockItem getDefinitions(BasicBlockNode node) {
@@ -206,6 +253,11 @@ public class ReachingDefinitions extends BasicBlockVisitor
 
       }
       else if (s.getType() == BasicStatementType.CALL) {
+        blockDefs.add(s);
+      }
+      else if (node == methodRoot &&
+               s.getType() == BasicStatementType.NOP &&
+               definitions.contains(s)) {
         blockDefs.add(s);
       }
     }
@@ -291,6 +343,24 @@ public class ReachingDefinitions extends BasicBlockVisitor
     BitSet ret = (BitSet) v1.clone();
     ret.or(v2);
     return ret;
+  }
+  
+  public static class FakeDefStatement extends NOPStatement {
+    private ParamDescriptor param;
+    public FakeDefStatement(ASTNode node, ParamDescriptor param) {
+      super(node);
+      this.type = BasicStatementType.NOP;
+      this.param = param;
+    }
+
+    public ParamDescriptor getParam() {
+      return param;
+    }
+
+    @Override
+    public String toString() {
+      return "FakeDefStatement " + param;
+    }
   }
 
 }

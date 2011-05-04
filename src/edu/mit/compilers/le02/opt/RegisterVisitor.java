@@ -10,12 +10,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.ast.ExpressionNode;
+import edu.mit.compilers.le02.cfg.ArgReassignStatement;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -24,12 +26,15 @@ import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.cfg.RegisterLiveness;
 import edu.mit.compilers.le02.dfa.GenKillItem;
 import edu.mit.compilers.le02.dfa.Lattice;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions;
+import edu.mit.compilers.le02.dfa.ReachingDefinitions.FakeDefStatement;
 import edu.mit.compilers.le02.dfa.WorklistAlgorithm;
 import edu.mit.compilers.le02.dfa.WorklistItem;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
+import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 import edu.mit.compilers.tools.CLI;
 
@@ -47,6 +52,9 @@ public class RegisterVisitor extends BasicBlockVisitor
   private InterferenceGraph ig;
   private ReachingDefinitions rd;
   private Pass pass;
+  private BasicStatement startOfMethod;
+  private MethodDescriptor methodDescriptor;
+  private ArgReassignStatement argReassign = null;
   
   public static final int NUM_REGISTERS = 11;
   public static final boolean ALLOCATE_GLOBALS = false;
@@ -60,10 +68,12 @@ public class RegisterVisitor extends BasicBlockVisitor
   }
 
 
-  public static void runRegisterAllocation(BasicBlockNode methodHead) {
+  public static void runRegisterAllocation(BasicBlockNode methodHead, 
+                                           MethodDescriptor md) {
     ReachingDefinitions rd = new ReachingDefinitions(methodHead);
     RegisterVisitor visitor = new RegisterVisitor(rd);
-
+    visitor.methodDescriptor = md;
+    visitor.startOfMethod = methodHead.getStatements().get(0);
     
     // == STAGE 1 ==
     // Generate def-use (DU) chains, which pair the definition of a variable
@@ -76,13 +86,12 @@ public class RegisterVisitor extends BasicBlockVisitor
     // the same uses.
     visitor.combineWebs();
     
-    /*
     if (CLI.debug) {
+      System.out.println("== WEBS ==");
       for (Web w : visitor.finalWebs) {
         System.out.println(w);      
       }
     }
-    */
     
     // == STAGE 3 ==
     // In order to generate the interference graph in stage 4, we need
@@ -238,6 +247,10 @@ public class RegisterVisitor extends BasicBlockVisitor
           localDefs.remove(d);  
         }
         
+        continue;
+      } else if (stmt instanceof FakeDefStatement) {
+        FakeDefStatement fds = (FakeDefStatement) stmt;
+        localDefs.put(fds.getParam(), fds);
         continue;
       } else if (stmt.getType() != BasicStatementType.OP) {
         continue;
@@ -547,8 +560,13 @@ public class RegisterVisitor extends BasicBlockVisitor
     // TODO: Register targeting, so we don't have to copy for things like
     //       arguments and return values, or idiv arguments
     if (numColors <= NUM_REGISTERS) {
+
       // Assign registers to everything, since we're ok (also the register
       // map is setup in the initialization).
+      for (int i = 0; i < numColors; i++) {
+        Register reg = registerMap.get(i);
+        methodDescriptor.markRegisterUsed(reg);
+      }
       return;
     }
     else {
@@ -597,6 +615,9 @@ public class RegisterVisitor extends BasicBlockVisitor
         // Assign a register to this color
         registerMap.put(list.get(0).getColor(), reg);
         
+        // Mark this register as used in the function
+        methodDescriptor.markRegisterUsed(reg);
+        
         // Mark any globals that have been assigned to a register as such,
         // so we can easily spill and restore them later.
         for (Web w : list) {
@@ -616,8 +637,6 @@ public class RegisterVisitor extends BasicBlockVisitor
   private void insertRegisters(BasicBlockNode node) {
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     
-    // TODO: spill everything before calls so that we don't screw up stuff
-    //       and restore everything after calls
     for (BasicStatement stmt : node.getStatements()) {
 
       Register reg;
@@ -659,12 +678,44 @@ public class RegisterVisitor extends BasicBlockVisitor
         setRegisterLivenessInfo(call, newCall);
         continue;
       }
+      else if (stmt.getType() == BasicStatementType.NOP) {
+        Web web = defUses.get(stmt);
+        if (web != null) {
+          reg = registerMap.get(web.find().getColor());
+          TypedDescriptor desc = web.find().desc();
+          if (reg != null) {
+            if (desc.getLocation().getLocationType() == LocationType.REGISTER) {
+              if (argReassign == null) {
+                argReassign = new ArgReassignStatement(startOfMethod.getNode());
+                newStmts.add(argReassign);  
+              }
+              argReassign.putRegPair(desc.getLocation().getRegister(), reg);
+            }
+            else {
+              BasicStatement bs;
+              bs = new OpStatement(startOfMethod.getNode(),
+                                   AsmOp.MOVE,
+                                   Argument.makeArgument(desc),
+                                   Argument.makeArgument(
+                                       new AnonymousDescriptor(
+                                           new RegisterLocation(reg),
+                                           web.find().desc())),
+                                   null);
+              newStmts.add(bs);  
+            }
+            
+          }
+        }
+        newStmts.add(stmt);
+        continue;
+      }
       else if (stmt.getType() != BasicStatementType.OP) {
         newStmts.add(stmt);
         continue;
       }
       
       OpStatement op = (OpStatement) stmt;
+      
       Argument arg1 = op.getArg1();
       Argument arg2 = op.getArg2();
       result = op.getTarget().getDesc();

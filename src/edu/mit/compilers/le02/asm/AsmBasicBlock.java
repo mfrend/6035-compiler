@@ -14,6 +14,7 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
+import edu.mit.compilers.le02.cfg.ArgReassignStatement;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -152,6 +153,26 @@ public class AsmBasicBlock implements AsmObject {
     } else if (stmt instanceof CallStatement) {
       generateCall((CallStatement) stmt, thisMethod);
       lastStatement = null;
+    } else if (stmt instanceof ArgReassignStatement) {
+      // TODO: make this algorithm reassign registers in a smarter way
+      ArgReassignStatement ars = (ArgReassignStatement) stmt;
+      ArrayList<Register> regs = new ArrayList<Register>();
+      
+      for (Register reg : ars.getRegMap().keySet()) {
+        regs.add(reg);
+      }
+      
+      for (Register reg : regs) {
+        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl));
+      }
+      
+      Collections.reverse(regs);
+      
+      for (Register from : regs) {
+        Register to = ars.getRegMap().get(from);
+        addInstruction(new AsmInstruction(AsmOpCode.POPQ, to, sl));
+      }
+      
     } else if (stmt instanceof NOPStatement) {
       // This is a nop; ignore it and continue onwards.
       return;
@@ -266,10 +287,12 @@ public class AsmBasicBlock implements AsmObject {
       // Save registers used in method.
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl));
     }
+    /*
     for (int ii = 0; ii < Math.min(desc.getParams().size(), 6); ii++) {
       desc.markRegisterUsed(argumentRegisters[ii]);
     }
     desc.markRegisterUsed(Register.R12);
+    */
   }
 
   /**
