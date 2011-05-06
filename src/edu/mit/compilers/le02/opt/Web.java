@@ -31,9 +31,12 @@ public class Web implements Comparable<Web> {
   private int _rank;
   private TypedDescriptor desc;
   private HashSet<BasicStatement> stmts;
+  private int id;
+  private static int nextID = 0;
   
   
   public Web(TypedDescriptor loc, BasicStatement def) {
+    this.id = nextID++;
     this.rep = this;
     this._rank = 0;
     this.desc = loc;
@@ -64,15 +67,15 @@ public class Web implements Comparable<Web> {
     
     if (this.rank() > other.rank()) {
       otherRoot.rep = thisRoot;
-      otherRoot.stmts.addAll(thisRoot.stmts);
+      thisRoot.stmts.addAll(otherRoot.stmts);
     }
     else if (other.rank() > this.rank()) {
       thisRoot.rep = otherRoot;
-      thisRoot.stmts.addAll(otherRoot.stmts);
+      otherRoot.stmts.addAll(thisRoot.stmts);
     }
     else {
       // other.rank() == this.rank()
-      thisRoot.rep = otherRoot;
+      otherRoot.rep = thisRoot;
       thisRoot.stmts.addAll(otherRoot.stmts);
       thisRoot._rank++;
     }
@@ -109,7 +112,11 @@ public class Web implements Comparable<Web> {
   
   @Override
   public String toString() {
-    String str =  "WEB\n"
+    return "Web" + id + " {" + desc + "}";
+  }
+  
+  public String longDesc() {
+    String str =  "WEB" + id + "\n"
                 + "  is rep: " + (this.find() == this.rep) + "\n"
                 + "  rank: " + _rank + "\n"
                 + "  desc: " + desc + "\n"
@@ -136,7 +143,7 @@ public class Web implements Comparable<Web> {
   
   @Override
   public int hashCode() {
-    return desc.hashCode() * stmts.size();
+    return desc.hashCode() * stmts.hashCode();
   }
 
   @Override

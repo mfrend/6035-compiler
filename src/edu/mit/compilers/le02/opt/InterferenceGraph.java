@@ -1,7 +1,5 @@
 package edu.mit.compilers.le02.opt;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
@@ -30,6 +28,7 @@ public class InterferenceGraph {
     IGNode n1, n2;
     n1 = nodes.get(w1);
     n2 = nodes.get(w2);
+
     n1.addNeighbor(n2);
     n2.addNeighbor(n1);
   }
@@ -111,6 +110,10 @@ public class InterferenceGraph {
     
     public int getColor() {
       return color;
+    }
+
+    public Web getWeb() {
+      return web;
     }
  
     public void setColor(int color) {
