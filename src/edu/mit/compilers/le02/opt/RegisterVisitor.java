@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import edu.mit.compilers.le02.RegisterLocation;
@@ -19,6 +18,7 @@ import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.ArgReassignStatement;
 import edu.mit.compilers.le02.cfg.Argument;
+import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
@@ -26,10 +26,10 @@ import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
-import edu.mit.compilers.le02.cfg.RegisterLiveness;
 import edu.mit.compilers.le02.dfa.GenKillItem;
 import edu.mit.compilers.le02.dfa.Lattice;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions;
+import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions.FakeDefStatement;
 import edu.mit.compilers.le02.dfa.WorklistAlgorithm;
 import edu.mit.compilers.le02.dfa.WorklistItem;
@@ -57,6 +57,10 @@ public class RegisterVisitor extends BasicBlockVisitor
   private ArgReassignStatement argReassign = null;
   
   public static final int NUM_REGISTERS = 11;
+  
+  // This boolean indicates whether or not to consider globals for allocation
+  // TODO: Add code to spill globals at appropriate times in order to allocate 
+  //       them temporarily within a block.
   public static final boolean ALLOCATE_GLOBALS = false;
   
 
@@ -79,7 +83,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     // Generate def-use (DU) chains, which pair the definition of a variable
     // with all of its reachable uses.
     visitor.pass = Pass.GENERATE_DU;
-    visitor.visit(methodHead);
+    visitor.visit(methodHead);  // generateDefUse(node)
     
     // == STAGE 2 ==
     // Generate webs from DU chains, by combining chains which share
@@ -98,8 +102,10 @@ public class RegisterVisitor extends BasicBlockVisitor
     // to use our existing variable liveness information to determine which
     // webs are live in which blocks.
     visitor.pass = Pass.GENERATE_WEB_LIVENESS;
-    visitor.visit(methodHead);
+    visitor.visit(methodHead); // generateWebLivenessInfo(node)
     
+    /* Commented to avoid huge dumps of debug data, but still occasionally
+     * useful.
     if (CLI.debug) {
       System.out.println("== WEB LIVENESS ==");
       for (BasicBlockNode n : visitor.blockLiveness.keySet()) {
@@ -118,7 +124,10 @@ public class RegisterVisitor extends BasicBlockVisitor
         }
       }
     }
-    
+    */
+
+    // This worklist algorithm fills out the global information for all
+    // of the block liveness values.
     WorklistAlgorithm.runBackwards(visitor.blockLiveness.values(), visitor);
     
     // == STAGE 4 ==
@@ -127,7 +136,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     // webs interfere with each other, thus generating an interference graph
     visitor.initInterferenceGraph();
     visitor.pass = Pass.GENERATE_IG;
-    visitor.visit(methodHead);
+    visitor.visit(methodHead); // generateInterferenceGraph(node)
 
     
     // == STAGE 5 ==
@@ -146,7 +155,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     
     // == STAGE 6 ==
     visitor.pass = Pass.INSERT_REGISTERS;
-    visitor.visit(methodHead);
+    visitor.visit(methodHead); // insertRegisters(node)
   }
   
   public RegisterVisitor(ReachingDefinitions rd) {
@@ -207,29 +216,33 @@ public class RegisterVisitor extends BasicBlockVisitor
   @SuppressWarnings("unused")
   private void generateDefUses(BasicBlockNode node) {
     Collection<BasicStatement> defs;
+    // The reaching definitions give definitions from other blocks that reach
+    // the start of this one.
     ReachingDefinitions.BlockItem bi = rd.getDefinitions(node);
+    
+    // The localDefs map keeps track of changes of the definition which reaches 
+    // each variable _within_ the block.
     HashMap<TypedDescriptor, BasicStatement> localDefs =
         new HashMap<TypedDescriptor, BasicStatement>();
     
+    // We are trying to fill out all of our def-use chains.  We do this
+    // by scanning the basic block for uses, and placing them in the web
+    // of each one of their reaching definitions in the defUses map.  We 
+    // also keep track of which defs correspond to each use in the 
+    // useToDefs map.
     TypedDescriptor desc;
     for (BasicStatement stmt : node.getStatements()) {
       
+      // Handle calls
       if (stmt.getType() == BasicStatementType.CALL) {
         CallStatement call = (CallStatement) stmt;
 
+        // Iterate over call argument to look for uses.
         for (Argument arg : call.getArgs()) {
-          if (arg.getType() == ArgType.VARIABLE) {
-            desc = arg.getDesc();
-            
-            if (ALLOCATE_GLOBALS &&
-                desc.getLocation().getLocationType() == LocationType.GLOBAL) {
-              continue;
-            }
-            defs = bi.getReachingDefinitions(desc.getLocation());
-            addDefUse(call, desc, defs, localDefs);
-          }
+          handleArg(bi, arg, call, localDefs);
         }
 
+        // If this is a definition, add it to the local definitions.
         if (call.getResult() != null) {
           localDefs.put(call.getResult(), call);
         }
@@ -249,6 +262,8 @@ public class RegisterVisitor extends BasicBlockVisitor
         
         continue;
       } else if (stmt instanceof FakeDefStatement) {
+        // Fake def statements are placeholders at the beginning of the method
+        // to be "definitions" for arguments passed into the method.
         FakeDefStatement fds = (FakeDefStatement) stmt;
         localDefs.put(fds.getParam(), fds);
         continue;
@@ -256,31 +271,66 @@ public class RegisterVisitor extends BasicBlockVisitor
         continue;
       }
 
+      // By here we've handled anything that's not an op.
       OpStatement op = (OpStatement)stmt;
-      if (op.getArg1() != null && op.getArg1().getType() == ArgType.VARIABLE) {
-        desc = op.getArg1().getDesc();
-        if (ALLOCATE_GLOBALS &&
-            desc.getLocation().getLocationType() == LocationType.GLOBAL) {
-          continue;
-        }
-        defs = bi.getReachingDefinitions(desc.getLocation());
-        addDefUse(op, desc, defs, localDefs);
+      
+      // Check both uses to see if they are variables
+      if (op.getArg1() != null) {
+        handleArg(bi, op.getArg1(), op, localDefs);
       }
       
-      if (op.getOp() != AsmOp.MOVE && 
-          op.getArg2() != null && op.getArg2().getType() == ArgType.VARIABLE) {
-        desc = op.getArg2().getDesc();
-        if (ALLOCATE_GLOBALS &&
-            desc.getLocation().getLocationType() == LocationType.GLOBAL) {
-          continue;
+      if (op.getArg2() != null) {
+        // If the op is a move, the second argument is a def and not a use.
+        if (op.getOp() != AsmOp.MOVE) {
+          handleArg(bi, op.getArg2(), op, localDefs);
+        } else if (op.getArg2().getType() == ArgType.ARRAY_VARIABLE) {
+          // If the second arg is an array variable, the index variable will
+          // still be used.
+          ArrayVariableArgument ava = (ArrayVariableArgument) op.getArg2();
+          handleArg(bi, ava.getIndex(), op, localDefs);
         }
-        defs = bi.getReachingDefinitions(desc.getLocation());
-        addDefUse(op, desc, defs, localDefs);
       }
       
+      // Update localDefs if this statement is a def.
       if (op.getTarget() != null) {
         localDefs.put(op.getTarget().getDesc(), op);
       }
+    }
+  }
+  
+  
+  /** This function determins if the argument is a variable, and if so adds it
+   * to the def-use webs.  It also handles the index if the argument is an
+   * array variable.
+   */
+  private void handleArg(BlockItem bi, Argument arg, BasicStatement stmt,
+                         HashMap<TypedDescriptor, BasicStatement> localDefs) {
+    
+    TypedDescriptor desc;
+    Collection<BasicStatement> defs;
+    
+    // If the argument is a variable, add it as a use
+    if (arg.getType() == ArgType.VARIABLE || 
+        arg.getType() == ArgType.ARRAY_VARIABLE) {
+      desc = arg.getDesc();
+      
+      // If we are allocating globals, or if the location isn't a global,
+      // then add it as a use, otherwise ignore it.
+      if (ALLOCATE_GLOBALS ||
+          desc.getLocation().getLocationType() != LocationType.GLOBAL) {
+        
+        defs = bi.getReachingDefinitions(desc.getLocation());
+        addDefUse(stmt, desc, defs, localDefs);
+      }
+
+    }
+    
+    // If the argument is an array variable, check the index as well.
+    if (arg.getType() == ArgType.ARRAY_VARIABLE) {
+      ArrayVariableArgument ava = (ArrayVariableArgument) arg;
+      
+      // We do this recursively in case the index is also an array variable.
+      handleArg(bi, ava.getIndex(), stmt, localDefs);
     }
   }
  
@@ -300,13 +350,15 @@ public class RegisterVisitor extends BasicBlockVisitor
     // If we have a local definition, that overrides the global definitions
     BasicStatement d = localDefs.get(loc);
     if (d != null) {
+      // Get the use web for this use's def, and add the use to it.
       Web uses = defUses.get(d);
       if (uses == null) {
         uses = new Web(loc, d);
       }
       uses.addStmt(use);
       defUses.put(d, uses);
-      
+
+      // Also, add this def's use web to this use's list of use webs.
       List<Web> webs = useToDefs.get(use);
       if (webs == null) {
         webs = new ArrayList<Web>();
@@ -316,14 +368,19 @@ public class RegisterVisitor extends BasicBlockVisitor
       return;
     }    
     
+    // If we don't have a local definition, then _every_ reaching definition
+    // for this basic block which defines loc should have this as a possible
+    // use.
     for (BasicStatement def : defs) {
+      // Get the use web for this use's def, and add the use to it.
       Web uses = defUses.get(def);
       if (uses == null) {
         uses = new Web(loc, def);
       }
       uses.addStmt(use);
       defUses.put(def, uses);
-      
+
+      // Also, add this def's use web to this use's list of use webs.
       List<Web> webs = useToDefs.get(use);
       if (webs == null) {
         webs = new ArrayList<Web>();
@@ -344,32 +401,43 @@ public class RegisterVisitor extends BasicBlockVisitor
         new HashMap<TypedDescriptor, Web>();
     
     HashSet<Web> finalWebSet = new HashSet<Web>();
-    
+
+    // For each use, we want to combine all webs which contain that use AND
+    // target the same variable.
     for (Entry<BasicStatement, List<Web>> entry : useToDefs.entrySet()) {
       List<Web> webs = entry.getValue();
       
+      // Iterate through all the webs that contain this use.
       Web finalWeb;
       for (Web web : webs) {
+        // For each web, get the merged web corresponding to this variable.
         finalWeb = finalWebMap.get(web.desc());
         
         if (finalWeb == null) {
+          // If the merged web doesn't exist, then it is just our current web.
           finalWeb = web;
         }
         else {
+          // Otherwise, merge our current web into the final web.
           assert finalWeb.desc().equals(web.desc());
           finalWeb.union(web);
         }
+        
+        // And replace the final web with the new merged version.
         finalWebMap.put(finalWeb.desc(), finalWeb.find());
       }
       
+      // Store all the merged webs we got in this round (eliminating duplicates)
+      // and clear out the web map for the next round.
       finalWebSet.addAll(finalWebMap.values());
       finalWebMap.clear();
     }
     
+    // Add all the merged webs to a list, and sort them, to make the coloring
+    // algorithm behave deterministically (to make debugging easier).  See the
+    // Web class for the sorting criteria.
     finalWebs.addAll(finalWebSet);
     
-    // This is purely to make the coloring deterministic, to make debugging
-    // easier.
     Collections.sort(finalWebs);
     for (int i = 0; i < finalWebs.size(); i++) {
       webIndices.put(finalWebs.get(i), i);
@@ -378,9 +446,14 @@ public class RegisterVisitor extends BasicBlockVisitor
   }
   
   /**
-   * Generates info about which webs are live at the beginning and end of a
-   * given node, using the variable liveness information from the Liveness
-   * object.
+   * Generates a WebLiveness object for each node, containing information about
+   * webs become live and dead locally, within the basic block.  This 
+   * information is then passed to a worklist algorithm to generate global web 
+   * liveness information for the entire method.
+   * 
+   * Note: The reason we have to generate liveness info again, is that our first
+   * pass generates info for variables, which is coarser-grained information
+   * than information about webs.  Otherwise, the algorithm is the same.
    * @param node
    */
   private void generateWebLivenessInfo(BasicBlockNode node) {
@@ -449,8 +522,6 @@ public class RegisterVisitor extends BasicBlockVisitor
   /**
    * Generates the interference graph by doing a per-statement liveness
    * calculation for the given block, and noting which webs interfere.
-   * TODO: Store this information so we can use it later on in register 
-   *       targeting and assembly generation 
    * @param node
    */
   private void generateInterferenceGraph(BasicBlockNode node) {
@@ -460,14 +531,8 @@ public class RegisterVisitor extends BasicBlockVisitor
       new HashMap<TypedDescriptor, Web>();
     
     assert wl != null;
-    
-    /*
-    if (CLI.debug) {
-      System.out.println("Generating IG for " + node.getId());
-    }
-    */
 
-    // Link all ending nodes
+    // Link all ending nodes in the interference graph.
     int size = liveOnExit.size();
     for (int i = 0; i < size; i++) {
       Web w1 = liveOnExit.get(i);
@@ -523,20 +588,9 @@ public class RegisterVisitor extends BasicBlockVisitor
           dyingWebsAtStatement.put(stmt, new ArrayList<Web>(dying));
         }
       }
-
-      /*
-      if (CLI.debug) {
-        System.out.println("Live at " + stmt + ":");
-        for (TypedDescriptor d : currentlyLive.keySet()) {
-          System.out.println(d);
-        }
-      }
-      */
       
       // Record liveness info
       liveWebsAtStatement.put(stmt, new ArrayList<Web>(currentlyLive.values()));
-      
-      //System.out.println("dying: " + dying + " live: " + currentlyLive.values());
     }
   }
   
@@ -638,7 +692,6 @@ public class RegisterVisitor extends BasicBlockVisitor
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     
     for (BasicStatement stmt : node.getStatements()) {
-
       Register reg;
       TypedDescriptor result = stmt.getResult();
       
@@ -656,9 +709,6 @@ public class RegisterVisitor extends BasicBlockVisitor
         CallStatement call = (CallStatement) stmt;
         List<Web> webs = useToDefs.get(stmt);
         List<Argument> args = call.getArgs();
-        if (CLI.debug) {
-          //System.out.println("Checking call " + call);
-        }
         if (webs != null) {
           for (int i = 0; i < args.size(); i++) {
             Argument arg = args.get(i);
@@ -720,6 +770,8 @@ public class RegisterVisitor extends BasicBlockVisitor
       Argument arg2 = op.getArg2();
       result = op.getTarget().getDesc();
       
+      // Using the web for the definition here, we want to update the register
+      // for the target.
       Web web = defUses.get(stmt);
       if (web != null) {
         reg = registerMap.get(web.find().getColor());
@@ -730,9 +782,6 @@ public class RegisterVisitor extends BasicBlockVisitor
       }
       
       List<Web> webs = useToDefs.get(stmt);
-      if (CLI.debug) {
-        //System.out.println("Checking op " + op);
-      }
       if (webs != null) {
         arg1 = convertArg(webs, op.getArg1());
         arg2 = convertArg(webs, op.getArg2());
@@ -740,13 +789,31 @@ public class RegisterVisitor extends BasicBlockVisitor
       
       OpStatement newOp;
       if (op.getOp() == AsmOp.MOVE) {
-        newOp = new OpStatement(op.getNode(), op.getOp(), 
-                                     arg1, Argument.makeArgument(result),
-                                     null);
-
+        // Convert the descriptor to an argument.
+        Argument resultArg = Argument.makeArgument(result);
         
-      }
-      else {
+        // If the argument is an array variable, we need to process more
+        if (op.getTarget().getType() == ArgType.ARRAY_VARIABLE) {
+          ArrayVariableArgument origTarget = 
+              (ArrayVariableArgument) op.getTarget();
+          Argument index = origTarget.getIndex();
+          
+          // The index uses are uses, so they need to be converted with the
+          // use webs for this statement.
+          if (webs != null) {
+            System.out.println("converting array arg");
+            index = convertArg(webs, index);
+            System.out.println("new index is: " + index);
+          }
+          System.out.println("result arg was: " + resultArg);
+          resultArg = Argument.makeArgument(result, index);
+          System.out.println("result arg is: " + resultArg);
+        }
+        newOp = new OpStatement(op.getNode(), op.getOp(), 
+                                     arg1, resultArg, null);
+        System.out.println("new statement is: " + newOp);
+        
+      } else {
         newOp = new OpStatement(op.getNode(), op.getOp(), 
                                      arg1, arg2, result);
       }
@@ -758,10 +825,6 @@ public class RegisterVisitor extends BasicBlockVisitor
   
   private void setRegisterLivenessInfo(BasicStatement oldStatement, 
                                        BasicStatement newStatement) {
-    
-    if (CLI.debug) {
-      //System.out.println("Processing " + oldStatement + " and " + newStatement);
-    }
 
     Collection<Web> dyingWebs = dyingWebsAtStatement.get(oldStatement);
     Collection<Web> liveWebs = liveWebsAtStatement.get(oldStatement);
@@ -769,9 +832,6 @@ public class RegisterVisitor extends BasicBlockVisitor
       for (Web w : liveWebs) {
         Register r = registerMap.get(w.find().getColor());
         if (r != null) {
-          if (CLI.debug) {
-            //System.out.println("Setting " + r + " live at " + newStatement);
-          }
           newStatement.setRegisterLiveness(r, true);
         }
       }
@@ -780,38 +840,43 @@ public class RegisterVisitor extends BasicBlockVisitor
       for (Web w : dyingWebs) {
         Register r = registerMap.get(w.find().getColor());
         if (r != null) {
-          if (CLI.debug) {
-            //System.out.println("Setting " + r + " dying at " + newStatement);
-          }
           newStatement.setRegisterDying(r, true);
         }
       }
     }
   }
   
+  // Given the list of colored webs, modify the argument to change all
+  // variable references to refer to their new register.
   private Argument convertArg(List<Web> webs, Argument arg) {
-    if (arg == null) {
-      return null;
+    if (arg == null || !arg.isVariable()) {
+      return arg;
     }
     
     Register reg;
+    TypedDescriptor newDesc = arg.getDesc();
+    System.out.println("Desc: " + arg.getDesc());
     for (Web w : webs) {
-      if (CLI.debug) {
-        //System.out.println("Desc: " + w.desc());
-      }
+      System.out.println("Web desc: " + w.desc());
       if (w.desc().equals(arg.getDesc())) {
         reg = registerMap.get(w.find().getColor());
-        if (CLI.debug) {
-          //System.out.println("Found arg " + arg + " reg: " + reg);
-        }
         if (reg != null) {
-          return Argument.makeArgument(new AnonymousDescriptor(
-                                           new RegisterLocation(reg),
-                                           w.desc()));
+          newDesc = new AnonymousDescriptor(new RegisterLocation(reg),
+                                            w.desc());
+          System.out.println("converted " + arg.getDesc() + " to " + newDesc);
+          break;
         }
-      }
+      }  
     }
-    return arg;
+    
+    // If the argument is an array variable, recursively convert the index.
+    if (arg.getType() == ArgType.ARRAY_VARIABLE) {
+      Argument newIndex = convertArg(webs,
+                                     ((ArrayVariableArgument) arg).getIndex());
+      return Argument.makeArgument(newDesc, newIndex);
+    } else {
+      return Argument.makeArgument(newDesc);
+    }
   }
 
   

@@ -559,9 +559,6 @@ public class AsmBasicBlock implements AsmObject {
     SourceLocation sl = call.getNode().getSourceLoc();
     // Push caller-saved variables that we've used and need to keep.
     List<Register> usedRegisters = call.getNonDyingCallerSavedRegisters();
-    if (CLI.debug) {
-      System.out.println("Used Registers: " + usedRegisters);
-    }
     for (Register r : usedRegisters) {
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, r, sl));
     }
