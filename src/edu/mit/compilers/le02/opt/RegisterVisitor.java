@@ -93,7 +93,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     if (CLI.debug) {
       System.out.println("== WEBS ==");
       for (Web w : visitor.finalWebs) {
-        System.out.println(w);      
+        System.out.println(w.longDesc());      
       }
     }
     
@@ -144,14 +144,12 @@ public class RegisterVisitor extends BasicBlockVisitor
     // and do a spill cost analysis on each of the webs to determing which
     visitor.allocateRegisters();
 
-    /*
     if (CLI.debug) {
       System.out.println("== AFTER COLORING ==");
       for (Web w : visitor.finalWebs) {
-        System.out.println(w);      
+        System.out.println(w.longDesc());      
       }
     }
-    */
     
     // == STAGE 6 ==
     visitor.pass = Pass.INSERT_REGISTERS;
@@ -515,7 +513,7 @@ public class RegisterVisitor extends BasicBlockVisitor
   private void initInterferenceGraph() {
     ig = new InterferenceGraph();
     for (Web w : finalWebs) {
-      ig.addNode(w);
+      ig.addNode(w.find());
     }
   }
 
@@ -531,15 +529,22 @@ public class RegisterVisitor extends BasicBlockVisitor
       new HashMap<TypedDescriptor, Web>();
     
     assert wl != null;
+    
+    if (CLI.debug) {
+      System.out.println("Processing == " + node.getId() + " ==");
+    }
 
     // Link all ending nodes in the interference graph.
     int size = liveOnExit.size();
     for (int i = 0; i < size; i++) {
       Web w1 = liveOnExit.get(i);
-      currentlyLive.put(w1.desc(), w1);
+      currentlyLive.put(w1.desc(), w1.find());
       for (int j = i+1; j < size; j++) {
         Web w2 = liveOnExit.get(j);
         ig.linkNodes(w1, w2);
+        if (CLI.debug) {
+          System.out.println("Linking " + w1 + " and " + w2);
+        }
       }
     }
     
@@ -547,9 +552,18 @@ public class RegisterVisitor extends BasicBlockVisitor
     // Traverse backwards through the statement list to compute liveness
     List<BasicStatement> stmts = node.getStatements();
     Collections.reverse(stmts);
+    
+    if (CLI.debug) {
+      for (Web w : currentlyLive.values()) {
+        System.out.println("Starting live: " + w);
+      }
+    }
 
     ArrayList<Web> dying = new ArrayList<Web>();
     for (BasicStatement stmt : stmts) {
+      if (CLI.debug) {
+        System.out.println("Processing statement " + stmt);
+      }
       
       // We only care about Op and Call statements.
       if (stmt.getType() != BasicStatementType.OP
@@ -562,6 +576,9 @@ public class RegisterVisitor extends BasicBlockVisitor
       //       variable becomes live at the beginning of the next statement.
       Web web = defUses.get(stmt);
       if (web != null) {
+        if (CLI.debug) {
+          System.out.println("Becoming dead " + web);
+        }
         currentlyLive.remove(web.desc());
       }
       
@@ -574,11 +591,17 @@ public class RegisterVisitor extends BasicBlockVisitor
         for (Web w : webs) {
           Web oldWeb = currentlyLive.get(w.desc());
           if (w.find() != oldWeb) {
+            if (CLI.debug) {
+              System.out.println("Becoming live " + w);
+            }
             Web newWeb = w.find();
             currentlyLive.put(newWeb.desc(), newWeb);
             dying.add(newWeb);
 
             for (Web w2 : currentlyLive.values()) {
+              if (CLI.debug) {
+                System.out.println("Linking " + w + " and " + w2);
+              }
               ig.linkNodes(newWeb, w2);
             }
           }
@@ -801,17 +824,12 @@ public class RegisterVisitor extends BasicBlockVisitor
           // The index uses are uses, so they need to be converted with the
           // use webs for this statement.
           if (webs != null) {
-            System.out.println("converting array arg");
             index = convertArg(webs, index);
-            System.out.println("new index is: " + index);
           }
-          System.out.println("result arg was: " + resultArg);
           resultArg = Argument.makeArgument(result, index);
-          System.out.println("result arg is: " + resultArg);
         }
         newOp = new OpStatement(op.getNode(), op.getOp(), 
                                      arg1, resultArg, null);
-        System.out.println("new statement is: " + newOp);
         
       } else {
         newOp = new OpStatement(op.getNode(), op.getOp(), 
@@ -855,15 +873,12 @@ public class RegisterVisitor extends BasicBlockVisitor
     
     Register reg;
     TypedDescriptor newDesc = arg.getDesc();
-    System.out.println("Desc: " + arg.getDesc());
     for (Web w : webs) {
-      System.out.println("Web desc: " + w.desc());
       if (w.desc().equals(arg.getDesc())) {
         reg = registerMap.get(w.find().getColor());
         if (reg != null) {
           newDesc = new AnonymousDescriptor(new RegisterLocation(reg),
                                             w.desc());
-          System.out.println("converted " + arg.getDesc() + " to " + newDesc);
           break;
         }
       }  
