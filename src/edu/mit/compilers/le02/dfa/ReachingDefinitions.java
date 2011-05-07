@@ -70,7 +70,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
         this.genSet.set(index);
 
         if (s.getType() == BasicStatementType.NOP) {
-          return;
+          continue;
         }
         
         this.killSet.or(parent.varDefinitions.get(
@@ -171,7 +171,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.methodRoot = methodRoot; 
     
     setupMethod();
-    this.visit(methodRoot);
+    this.visit(this.methodRoot);
 
     for (BlockItem bi : blockDefinitions.values()) {
       bi.init();
@@ -213,9 +213,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
       BitSet bs = varDefinitions.get(arg.getLocation());
       if (bs == null) {
         bs = new BitSet();
-        varDefinitions.put(arg.getLocation(), bs);
       }
       bs.set(index);
+      varDefinitions.put(arg.getLocation(), bs);
     }
     
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
@@ -243,9 +243,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
         BitSet bs = varDefinitions.get(target);
         if (bs == null) {
           bs = new BitSet();
-          varDefinitions.put(target, bs);
         }
         bs.set(index);
+        varDefinitions.put(target, bs);
 
         if (target.getLocationType() == LocationType.GLOBAL) {
           globalDefinitions.set(index);
@@ -255,9 +255,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       else if (s.getType() == BasicStatementType.CALL) {
         blockDefs.add(s);
       }
-      else if (node == methodRoot &&
-               s.getType() == BasicStatementType.NOP &&
-               definitions.contains(s)) {
+      else if (s instanceof FakeDefStatement) {
         blockDefs.add(s);
       }
     }
@@ -349,7 +347,6 @@ public class ReachingDefinitions extends BasicBlockVisitor
     private ParamDescriptor param;
     public FakeDefStatement(ASTNode node, ParamDescriptor param) {
       super(node);
-      this.type = BasicStatementType.NOP;
       this.param = param;
     }
 
