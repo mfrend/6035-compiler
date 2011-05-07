@@ -56,4 +56,12 @@ public final class VariableNode extends ExpressionNode {
   public DecafType getType() {
     return loc.getType();
   }
+
+@Override
+public int compare(ExpressionNode arg) {
+	if(arg instanceof VariableNode){
+		return this.getLoc().getName().compareTo(((VariableNode) arg).getLoc().getName());
+	}
+	return 0;
+}
 }

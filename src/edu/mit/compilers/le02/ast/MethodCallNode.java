@@ -90,4 +90,13 @@ public final class MethodCallNode extends CallNode {
   public DecafType getType() {
     return (desc == null) ? null : desc.getType();
   }
+
+@Override
+public int compare(ExpressionNode arg) {
+	if (arg instanceof MethodCallNode){
+		return this.getName().compareTo(((MethodCallNode) arg).getName());
+	} else {
+		return ExpressionNodeComparator.classCompare(this, arg);
+	}
+}
 }
