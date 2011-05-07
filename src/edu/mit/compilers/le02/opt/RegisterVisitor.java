@@ -56,7 +56,7 @@ public class RegisterVisitor extends BasicBlockVisitor
   private MethodDescriptor methodDescriptor;
   private ArgReassignStatement argReassign = null;
   
-  public static final int NUM_REGISTERS = 11;
+  public static final int NUM_REGISTERS = 10;
   
   // This boolean indicates whether or not to consider globals for allocation
   // TODO: Add code to spill globals at appropriate times in order to allocate 
@@ -116,11 +116,11 @@ public class RegisterVisitor extends BasicBlockVisitor
         WebLiveness wl = visitor.blockLiveness.get(n);
         System.out.println("*** GEN ***");
         for (Web w : wl.theGen) {
-          System.out.println("  " + w.desc());
+          System.out.println("  " + w);
         }
         System.out.println("*** KILL ***");
         for (Web w : wl.theKill) {
-          System.out.println("  " + w.desc());
+          System.out.println("  " + w);
         }
       }
     }
@@ -178,13 +178,13 @@ public class RegisterVisitor extends BasicBlockVisitor
     this.registerMap.put(4, Register.RDI);
     this.registerMap.put(5, Register.R8);
     this.registerMap.put(6, Register.R9);
-    this.registerMap.put(7, Register.R12);
-    this.registerMap.put(8, Register.R13);
-    this.registerMap.put(9, Register.R14);
-    this.registerMap.put(10, Register.R15);
+    this.registerMap.put(7, Register.R13);
+    this.registerMap.put(8, Register.R14);
+    this.registerMap.put(9, Register.R15);
     // These registers should be unallocated, as they are used as temps
     this.registerMap.put(-2, Register.R10);
     this.registerMap.put(-3, Register.R11);
+    this.registerMap.put(-4, Register.R12);
     this.registerMap.put(-1, Register.RAX);
   }
     
@@ -294,6 +294,16 @@ public class RegisterVisitor extends BasicBlockVisitor
         localDefs.put(op.getTarget().getDesc(), op);
       }
     }
+    
+    /*
+    if (node.isBranch()) {
+      BasicStatement stmt = node.getConditional();
+      if (stmt instanceof OpStatement) {
+        OpStatement op = (OpStatement) stmt;
+        if (op.getOp() == )
+      }
+    }
+    */
   }
   
   
@@ -685,7 +695,7 @@ public class RegisterVisitor extends BasicBlockVisitor
       });
       
       Register reg;
-      for (int i = 0; i < NUM_REGISTERS || i < webLists.size(); i++) {
+      for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
         reg = registerMap.get(i);
         List<Web> list = webLists.get(i);
         
