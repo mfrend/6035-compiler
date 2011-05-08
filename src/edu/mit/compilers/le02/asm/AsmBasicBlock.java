@@ -3,12 +3,15 @@ package edu.mit.compilers.le02.asm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
@@ -251,28 +254,15 @@ public class AsmBasicBlock implements AsmObject {
     } else if (stmt instanceof ArgReassignStatement) {
       // TODO: make this algorithm reassign registers in a smarter way
       ArgReassignStatement ars = (ArgReassignStatement) stmt;
-      ArrayList<Register> regs = new ArrayList<Register>();
-      Map<Register, Register> regMap = ars.getRegMap();
-
-      for (Register reg : regMap.keySet()) {
-        // If the register is not reassigned to itself, put it on a list
-        // of registers to reassign.
-        if (regMap.get(reg) != reg) {
-          regs.add(reg);
-        }
+      Map<Register, List<Register>> regMap =
+        new TreeMap<Register, List<Register>>();
+      for (Entry<Register, Register> entry : ars.getRegMap().entrySet()) {
+        List<Register> targets = new ArrayList<Register>();
+        targets.add(entry.getValue());
+        regMap.put(entry.getKey(), targets);
       }
 
-      for (Register reg : regs) {
-        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl));
-      }
-
-      Collections.reverse(regs);
-
-      for (Register from : regs) {
-        Register to = regMap.get(from);
-        addInstruction(new AsmInstruction(AsmOpCode.POPQ, to, sl));
-      }
-
+      swapRegisters(regMap, -1, sl);
     } else if (stmt instanceof NOPStatement) {
       // This is a nop; ignore it and continue onwards.
       return;
@@ -289,6 +279,51 @@ public class AsmBasicBlock implements AsmObject {
       ErrorReporting.reportError(new AsmException(sl,
           "Low level statement found at codegen time"));
       return;
+    }
+  }
+
+  private void swapRegisters(Map<Register, List<Register>> regMap,
+      int numArgs, SourceLocation sl) {
+    Map<Register, Register> subMap = new HashMap<Register, Register>();
+
+    for (Entry<Register, List<Register>> entry : regMap.entrySet()) {
+      Register value = entry.getKey();
+      // If the register is not reassigned to itself, put it on a list
+      // of registers to reassign.
+      // rdx's value in rcx, needs to go to rax
+      // when we swap rcx and rax:
+      // rdx's value now lives in rax
+      // the value in rax now lives in rcx.
+      Register location =
+        subMap.containsKey(value) ? subMap.get(value) : value;
+      Register target = entry.getValue().get(0);
+      Register targetValue = target;
+      for (Entry<Register, Register> subEntry : subMap.entrySet()) {
+        if (subEntry.getValue() == target) {
+          targetValue = subEntry.getKey();
+        }
+      }
+      if (target == location) {
+        continue;
+      }
+      if (isArgumentRegister(location, numArgs) || numArgs < 0) {
+        addInstruction(new AsmInstruction(
+            AsmOpCode.XCHGQ, location, target, sl));
+        subMap.put(value, target);
+        subMap.put(targetValue, location);
+      }
+    }
+    for (Register reg : regMap.keySet()) {
+      List<Register> targets = regMap.get(reg);
+      Register firstTarget = targets.get(0);
+      if (numArgs >= 0 && !isArgumentRegister(reg, numArgs)) {
+        addInstruction(new AsmInstruction(
+            AsmOpCode.MOVQ, reg, firstTarget, sl));
+      }
+      for (int ii = 1; ii < regMap.get(reg).size(); ii++) {
+        addInstruction(new AsmInstruction(
+            AsmOpCode.MOVQ, firstTarget, targets.get(ii), sl));
+      }
     }
   }
 
@@ -401,6 +436,9 @@ public class AsmBasicBlock implements AsmObject {
         AsmOpCode.ENTER,
         new StringAsmArg("$" + numLocals), new StringAsmArg("$0"), sl));
 
+    // R12 is a callee saved register and is modified during array accesses.
+    desc.markRegisterUsed(Register.R12);
+
     for (Register reg : desc.getUsedCalleeRegisters()) {
       // Save registers used in method.
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl));
@@ -411,7 +449,6 @@ public class AsmBasicBlock implements AsmObject {
         desc.markRegisterUsed(argumentRegisters[ii]);
       }
     }
-    //desc.markRegisterUsed(Register.R12);
   }
 
   /**
@@ -678,7 +715,8 @@ public class AsmBasicBlock implements AsmObject {
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
 
-    boolean[] pushedRegs = new boolean[6];
+    Map<Register, List<Register>> regMap =
+      new TreeMap<Register, List<Register>>();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
       // Arguments after arg 6 go on the stack in reverse order
       if (ii >= 6) {
@@ -689,35 +727,26 @@ public class AsmBasicBlock implements AsmObject {
       }
 
       // If the arguments before arg 6 are currently in an argument register,
-      // and is not in the right one, push it onto the stack
-      // (to be popped later)
+      // and is not in the right one, put it into transposition map.
       Argument arg = args.get(ii);
-      if (arg.isRegister() &&
-          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii] &&
-          isArgumentRegister(arg.getDesc().getLocation().getRegister())) {
-        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
-            prepareArgument(arg, null, true, AsmOp.PUSH, null, true, sl),
-            sl));
-        pushedRegs[ii] = true;
+      if (arg.isRegister()) {
+        Register source = arg.getDesc().getLocation().getRegister();
+        List<Register> targets;
+        if (regMap.containsKey(source)) {
+          targets = regMap.get(source);
+        } else {
+          targets = new ArrayList<Register>();
+        }
+        targets.add(argumentRegisters[ii]);
+        regMap.put(source, targets);
       }
     }
 
-    // XXX: For now, we push all the registers onto the stack and then
-    //      pop them into their registers, since we could have the %rdi
-    //      value be in %rsi, and the %rsi value be in %rdi.  We should
-    //      do this more efficiently in general, though.
+    swapRegisters(regMap, args.size(), sl);
+
     for (int ii = 0; ii < Math.min(args.size(), 6); ii++) {
       Argument arg = args.get(ii);
-      if (pushedRegs[ii]) {
-        // Arg has been pushed onto the stack
-        addInstruction(new AsmInstruction(AsmOpCode.POPQ,
-            argumentRegisters[ii], sl));
-      } else if (arg.isRegister() &&
-                 (arg.getDesc().getLocation().getRegister() ==
-                  argumentRegisters[ii])) {
-        // Arg is already in the right place
-        continue;
-      } else {
+      if (!arg.isRegister()) {
         // Arg needs to be moved into its register
         addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
             prepareArgument(args.get(ii),
@@ -756,8 +785,8 @@ public class AsmBasicBlock implements AsmObject {
     }
   }
 
-  protected boolean isArgumentRegister(Register r) {
-    for (int i = 0; i < 6; i++) {
+  protected boolean isArgumentRegister(Register r, int numArgs) {
+    for (int i = 0; i < Math.min(numArgs, 6); i++) {
       if (argumentRegisters[i] == r) {
         return true;
       }
