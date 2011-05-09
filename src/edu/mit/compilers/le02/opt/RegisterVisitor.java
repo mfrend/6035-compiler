@@ -512,8 +512,12 @@ public class RegisterVisitor extends BasicBlockVisitor
       }
     }
 
-    blockLiveness.put(node, new WebLiveness(this, node, 
-                                            genMap.values(), killSet));
+    WebLiveness webLiveness = new WebLiveness(this, node, 
+                                              genMap.values(), killSet);
+    if (webLiveness.successors().isEmpty()) {
+        webLiveness.setOut(bottom());
+    }
+    blockLiveness.put(node, webLiveness);
   }
   
   /**
