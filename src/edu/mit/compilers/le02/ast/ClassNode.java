@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.symboltable.ClassDescriptor;
@@ -33,6 +34,28 @@ public final class ClassNode extends ASTNode {
     children.addAll(fields);
     children.addAll(methods);
     return children;
+  }
+
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    ListIterator<FieldDeclNode> fieldIter = fields.listIterator();
+    while (fieldIter.hasNext()) {
+      if ((fieldIter.next() == prev) && (next instanceof FieldDeclNode)) {
+        next.setParent(this);
+        fieldIter.set((FieldDeclNode)next);
+        return true;
+      }
+    }
+
+    ListIterator<MethodDeclNode> methodIter = methods.listIterator();
+    while (methodIter.hasNext()) {
+      if ((methodIter.next() == prev) && (next instanceof MethodDeclNode)) {
+        next.setParent(this);
+        methodIter.set((MethodDeclNode)next);
+        return true;
+      }
+    }
+    return false;
   }
 
   public List<FieldDeclNode> getFields() {

@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.SourceLocation;
@@ -30,6 +31,19 @@ public final class MethodCallNode extends CallNode {
     List<ASTNode> children = new ArrayList<ASTNode>();
     children.addAll(args);
     return children;
+  }
+
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    ListIterator<ExpressionNode> iter = args.listIterator();
+    while (iter.hasNext()) {
+      if ((iter.next() == prev) && (next instanceof ExpressionNode)) {
+        next.setParent(this);
+        iter.set((ExpressionNode)next);
+        return true;
+      }
+    }
+    return false;
   }
 
   public List<ExpressionNode> getArgs() {

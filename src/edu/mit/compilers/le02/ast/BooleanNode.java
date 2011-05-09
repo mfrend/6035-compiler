@@ -19,6 +19,11 @@ public final class BooleanNode extends ExpressionNode {
     return Collections.emptyList();
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
   public boolean getValue() {
     return value;
   }

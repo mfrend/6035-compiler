@@ -17,6 +17,11 @@ public final class ContinueNode extends StatementNode {
   }
 
   @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
+  @Override
   public <T> T accept(ASTNodeVisitor<T> v) {
     return v.visit(this);
   }

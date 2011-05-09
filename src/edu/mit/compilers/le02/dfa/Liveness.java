@@ -145,10 +145,6 @@ implements Lattice<BitSet, BasicBlockNode> {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
 
-      if (returns) {
-        return ret;
-      }
-
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockItems.get(pred);
         if (item != null) {
@@ -162,6 +158,10 @@ implements Lattice<BitSet, BasicBlockNode> {
     public Collection<WorklistItem<BitSet>> successors() {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
+
+      if (returns) {
+        return ret;
+      }
 
       WorklistItem<BitSet> item;
       if (node.getNext() != null) {
@@ -257,7 +257,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
 
     BlockItem ret = new BlockItem(this, node, statements);
-    if ((node.getNext() == null) && (node.getBranchTarget() == null)) {
+    if (ret.successors().isEmpty()) {
       ret.setOut(globalSet);
     }
     return ret;

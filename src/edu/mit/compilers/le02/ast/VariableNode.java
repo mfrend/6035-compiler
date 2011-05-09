@@ -20,6 +20,16 @@ public final class VariableNode extends ExpressionNode {
     return Util.makeList((ASTNode)loc);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((loc == prev) && (next instanceof LocationNode)) {
+      loc = (LocationNode)next;
+      loc.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public void setLoc(LocationNode loc) {
     this.loc = loc;
   }
