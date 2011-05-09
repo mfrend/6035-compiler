@@ -58,7 +58,7 @@ public class WorklistAlgorithm {
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
-      if (!item.successors().isEmpty()) {
+      if (item.getOut() == null) {
         item.setOut(lattice.bottom());
       } else {
         worklist.remove(item);
