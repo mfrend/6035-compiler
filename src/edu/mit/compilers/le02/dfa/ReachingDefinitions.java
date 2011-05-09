@@ -55,22 +55,28 @@ public class ReachingDefinitions extends BasicBlockVisitor
         if (s.getType() == BasicStatementType.CALL) {
           this.genSet.andNot(parent.globalDefinitions);
           this.killSet.or(parent.globalDefinitions);
-          continue;
+          if (!isDefinition(s)) {
+            continue;
+          }
         }
 
-        OpStatement def = (OpStatement) s;
         index = parent.definitionIndices.get(s);
         this.genSet.set(index);
 
         this.killSet.or(parent.varDefinitions.get(
-            parent.getDefinitionTarget(def)));
+            parent.getDefinitionTarget(s)));
       }
     }
 
     public Collection<BasicStatement>
     getReachingDefinitions(VariableLocation loc) {
       BitSet ret = (BitSet) this.getIn().clone();
-      ret.and(parent.varDefinitions.get(loc));
+      BitSet varDefs = parent.varDefinitions.get(loc);
+      if (varDefs == null) {
+        return Collections.emptyList();
+      }
+      
+      ret.and(varDefs);
       return getBitsetDefinitions(ret);
     }
 
@@ -178,8 +184,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
 
     for (BasicStatement s : node.getStatements()) {
       if (isDefinition(s)) {
-        OpStatement def = (OpStatement) s;
-        VariableLocation target = getDefinitionTarget(def);
+        VariableLocation target = getDefinitionTarget(s);
 
         blockDefs.add(s);
         definitions.add(s);
@@ -208,7 +213,10 @@ public class ReachingDefinitions extends BasicBlockVisitor
   }
 
   private boolean isDefinition(BasicStatement s) {
-    if (!(s instanceof OpStatement)) {
+    if (s.getType() == BasicStatementType.CALL && s.getResult() != null) {
+      return true;
+    }
+    else if (!(s instanceof OpStatement)) {
       return false;
     }
 
@@ -228,7 +236,12 @@ public class ReachingDefinitions extends BasicBlockVisitor
     }
   }
 
-  private VariableLocation getDefinitionTarget(OpStatement def) {
+  private VariableLocation getDefinitionTarget(BasicStatement s) {
+    if (s.getType() == BasicStatementType.CALL && s.getResult() != null) {
+      return s.getResult().getLocation();
+    }
+    
+    OpStatement def = (OpStatement) s;
     switch (def.getOp()) {
       case MOVE:
         return ((VariableArgument) def.getArg2()).getDesc().getLocation();

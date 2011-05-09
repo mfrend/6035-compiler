@@ -33,14 +33,16 @@ public class InterferenceGraph {
     int max = -1;
     IGNode maxNode = null;
     for (IGNode node : nodes.values()) {
+      if (node.wasRemoved()) {
+        continue;
+      }
       if (node.getDegree() > max) {
         max = node.getDegree();
         maxNode = node;
       }
     }
     
-    maxNode.removeFromNeighbors();
-    
+    maxNode.simulateRemove();
     return maxNode;
   }
   
@@ -51,7 +53,9 @@ public class InterferenceGraph {
     }
     
     int color = 0;
-    while (colors.contains(color)) {}
+    while (colors.contains(color)) {
+      color++;
+    }
     
     node.setColor(color);
     return color;
@@ -61,7 +65,7 @@ public class InterferenceGraph {
     Stack<IGNode> stack = new Stack<IGNode>();
     int numColors = 0;
     
-    while (!isEmpty()) {
+    for (int i = 0; i < nodes.size(); i++) {
       stack.push(removeHighestDegree());
     }
     
@@ -79,10 +83,20 @@ public class InterferenceGraph {
     private Web web;
     private int color = -1;
     private int degree = 0;
+    private boolean removed = false;
     private Set<IGNode> neighbors = new HashSet<IGNode>();
     
     public IGNode(Web web) {
       this.web = web;
+    }
+    
+    public void reset() {
+      removed = false;
+      degree = neighbors.size();
+    }
+    
+    public boolean wasRemoved() {
+      return removed;
     }
     
     public int getDegree() {
@@ -110,20 +124,28 @@ public class InterferenceGraph {
       neighbors.add(node);
       degree += 1;
     }
-    
-    public void removeNeighbor(IGNode node) {
+  
+    public void simulateRemoveNeighbor(IGNode node) {
       if (!neighbors.contains(node)) {
         return;
       }
       
-      neighbors.remove(node);
       degree -= 1;
     }
     
-    public void removeFromNeighbors() {
+    public void simulateRemove() {
       for (IGNode n : neighbors) {
-        n.removeNeighbor(this);
+        n.simulateRemoveNeighbor(this);
       }
+      removed = true;
+    }
+    
+    @Override
+    public String toString() {
+      return "NODE\ndegree: " + getDegree() + "\n"
+           + "color: " + color + "\n"
+           + "removed: " + removed + "\n"
+           + "# neighbors: " + neighbors.size() + "\n";
     }
 
   };

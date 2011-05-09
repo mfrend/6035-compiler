@@ -14,6 +14,7 @@ import edu.mit.compilers.le02.opt.BasicBlockVisitor;
 import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
 import edu.mit.compilers.le02.opt.GlobalCseVisitor;
+import edu.mit.compilers.le02.opt.RegisterVisitor;
 
 public class BasicBlockGraph {
   private static int id;
@@ -77,6 +78,11 @@ public class BasicBlockGraph {
         if (n.getStatements().isEmpty()) {
           n.removeFromCFG();
         }
+      }
+
+      // Run register allocation.
+      if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
+        RegisterVisitor.runRegisterAllocation(methodEnter);
       }
 
       // All of these optimizations change the number of local variables.

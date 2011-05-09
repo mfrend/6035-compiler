@@ -11,12 +11,16 @@ import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.VariableLocation.LocationType;
+import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
+import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.Liveness;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
@@ -42,6 +46,42 @@ public class RegisterVisitor extends BasicBlockVisitor {
   }
 
 
+  public static void runRegisterAllocation(BasicBlockNode methodHead) {
+    ReachingDefinitions rd = new ReachingDefinitions(methodHead);
+    Liveness liveness = new Liveness(methodHead);
+    RegisterVisitor visitor = new RegisterVisitor(rd, liveness);
+    
+    // Generate DU chains
+    visitor.pass = Pass.GENERATE_DU;
+    visitor.visit(methodHead);
+    
+    
+    // Generate webs from DU chains
+    visitor.combineWebs();
+    
+    for (Web w : visitor.finalWebs) {
+      System.out.println(w);      
+    }
+    
+    
+    // Annotate blocks with web liveness info
+    visitor.pass = Pass.GENERATE_WEB_LIVENESS;
+    visitor.visit(methodHead);
+    
+    // Generate interference graph from annotated blocks
+    visitor.initInterferenceGraph();
+    visitor.pass = Pass.GENERATE_IG;
+    visitor.visit(methodHead);
+    
+    visitor.allocateRegisters();
+    System.out.println("== AFTER COLORING ==");
+    for (Web w : visitor.finalWebs) {
+      System.out.println(w);      
+    }
+    visitor.pass = Pass.INSERT_REGISTERS;
+    visitor.visit(methodHead);
+  }
+  
   public RegisterVisitor(ReachingDefinitions rd, Liveness liveness) {
     this.rd = rd;
     this.liveness = liveness;
@@ -69,31 +109,6 @@ public class RegisterVisitor extends BasicBlockVisitor {
     this.registerMap.put(13, Register.R11);
   }
   
-  public static void getWebs(BasicBlockNode methodHead) {
-    ReachingDefinitions rd = new ReachingDefinitions(methodHead);
-    Liveness liveness = new Liveness(methodHead);
-    RegisterVisitor visitor = new RegisterVisitor(rd, liveness);
-    
-    // Generate DU chains
-    visitor.pass = Pass.GENERATE_DU;
-    visitor.visit(methodHead);
-    
-    // Generate webs from DU chains
-    visitor.combineWebs();
-    
-    // Annotate blocks with web liveness info
-    visitor.pass = Pass.GENERATE_WEB_LIVENESS;
-    visitor.visit(methodHead);
-    
-    // Generate interference graph from annotated blocks
-    visitor.initInterferenceGraph();
-    visitor.pass = Pass.GENERATE_IG;
-    visitor.visit(methodHead);
-    
-    visitor.allocateRegisters();
-    visitor.pass = Pass.INSERT_REGISTERS;
-    visitor.visit(methodHead);
-  }
 
   private void insertRegisters(BasicBlockNode node) {
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
@@ -101,9 +116,39 @@ public class RegisterVisitor extends BasicBlockVisitor {
     // TODO: spill everything before calls so that we don't screw up stuff
     //       and restore everything after calls
     for (BasicStatement stmt : node.getStatements()) {
+
+      Register reg;
+      TypedDescriptor result = stmt.getResult();
       
-      // Only ops are in def-use chains
-      if (stmt.getType() != BasicStatementType.OP) {
+      if (stmt.getType() == BasicStatementType.CALL) {
+        Web web = defUses.get(stmt);
+        if (web != null) {
+          reg = registerMap.get(web.find().getColor());
+          if (reg != null) {
+            result = new AnonymousDescriptor(new RegisterLocation(reg));
+          }
+        }
+        
+        CallStatement call = (CallStatement) stmt;
+        List<Web> webs = useToDefs.get(stmt);
+        List<Argument> args = call.getArgs();
+        System.out.println("Checking call " + call);
+        if (webs != null) {
+          for (int i = 0; i < args.size(); i++) {
+            Argument arg = args.get(i);
+            arg = convertArg(webs, arg);
+            args.set(i, arg);
+          }
+        }
+       
+        newStmts.add(new CallStatement(((ExpressionNode) call.getNode()), 
+                                       call.getMethodName(), 
+                                       args, 
+                                       result, 
+                                       call.isCallout()));
+        continue;
+      }
+      else if (stmt.getType() != BasicStatementType.OP) {
         newStmts.add(stmt);
         continue;
       }
@@ -111,9 +156,8 @@ public class RegisterVisitor extends BasicBlockVisitor {
       OpStatement op = (OpStatement) stmt;
       Argument arg1 = op.getArg1();
       Argument arg2 = op.getArg2();
-      TypedDescriptor result = op.getResult();
+      result = op.getResult();
       
-      Register reg;
       Web web = defUses.get(stmt);
       if (web != null) {
         reg = registerMap.get(web.find().getColor());
@@ -123,27 +167,39 @@ public class RegisterVisitor extends BasicBlockVisitor {
       }
       
       List<Web> webs = useToDefs.get(stmt);
-      for (Web w : webs) {
-        if (w.desc().equals(op.getArg1())) {
-          reg = registerMap.get(w.find().getColor());
-          if (reg != null) {
-            arg1 = Argument.makeArgument(new AnonymousDescriptor(
-                                             new RegisterLocation(reg)));
-          }
-        }
-        else if (w.desc().equals(op.getArg2())) {
-          reg = registerMap.get(w.find().getColor());
-          if (reg != null) {
-            arg2 = Argument.makeArgument(new AnonymousDescriptor(
-                                             new RegisterLocation(reg)));
-          }
-        }
+      System.out.println("Checking op " + op);
+      if (webs != null) {
+        arg1 = convertArg(webs, op.getArg1());
+        arg2 = convertArg(webs, op.getArg2());
       }
       
-      newStmts.add(new OpStatement(op.getNode(), op.getOp(), 
-                                   arg1, arg2, result));
+      if (op.getOp() == AsmOp.MOVE) {
+        newStmts.add(new OpStatement(op.getNode(), op.getOp(), 
+                                     arg1, Argument.makeArgument(result),
+                                     null));
+      }
+      else {
+        newStmts.add(new OpStatement(op.getNode(), op.getOp(), 
+                                     arg1, arg2, result));
+      }
     }
     node.setStatements(newStmts);
+  }
+  
+  private Argument convertArg(List<Web> webs, Argument arg) {
+    Register reg;
+    for (Web w : webs) {
+      System.out.println("Desc: " + w.desc());
+      if (w.desc().equals(arg.getDesc())) {
+        reg = registerMap.get(w.find().getColor());
+        System.out.println("Found arg " + arg + " reg: " + reg);
+        if (reg != null) {
+          return Argument.makeArgument(new AnonymousDescriptor(
+                                           new RegisterLocation(reg)));
+        }
+      }
+    }
+    return arg;
   }
   
   private void allocateRegisters() {
@@ -190,30 +246,61 @@ public class RegisterVisitor extends BasicBlockVisitor {
   private void generateDefUses(BasicBlockNode node) {
     Collection<BasicStatement> defs;
     ReachingDefinitions.BlockItem bi = rd.getDefinitions(node);
+    HashMap<TypedDescriptor, BasicStatement> localDefs =
+        new HashMap<TypedDescriptor, BasicStatement>();
+    
+    TypedDescriptor desc;
     for (BasicStatement stmt : node.getStatements()) {
       
+      if (stmt.getType() == BasicStatementType.CALL) {
+        CallStatement call = (CallStatement) stmt;
+
+        for (Argument arg : call.getArgs()) {
+          if (arg.getType() == ArgType.VARIABLE) {
+            desc = arg.getDesc();
+            defs = bi.getReachingDefinitions(desc.getLocation());
+            addDefUse(call, desc, defs, localDefs);
+          }
+        }
+
+        if (call.getResult() != null) {
+          localDefs.put(call.getResult(), call);
+        }
+        
+        for (TypedDescriptor d : localDefs.keySet()) {
+          if (d.getLocation().getLocationType() == LocationType.GLOBAL) {
+            localDefs.remove(d);
+          }
+        }
+        continue;
+      }
+      
       // Only ops are in def-use chains
-      if (stmt.getType() != BasicStatementType.OP) {
+      else if (stmt.getType() != BasicStatementType.OP) {
         continue;
       }
 
       OpStatement op = (OpStatement)stmt;
-      TypedDescriptor desc;
       if (op.getArg1().getType() == ArgType.VARIABLE) {
         desc = op.getArg1().getDesc();
         defs = bi.getReachingDefinitions(desc.getLocation());
-        addDefUse(op, desc, defs);
+        addDefUse(op, desc, defs, localDefs);
       }
       
       if (op.getArg2().getType() == ArgType.VARIABLE) {
         desc = op.getArg2().getDesc();
         defs = bi.getReachingDefinitions(desc.getLocation());
-        addDefUse(op, desc, defs);
+        addDefUse(op, desc, defs, localDefs);
+      }
+      
+      if (op.getTarget() != null) {
+        localDefs.put(op.getTarget().getDesc(), op);
       }
     }
   }
   
   private void initInterferenceGraph() {
+    ig = new InterferenceGraph();
     for (Web w : finalWebs) {
       ig.addNode(w);
     }
@@ -239,7 +326,8 @@ public class RegisterVisitor extends BasicBlockVisitor {
     
     for (BasicStatement stmt : node.getStatements()) {
       // Only ops are in def-use chains
-      if (stmt.getType() != BasicStatementType.OP) {
+      if (stmt.getType() != BasicStatementType.OP
+          && stmt.getType() != BasicStatementType.CALL) {
         continue;
       }
       
@@ -271,7 +359,8 @@ public class RegisterVisitor extends BasicBlockVisitor {
     
     for (BasicStatement stmt : node.getStatements()) {
       // Only ops are in def-use chains
-      if (stmt.getType() != BasicStatementType.OP) {
+      if (stmt.getType() != BasicStatementType.OP 
+          && stmt.getType() != BasicStatementType.CALL) {
         continue;
       }
       
@@ -332,7 +421,29 @@ public class RegisterVisitor extends BasicBlockVisitor {
    */
   private void addDefUse(BasicStatement use,
                          TypedDescriptor loc, 
-                         Collection<BasicStatement> defs) {
+                         Collection<BasicStatement> defs,
+                         HashMap<TypedDescriptor, BasicStatement> localDefs) {
+    
+    // If we have a local definition, that overrides the global definitions
+    BasicStatement d = localDefs.get(loc);
+    if (d != null) {
+      Web uses = defUses.get(d);
+      if (uses == null) {
+        uses = new Web(loc, d);
+      }
+      uses.addStmt(use);
+      defUses.put(d, uses);
+      
+      List<Web> webs = useToDefs.get(use);
+      if (webs == null) {
+        webs = new ArrayList<Web>();
+      }
+      webs.add(uses);
+      useToDefs.put(use, webs);
+      return;
+    }
+    
+    
     for (BasicStatement def : defs) {
       Web uses = defUses.get(def);
       if (uses == null) {

@@ -106,5 +106,22 @@ public class Web {
   public int getSpillCost() {
     return this.stmts.size();
   }
+  
+  @Override
+  public String toString() {
+    String str =  "WEB\n"
+                + "  is rep: " + (this.find() == this.rep) + "\n"
+                + "  rank: " + _rank + "\n"
+                + "  desc: " + desc + "\n"
+                + "  color: " + color + "\n"
+                + "  statments: \n";
+                
+    
+    for (BasicStatement s : stmts) {
+      str += "  " + s + "\n";
+    }
+
+    return str;
+  }
 
 }
