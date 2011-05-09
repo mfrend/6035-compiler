@@ -9,6 +9,7 @@ import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayLocationNode;
@@ -41,6 +42,9 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.le02.symboltable.SymbolTable.SymbolType;
+import edu.mit.compilers.le02.symboltable.Descriptor;
+import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
@@ -502,13 +506,51 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       index = Argument.makeArgument(indexTemp);
       indexFrag = indexFrag.append(new SimpleCFGNode(
         new OpStatement(node, AsmOp.MOVE, ava, index, null)));
-
     }
+
+    // Get the size of the array and make a fragment which prints oob errors
+    Descriptor arrayDesc = node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
+    int size = ((FieldDescriptor)arrayDesc).getLength();
+    CFGFragment violationFrag = boundsViolation(node);
+
+    // Create a branch node where the array lower-bound is evaluated
+    BasicStatement lowerBoundCheck = new OpStatement(node,
+        AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(0), null);
+    SimpleCFGNode lowerBound = new SimpleCFGNode(lowerBoundCheck);
+    lowerBound.setBranchTarget(violationFrag.getEnter());
+
+    // Create a branch node where the array upper-bound is evaluated
+    BasicStatement upperBoundCheck = new OpStatement(node,
+        AsmOp.LESS_THAN, index, new ConstantArgument(size), null);
+    SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
+    upperBound.setBranchTarget(violationFrag.getEnter());
+
+    // Create the final argument statement fragment
     Argument array = Argument.makeArgument(node.getDesc(),
                                            index);
     ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
-    return indexFrag.append(cfgNode);
+
+    // Link all the fragments together and return the result
+    return indexFrag.append(lowerBound).append(upperBound).append(cfgNode);
+  }
+
+  private CFGFragment boundsViolation(ASTNode node) {
+    SourceLocation sl = node.getSourceLoc();
+    SyscallArgNode formatString = new SyscallArgNode(sl,
+        new StringNode(sl, "%s"));
+    // TODO: The error message should include the method name
+    SyscallArgNode errorMessage = new SyscallArgNode(sl,
+        new StringNode(sl, "RUNTIME ERROR: Array oob access in BLAH"));
+
+    ArrayList<SyscallArgNode> args = new ArrayList<SyscallArgNode>();
+    args.add(formatString);
+    args.add(errorMessage);
+
+    SystemCallNode call =
+        new SystemCallNode(sl, new StringNode(sl, "printf"), args);
+    return call.accept(this);
+    // TODO: Add in a statement halting program execution here
   }
 
   @Override
