@@ -7,6 +7,7 @@ import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.Main.Optimization;
+import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.DeadCodeElimination;
 import edu.mit.compilers.le02.dfa.Liveness;
@@ -15,6 +16,8 @@ import edu.mit.compilers.le02.opt.CpVisitor;
 import edu.mit.compilers.le02.opt.CseVisitor;
 import edu.mit.compilers.le02.opt.GlobalCseVisitor;
 import edu.mit.compilers.le02.opt.RegisterVisitor;
+import edu.mit.compilers.le02.symboltable.MethodDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 public class BasicBlockGraph {
   private static int id;
@@ -72,6 +75,10 @@ public class BasicBlockGraph {
         Liveness live = new Liveness(methodEnter);
         new DeadCodeElimination(methodEnter, live.getBlockItems());
       }
+      
+      ASTNode enterNode = methodEnter.getStatements().get(0).getNode();
+      SymbolTable st = enterNode.getSymbolTable();
+      MethodDescriptor md = st.getMethod(methodEnter.getMethod());
 
       // Remove any BasicBlockNodes that are empty after optimizations
       for (BasicBlockNode n : visited.values()) {
@@ -82,7 +89,7 @@ public class BasicBlockGraph {
 
       // Run register allocation.
       if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
-        RegisterVisitor.runRegisterAllocation(methodEnter);
+        RegisterVisitor.runRegisterAllocation(methodEnter, md);
       }
 
       // All of these optimizations change the number of local variables.
@@ -92,7 +99,7 @@ public class BasicBlockGraph {
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();
       // TODO: Find a suitable source location to put in here
-      OpStatement enterStmt = new OpStatement(null, AsmOp.ENTER,
+      OpStatement enterStmt = new OpStatement(enterNode, AsmOp.ENTER,
                                 Argument.makeArgument(localOffset),
                                 null, null);
       methodEnter.prependStatement(enterStmt);
