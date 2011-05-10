@@ -21,6 +21,7 @@ import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.ConstantArgument;
+import edu.mit.compilers.le02.cfg.HaltStatement;
 import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
@@ -176,6 +177,12 @@ public class AsmBasicBlock implements AsmObject {
     } else if (stmt instanceof NOPStatement) {
       // This is a nop; ignore it and continue onwards.
       return;
+    } else if (stmt instanceof HaltStatement) {
+      addInstruction(new AsmInstruction(
+          AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
+      addInstruction(new AsmInstruction(
+          AsmOpCode.XORQ, Register.RDI, Register.RDI, sl));
+      addInstruction(new AsmInstruction(AsmOpCode.CALL, "exit", sl));
     } else {
       // We have an ArgumentStatement that made it to ASM generation.
       // These are supposed to be filtered out during CFG pass 2.
@@ -628,6 +635,11 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, r, sl));
     }
 
+    // Move RAX into the correct save location.
+    if (call.getResult() != null) {
+      addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
+        convertVariableLocation(call.getResult().getLocation(), true), sl));
+    }
   }
 
   /**
@@ -673,14 +685,6 @@ public class AsmBasicBlock implements AsmObject {
       // As it happens, this is also our return register, but that's okay.
       String index = prepareArgument(ava.getIndex(), first, methodName,
           false, sl);
-
-      // Perform array bounds check. TODO(lizf): fix code duplication.
-      addInstruction(new AsmInstruction(AsmOpCode.CMPL, index,
-          symbol + "_size", sl));
-      addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
-          "$." + methodName + "_name", Register.R12, sl));
-      addInstruction(new AsmInstruction(AsmOpCode.JLE,
-          "array_oob_error_handler", sl));
 
       // Use R12 to store the global name to access.
       addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$" + symbol,
@@ -742,14 +746,6 @@ public class AsmBasicBlock implements AsmObject {
       // return.
       String index = prepareArgument(
         ava.getIndex(), true, methodName, false, sl);
-
-      // Perform array bounds check. TODO(lizf): fix code duplication.
-      addInstruction(new AsmInstruction(
-          AsmOpCode.CMPL, index, symbol + "_size", sl));
-      addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
-          "$." + methodName + "_name", Register.R12, sl));
-      addInstruction(new AsmInstruction(
-          AsmOpCode.JLE, "array_oob_error_handler", sl));
 
       // Use R12 to store the global name to access.
       addInstruction(new AsmInstruction(AsmOpCode.MOVQ, "$" + symbol,

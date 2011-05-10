@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -192,7 +191,7 @@ public class CpVisitor extends BasicBlockVisitor {
     for (Argument arg : call.getArgs()) {
       args.add(convertArg(arg));
     }
-    call = new CallStatement((ExpressionNode)call.getNode(),
+    call = new CallStatement(call.getNode(),
       call.getMethodName(), args, call.getResult(), call.isCallout());
 
     if (call.isCallout()) {

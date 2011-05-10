@@ -83,9 +83,6 @@ public class AsmFile {
     }
 
     // Error handler messages.
-    strings.add(writeLabel(".aoob_msg"));
-    strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: " +
-        "Array out of Bounds access in method \\\"%s\\\"\\n\""));
     strings.add(writeLabel(".nonvoid_noreturn_msg"));
     strings.add(new AsmString("  .string \"*** RUNTIME ERROR ***: " +
         "No return value from non-void method \\\"%s\\\"\\n\""));
@@ -113,10 +110,6 @@ public class AsmFile {
         globals.add(new AsmString("  .rept " + size));
         globals.add(new AsmString("  .quad 0"));
         globals.add(new AsmString("  .endr"));
-        // Save the read-only size of the array for array index checks.
-        globals.add(new AsmString(".section .rodata"));
-        globals.add(writeLabel(globalName + "_size"));
-        globals.add(new AsmString("  .long " + size));
       }
     }
   }
@@ -142,8 +135,6 @@ public class AsmFile {
    * Writes the necessary error information
    */
   private void writeErrors() {
-    errors.add(writeLabel("array_oob_error_handler"));
-    generateImmediateExit("aoob_msg");
     errors.add(writeLabel("nonvoid_noreturn_error_handler"));
     generateImmediateExit("nonvoid_noreturn_msg");
   }

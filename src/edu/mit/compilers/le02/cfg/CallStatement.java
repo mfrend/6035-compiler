@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.mit.compilers.le02.RegisterLocation.Register;
-import edu.mit.compilers.le02.ast.ExpressionNode;
+import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class CallStatement extends BasicStatement {
@@ -12,9 +12,9 @@ public class CallStatement extends BasicStatement {
   private String name;
   private boolean callout;
 
-  public CallStatement(ExpressionNode expr, String name, List<Argument> args,
+  public CallStatement(ASTNode node, String name, List<Argument> args,
                        TypedDescriptor result, boolean callout) {
-    super(expr, result);
+    super(node, result);
     this.name = name;
     this.args = args;
     this.type = BasicStatementType.CALL;
