@@ -749,8 +749,6 @@ public class RegisterVisitor extends BasicBlockVisitor
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     int argTmpOffset = 0;
     
-    System.out.println("Processing == " + node.getId() + " == ");
-    
     for (BasicStatement stmt : node.getStatements()) {
       Register reg;
       TypedDescriptor result = stmt.getResult();
@@ -861,7 +859,6 @@ public class RegisterVisitor extends BasicBlockVisitor
       Web web = defUses.get(stmt);
       if (web != null) {
         reg = registerMap.get(web.find().getColor());
-        System.out.println("got " + web.find() + " and " + reg + " for " + stmt);
         if (reg != null) {
           result = new AnonymousDescriptor(new RegisterLocation(reg),
                                            web.find().desc());
