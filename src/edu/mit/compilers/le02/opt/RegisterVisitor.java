@@ -172,20 +172,20 @@ public class RegisterVisitor extends BasicBlockVisitor
     
 
     this.registerMap.put(0, Register.RBX);
-    this.registerMap.put(1, Register.RCX);
-    this.registerMap.put(2, Register.RDX);
-    this.registerMap.put(3, Register.RSI);
-    this.registerMap.put(4, Register.RDI);
+    this.registerMap.put(1, Register.R13);
+    this.registerMap.put(2, Register.R14);
+    this.registerMap.put(3, Register.R15);
+    this.registerMap.put(4, Register.R9);
     this.registerMap.put(5, Register.R8);
-    this.registerMap.put(6, Register.R9);
-    this.registerMap.put(7, Register.R13);
-    this.registerMap.put(8, Register.R14);
-    this.registerMap.put(9, Register.R15);
+    this.registerMap.put(6, Register.RDX);
+    this.registerMap.put(7, Register.RCX);
+    this.registerMap.put(8, Register.RSI);
+    this.registerMap.put(9, Register.RDI);
     // These registers should be unallocated, as they are used as temps
-    this.registerMap.put(-2, Register.R10);
-    this.registerMap.put(-3, Register.R11);
-    this.registerMap.put(-4, Register.R12);
-    this.registerMap.put(-1, Register.RAX);
+    this.registerMap.put(-1, Register.R10);
+    this.registerMap.put(-2, Register.R11);
+    this.registerMap.put(-3, Register.R12);
+    this.registerMap.put(-4, Register.RAX);
   }
     
   
@@ -295,15 +295,6 @@ public class RegisterVisitor extends BasicBlockVisitor
       }
     }
     
-    /*
-    if (node.isBranch()) {
-      BasicStatement stmt = node.getConditional();
-      if (stmt instanceof OpStatement) {
-        OpStatement op = (OpStatement) stmt;
-        if (op.getOp() == )
-      }
-    }
-    */
   }
   
   

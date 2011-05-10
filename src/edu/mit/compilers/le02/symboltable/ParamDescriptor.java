@@ -13,6 +13,7 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation;
 
 public class ParamDescriptor extends TypedDescriptor {
+  private int index = -1;
 
   private static Register[] arguments = {RDI, RSI, RDX, RCX, R8, R9};
 
@@ -21,10 +22,21 @@ public class ParamDescriptor extends TypedDescriptor {
   }
 
   public void setIndex(int i) {
+    this.index = i;
     if (i < 6) {
-      this.location = new RegisterLocation(arguments[i]);
+      System.out.println("param loc");
+      this.location = new StackLocation(getParent().getNonconflictingOffset());
     } else {
       this.location = new StackLocation((i - 6) * 8 + 16);
+    }
+  }
+  
+  public Register getIndexRegister() {
+    if (index >= 6 || index == -1) {
+      return null;
+    }
+    else {
+      return arguments[index];
     }
   }
 

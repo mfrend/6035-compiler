@@ -79,7 +79,8 @@ public class BasicBlockGraph {
 
       // Run register allocation.
       if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
-        RegisterVisitor.runRegisterAllocation(methodEnter, md);
+        opts.remove(Optimization.REGISTER_ALLOCATION);
+        //RegisterVisitor.runRegisterAllocation(methodEnter, md);
       }
 
       // All of these optimizations change the number of local variables.

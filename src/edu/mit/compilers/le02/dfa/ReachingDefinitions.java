@@ -170,7 +170,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.globalDefinitions = new BitSet();
     this.methodRoot = methodRoot; 
     
-    setupMethod();
+    //setupMethod();
     this.visit(this.methodRoot);
 
     for (BlockItem bi : blockDefinitions.values()) {
