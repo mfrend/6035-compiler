@@ -49,6 +49,7 @@ import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private static CFGGenerator instance = null;
+  private static String curMethod;
   private ControlFlowGraph cfg;
   private SimpleCFGNode increment, loopExit;
 
@@ -161,6 +162,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(MethodDeclNode node) {
+    curMethod = node.getName();
     cfg.putMethod(node.getName(), node.getBody().accept(this).getEnter());
     return null;
   }
@@ -537,12 +539,13 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   private SimpleCFGNode boundsViolation(ASTNode node) {
     SourceLocation sl = node.getSourceLoc();
-    // TODO: The error message should include the method name
-    StringNode errorMessage = 
-        new StringNode(sl, "RUNTIME ERROR: Array oob access in BLAH\n");
+    StringNode errorMessage = new StringNode(sl,
+        "*** RUNTIME ERROR ***: Array out of Bounds access in method \"%s\"\n");
+    StringNode methodName = new StringNode(sl, new String(curMethod));
 
     ArrayList<Argument> args = new ArrayList<Argument>();
     args.add(errorMessage.accept(this).getExit().getResult());
+    args.add(methodName.accept(this).getExit().getResult());
 
     TypedDescriptor loc = makeTemp(node, DecafType.INT);
 

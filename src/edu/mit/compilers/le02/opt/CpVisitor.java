@@ -192,7 +192,7 @@ public class CpVisitor extends BasicBlockVisitor {
     for (Argument arg : call.getArgs()) {
       args.add(convertArg(arg));
     }
-    call = new CallStatement((ExpressionNode)call.getNode(),
+    call = new CallStatement(call.getNode(),
       call.getMethodName(), args, call.getResult(), call.isCallout());
 
     if (call.isCallout()) {
