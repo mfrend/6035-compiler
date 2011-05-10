@@ -24,11 +24,14 @@ public class ParamDescriptor extends TypedDescriptor {
   public void setIndex(int i) {
     this.index = i;
     if (i < 6) {
-      System.out.println("param loc");
-      this.location = new StackLocation(getParent().getNonconflictingOffset());
+      this.location = new RegisterLocation(arguments[i]);
     } else {
       this.location = new StackLocation((i - 6) * 8 + 16);
     }
+  }
+  
+  public void setLocation(VariableLocation loc) {
+    this.location = loc;
   }
   
   public Register getIndexRegister() {

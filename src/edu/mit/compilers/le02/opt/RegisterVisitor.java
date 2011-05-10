@@ -9,30 +9,32 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.RegisterLocation;
+import edu.mit.compilers.le02.StackLocation;
+import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.ArgReassignStatement;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
-import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
-import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.CallStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.Argument.ArgType;
+import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.dfa.GenKillItem;
 import edu.mit.compilers.le02.dfa.Lattice;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions;
-import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
-import edu.mit.compilers.le02.dfa.ReachingDefinitions.FakeDefStatement;
 import edu.mit.compilers.le02.dfa.WorklistAlgorithm;
 import edu.mit.compilers.le02.dfa.WorklistItem;
+import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
+import edu.mit.compilers.le02.dfa.ReachingDefinitions.FakeDefStatement;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
@@ -757,7 +759,24 @@ public class RegisterVisitor extends BasicBlockVisitor
       }
       else if (stmt.getType() == BasicStatementType.NOP) {
         Web web = defUses.get(stmt);
-        if (web != null) {
+        if (web == null) {
+          // Move the variable OUT of its register into a temporary
+          int tmpOffset = startOfMethod.getNode().getSymbolTable().getNonconflictingOffset();
+          FakeDefStatement fds = (FakeDefStatement) stmt;
+          Register oldReg = fds.getParam().getIndexRegister();
+          VariableLocation loc = new StackLocation(tmpOffset);
+          fds.getParam().setLocation(loc);
+
+          BasicStatement bs = new OpStatement(startOfMethod.getNode(),
+                               AsmOp.MOVE,
+                               Argument.makeArgument(
+                                   new AnonymousDescriptor(
+                                       new RegisterLocation(oldReg),
+                                       null)),
+                               Argument.makeArgument(fds.getParam()),
+                               null);
+          newStmts.add(bs);
+        } else {
           reg = registerMap.get(web.find().getColor());
           TypedDescriptor desc = web.find().desc();
           if (reg != null) {

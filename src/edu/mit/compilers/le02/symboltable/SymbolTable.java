@@ -254,7 +254,7 @@ public class SymbolTable {
    * table.
    */
   public int getLargestLocalOffset() {
-    if (locals.size() == 0 && params.size() == 0) {
+    if (locals.size() == 0) {
       return 0;
     }
 
@@ -264,24 +264,8 @@ public class SymbolTable {
       }
     };
     
-    Comparator<ParamDescriptor> c2 = new Comparator<ParamDescriptor>() {
-      public int compare(ParamDescriptor d1, ParamDescriptor d2) {
-        return d1.getLocation().getOffset() - d2.getLocation().getOffset();
-      }
-    };
 
-    // Return minimum because the stack offsets are negative
-    int min1 = 0;
-    if (!locals.isEmpty()) {
-      min1 = Collections.min(locals, c).getLocation().getOffset();
-    }
-    int min2 = 0; 
-    if (!params.isEmpty()) {
-      Collections.min(params, c2).getLocation().getOffset();
-    }
-    
-    System.out.println("min1: " + min1 + " min2: " + min2);
-    return Math.min(min1, min2);
+    return Collections.min(locals, c).getLocation().getOffset();
   }
 
   /**
