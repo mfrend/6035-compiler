@@ -511,19 +511,19 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     // Get the size of the array and make a fragment which prints oob errors
     Descriptor arrayDesc = node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
     int size = ((FieldDescriptor)arrayDesc).getLength();
-    CFGFragment violationFrag = boundsViolation(node);
+    SimpleCFGNode violation = boundsViolation(node);
 
     // Create a branch node where the array lower-bound is evaluated
     BasicStatement lowerBoundCheck = new OpStatement(node,
-        AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(0), null);
+        AsmOp.LESS_THAN, index, new ConstantArgument(0), null);
     SimpleCFGNode lowerBound = new SimpleCFGNode(lowerBoundCheck);
-    lowerBound.setBranchTarget(violationFrag.getEnter());
+    lowerBound.setBranchTarget(violation);
 
     // Create a branch node where the array upper-bound is evaluated
     BasicStatement upperBoundCheck = new OpStatement(node,
-        AsmOp.LESS_THAN, index, new ConstantArgument(size), null);
+        AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(size), null);
     SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
-    upperBound.setBranchTarget(violationFrag.getEnter());
+    upperBound.setBranchTarget(violation);
 
     // Create the final argument statement fragment
     Argument array = Argument.makeArgument(node.getDesc(),
@@ -535,22 +535,19 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return indexFrag.append(lowerBound).append(upperBound).append(cfgNode);
   }
 
-  private CFGFragment boundsViolation(ASTNode node) {
+  private SimpleCFGNode boundsViolation(ASTNode node) {
     SourceLocation sl = node.getSourceLoc();
-    SyscallArgNode formatString = new SyscallArgNode(sl,
-        new StringNode(sl, "%s"));
     // TODO: The error message should include the method name
-    SyscallArgNode errorMessage = new SyscallArgNode(sl,
-        new StringNode(sl, "RUNTIME ERROR: Array oob access in BLAH"));
+    StringNode errorMessage = 
+        new StringNode(sl, "RUNTIME ERROR: Array oob access in BLAH\n");
 
-    ArrayList<SyscallArgNode> args = new ArrayList<SyscallArgNode>();
-    args.add(formatString);
-    args.add(errorMessage);
+    ArrayList<Argument> args = new ArrayList<Argument>();
+    args.add(errorMessage.accept(this).getExit().getResult());
 
-    SystemCallNode call =
-        new SystemCallNode(sl, new StringNode(sl, "printf"), args);
-    return call.accept(this);
-    // TODO: Add in a statement halting program execution here
+    TypedDescriptor loc = makeTemp(node, DecafType.INT);
+
+    return new SimpleCFGNode(
+        new CallStatement(node, "printf", args, loc, true));
   }
 
   @Override
