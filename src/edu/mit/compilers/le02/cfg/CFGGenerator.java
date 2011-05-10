@@ -511,7 +511,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     }
 
     // Get the size of the array and make a fragment which prints oob errors
-    Descriptor arrayDesc = node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
+    Descriptor arrayDesc =
+      node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
     int size = ((FieldDescriptor)arrayDesc).getLength();
     CFGFragment violation = boundsViolation(node);
 
