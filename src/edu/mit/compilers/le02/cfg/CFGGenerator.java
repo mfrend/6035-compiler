@@ -9,6 +9,7 @@ import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
+import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
 import edu.mit.compilers.le02.ast.ArrayLocationNode;
@@ -41,10 +42,14 @@ import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
+import edu.mit.compilers.le02.symboltable.SymbolTable.SymbolType;
+import edu.mit.compilers.le02.symboltable.Descriptor;
+import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   private static CFGGenerator instance = null;
+  private static String curMethod;
   private ControlFlowGraph cfg;
   private SimpleCFGNode increment, loopExit;
 
@@ -157,6 +162,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(MethodDeclNode node) {
+    curMethod = node.getName();
     cfg.putMethod(node.getName(), node.getBody().accept(this).getEnter());
     return null;
   }
@@ -502,13 +508,50 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       index = Argument.makeArgument(indexTemp);
       indexFrag = indexFrag.append(new SimpleCFGNode(
         new OpStatement(node, AsmOp.MOVE, ava, index, null)));
-
     }
-    Argument array = Argument.makeArgument(node.getDesc(),
-                                           index);
+
+    // Get the size of the array and make a fragment which prints oob errors
+    Descriptor arrayDesc =
+      node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
+    int size = ((FieldDescriptor)arrayDesc).getLength();
+    CFGFragment violation = boundsViolation(node);
+
+    // Create a branch node where the array lower-bound is evaluated
+    BasicStatement lowerBoundCheck = new OpStatement(node,
+        AsmOp.LESS_THAN, index, new ConstantArgument(0), null);
+    SimpleCFGNode lowerBound = new SimpleCFGNode(lowerBoundCheck);
+    lowerBound.setBranchTarget(violation.getEnter());
+
+    // Create a branch node where the array upper-bound is evaluated
+    BasicStatement upperBoundCheck = new OpStatement(node,
+        AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(size), null);
+    SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
+    upperBound.setBranchTarget(violation.getEnter());
+
+    // Create the final argument statement fragment
+    Argument array = Argument.makeArgument(node.getDesc(), index);
     ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
-    return indexFrag.append(cfgNode);
+
+    // Link all the fragments together and return the result
+    return indexFrag.append(lowerBound).append(upperBound).append(cfgNode);
+  }
+
+  private CFGFragment boundsViolation(ASTNode node) {
+    SourceLocation sl = node.getSourceLoc();
+    StringNode errorMessage = new StringNode(sl,
+        "*** RUNTIME ERROR ***: Array out of Bounds access in method \"%s\"\n");
+    StringNode methodName = new StringNode(sl, new String(curMethod));
+
+    ArrayList<Argument> args = new ArrayList<Argument>();
+    args.add(errorMessage.accept(this).getExit().getResult());
+    args.add(methodName.accept(this).getExit().getResult());
+
+    SimpleCFGNode print = new SimpleCFGNode(
+        new CallStatement(node, "printf", args, null, true));
+    SimpleCFGNode exit = new SimpleCFGNode(new HaltStatement(node));
+    print.setNext(exit);
+    return new CFGFragment(print, exit);
   }
 
   @Override
