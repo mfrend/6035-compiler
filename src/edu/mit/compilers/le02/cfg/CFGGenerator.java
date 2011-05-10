@@ -16,6 +16,7 @@ import edu.mit.compilers.le02.ast.ArrayLocationNode;
 import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
+import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.ast.BooleanNode;
 import edu.mit.compilers.le02.ast.BreakNode;
 import edu.mit.compilers.le02.ast.CallStatementNode;
@@ -37,10 +38,10 @@ import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.ast.SyscallArgNode;
 import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
-import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
+import edu.mit.compilers.le02.symboltable.ParamDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
 import edu.mit.compilers.le02.symboltable.SymbolTable.SymbolType;
 import edu.mit.compilers.le02.symboltable.Descriptor;
@@ -67,6 +68,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    */
   public static LocalDescriptor makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
+    System.out.println("tmp loc");
     int offset = st.getNonconflictingOffset();
 
     LocalDescriptor ld =
@@ -163,7 +165,34 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   @Override
   public CFGFragment visit(MethodDeclNode node) {
     curMethod = node.getName();
-    cfg.putMethod(node.getName(), node.getBody().accept(this).getEnter());
+    CFGFragment paramInitFrag = null;
+    for (ParamDescriptor pd : node.getDescriptor().getParams()) {
+      if (pd.getIndexRegister() == null) {
+        continue;
+      }
+      
+      Register reg = pd.getIndexRegister();
+      TypedDescriptor regLoc = new AnonymousDescriptor(
+                                    new RegisterLocation(reg));
+      BasicStatement st = new OpStatement(node, AsmOp.MOVE, 
+          Argument.makeArgument(regLoc), Argument.makeArgument(pd), null);
+      SimpleCFGNode cfgNode = new SimpleCFGNode(st);
+      
+      if (paramInitFrag == null) {
+        paramInitFrag = new CFGFragment(cfgNode, cfgNode);
+      } else {
+        paramInitFrag = paramInitFrag.append(cfgNode);
+      }
+    }
+    
+    CFGFragment body = node.getBody().accept(this);
+    CFGNode methodEnter = body.getEnter();
+    if (paramInitFrag != null) {
+      paramInitFrag = paramInitFrag.link(body);
+      methodEnter = paramInitFrag.getEnter();
+    }
+    
+    cfg.putMethod(node.getName(), methodEnter);
     return null;
   }
 

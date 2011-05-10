@@ -294,12 +294,13 @@ public class AsmBasicBlock implements AsmObject {
       // Save registers used in method.
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, reg, sl));
     }
-    /*
-    for (int ii = 0; ii < Math.min(desc.getParams().size(), 6); ii++) {
-      desc.markRegisterUsed(argumentRegisters[ii]);
+    
+    if (!opts.contains(Optimization.REGISTER_ALLOCATION)) {
+      for (int ii = 0; ii < Math.min(desc.getParams().size(), 6); ii++) {
+        desc.markRegisterUsed(argumentRegisters[ii]);
+      }
     }
-    desc.markRegisterUsed(Register.R12);
-    */
+    //desc.markRegisterUsed(Register.R12);
   }
 
   /**
@@ -565,7 +566,13 @@ public class AsmBasicBlock implements AsmObject {
   protected void generateCall(CallStatement call, MethodDescriptor thisMethod) {
     SourceLocation sl = call.getNode().getSourceLoc();
     // Push caller-saved variables that we've used and need to keep.
-    List<Register> usedRegisters = call.getNonDyingCallerSavedRegisters();
+    List<Register> usedRegisters;
+    if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
+      usedRegisters = call.getNonDyingCallerSavedRegisters();
+    } else {
+      usedRegisters = thisMethod.getUsedCallerRegisters();
+    }
+    
     for (Register r : usedRegisters) {
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, r, sl));
     }
@@ -573,25 +580,30 @@ public class AsmBasicBlock implements AsmObject {
     // Push arguments.
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
-    
-    /*
-    boolean[] savedRegs= new boolean[6];
-    // TODO: check liveness of argument registers before saving
-    for (int ii = Math.min(args.size() - 1, 5); ii >= 0; ii--) {
-      Argument arg = args.get(ii);
-      if (!arg.isRegister() || 
-          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii]) {
-        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
-            argumentRegisters[ii].toString(), sl));
-        savedRegs[ii] = true;
-      }
-    }
-    */
-    
+
+    boolean[] pushedRegs = new boolean[6];
     for (int ii = args.size() - 1; ii >= 0; ii--) {
-      addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
-          prepareArgument(args.get(ii), true, thisMethod.getId(),
-              true, sl), sl));
+      if (ii >= 6) {
+        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
+            prepareArgument(args.get(ii), true, thisMethod.getId(), 
+                true, sl), sl));
+        continue;
+      } 
+
+      Argument arg = args.get(ii);
+      if (arg.isRegister() &&
+          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii]) {
+
+        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
+            prepareArgument(arg, true, thisMethod.getId(), true, sl), sl));
+        pushedRegs[ii] = true;
+      } else {
+        addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
+            prepareArgument(arg, true, thisMethod.getId(),
+              true, sl), argumentRegisters[ii].toString(), sl));
+      }
+      addInstruction(new AsmInstruction(AsmOpCode.POPQ,
+          argumentRegisters[ii].toString(), sl));
     }
     
     // XXX: For now, we push all the registers onto the stack and then
@@ -599,15 +611,10 @@ public class AsmBasicBlock implements AsmObject {
     //      value be in %rsi, and the %rsi value be in %rdi.  We should
     //      do this more efficiently in general, though.
     for (int ii = 0; ii < Math.min(args.size(), 6); ii++) {
-      Argument arg = args.get(ii);
-      
-      // If the argument is already in the right place, do nothing
-      if (arg.isRegister() &&
-          arg.getDesc().getLocation().getRegister() == argumentRegisters[ii]) {
-        continue;
+      if (pushedRegs[ii]) {
+        addInstruction(new AsmInstruction(AsmOpCode.POPQ,
+            argumentRegisters[ii].toString(), sl));
       }
-      addInstruction(new AsmInstruction(AsmOpCode.POPQ,
-          argumentRegisters[ii].toString(), sl));
     }
 
     // Empty %rax to cope with printf vararg issue

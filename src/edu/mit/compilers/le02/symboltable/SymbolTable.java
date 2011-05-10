@@ -263,8 +263,8 @@ public class SymbolTable {
         return d1.getLocation().getOffset() - d2.getLocation().getOffset();
       }
     };
+    
 
-    // Return minimum because the local offsets are negative
     return Collections.min(locals, c).getLocation().getOffset();
   }
 
