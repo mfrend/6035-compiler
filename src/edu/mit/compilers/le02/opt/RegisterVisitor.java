@@ -747,6 +747,9 @@ public class RegisterVisitor extends BasicBlockVisitor
    */
   private void insertRegisters(BasicBlockNode node) {
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
+    int argTmpOffset = 0;
+    
+    System.out.println("Processing == " + node.getId() + " == ");
     
     for (BasicStatement stmt : node.getStatements()) {
       Register reg;
@@ -794,6 +797,12 @@ public class RegisterVisitor extends BasicBlockVisitor
 
             // Move the variable OUT of its register into a temporary
             int tmpOffset = startOfMethod.getNode().getSymbolTable().getNonconflictingOffset();
+            
+            // Update the argument temp offset, so if we do this for more
+            // than one variable, they don't overlap
+            tmpOffset += argTmpOffset;
+            argTmpOffset -= 8;
+            
             FakeDefStatement fds = (FakeDefStatement) stmt;
             Register oldReg = fds.getParam().getIndexRegister();
             if (oldReg != null) {
@@ -852,6 +861,7 @@ public class RegisterVisitor extends BasicBlockVisitor
       Web web = defUses.get(stmt);
       if (web != null) {
         reg = registerMap.get(web.find().getColor());
+        System.out.println("got " + web.find() + " and " + reg + " for " + stmt);
         if (reg != null) {
           result = new AnonymousDescriptor(new RegisterLocation(reg),
                                            web.find().desc());
@@ -950,7 +960,6 @@ public class RegisterVisitor extends BasicBlockVisitor
       return Argument.makeArgument(newDesc);
     }
   }
-
   
   
   private static class WebLiveness extends GenKillItem {
