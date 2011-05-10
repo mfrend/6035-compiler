@@ -13,7 +13,8 @@ public abstract class BasicStatement {
     OP,
     CALL,
     NOP,
-    JUMP
+    JUMP,
+    HALT,
   }
 
   public BasicStatement(ASTNode node, TypedDescriptor result) {

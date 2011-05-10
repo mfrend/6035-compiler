@@ -513,23 +513,22 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     // Get the size of the array and make a fragment which prints oob errors
     Descriptor arrayDesc = node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
     int size = ((FieldDescriptor)arrayDesc).getLength();
-    SimpleCFGNode violation = boundsViolation(node);
+    CFGFragment violation = boundsViolation(node);
 
     // Create a branch node where the array lower-bound is evaluated
     BasicStatement lowerBoundCheck = new OpStatement(node,
         AsmOp.LESS_THAN, index, new ConstantArgument(0), null);
     SimpleCFGNode lowerBound = new SimpleCFGNode(lowerBoundCheck);
-    lowerBound.setBranchTarget(violation);
+    lowerBound.setBranchTarget(violation.getEnter());
 
     // Create a branch node where the array upper-bound is evaluated
     BasicStatement upperBoundCheck = new OpStatement(node,
         AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(size), null);
     SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
-    upperBound.setBranchTarget(violation);
+    upperBound.setBranchTarget(violation.getEnter());
 
     // Create the final argument statement fragment
-    Argument array = Argument.makeArgument(node.getDesc(),
-                                           index);
+    Argument array = Argument.makeArgument(node.getDesc(), index);
     ArgumentStatement as = new ArgumentStatement(node, array);
     SimpleCFGNode cfgNode = new SimpleCFGNode(as);
 
@@ -537,7 +536,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return indexFrag.append(lowerBound).append(upperBound).append(cfgNode);
   }
 
-  private SimpleCFGNode boundsViolation(ASTNode node) {
+  private CFGFragment boundsViolation(ASTNode node) {
     SourceLocation sl = node.getSourceLoc();
     StringNode errorMessage = new StringNode(sl,
         "*** RUNTIME ERROR ***: Array out of Bounds access in method \"%s\"\n");
@@ -547,10 +546,11 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     args.add(errorMessage.accept(this).getExit().getResult());
     args.add(methodName.accept(this).getExit().getResult());
 
-    TypedDescriptor loc = makeTemp(node, DecafType.INT);
-
-    return new SimpleCFGNode(
-        new CallStatement(node, "printf", args, loc, true));
+    SimpleCFGNode print = new SimpleCFGNode(
+        new CallStatement(node, "printf", args, null, true));
+    SimpleCFGNode exit = new SimpleCFGNode(new HaltStatement(node));
+    print.setNext(exit);
+    return new CFGFragment(print, exit);
   }
 
   @Override
