@@ -139,7 +139,7 @@ public class GlobalCseVisitor extends BasicBlockVisitor {
         OpStatement opSt = (OpStatement) s;
 
 
-        if (!AvailableExpressions.isExpression(opSt)) {
+        if ((opSt.getResult() == null) || !AvailableExpressions.isExpression(opSt)) {
           continue;
         }
 
