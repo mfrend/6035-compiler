@@ -48,6 +48,7 @@ public class RegisterVisitor extends BasicBlockVisitor
   private Map<BasicStatement, Collection<Web>> liveWebsAtStatement;
   private Map<BasicStatement, Collection<Web>> dyingWebsAtStatement;
   private Map<Integer, Register> registerMap;
+  private List<Register> registerOrder;
   private List<Web> finalWebs;
   private Map<Web, Integer> webIndices;
   private Map<TypedDescriptor, Register> allocatedGlobals;
@@ -170,19 +171,24 @@ public class RegisterVisitor extends BasicBlockVisitor
     this.webIndices = new HashMap<Web, Integer>();
 
     this.registerMap = new HashMap<Integer, Register>();
+    this.registerOrder = new ArrayList<Register>();
     this.pass = Pass.GENERATE_DU;
     
 
-    this.registerMap.put(0, Register.RBX);
-    this.registerMap.put(1, Register.R13);
-    this.registerMap.put(2, Register.R14);
-    this.registerMap.put(3, Register.R15);
-    this.registerMap.put(4, Register.R9);
-    this.registerMap.put(5, Register.R8);
-    this.registerMap.put(6, Register.RDX);
-    this.registerMap.put(7, Register.RCX);
-    this.registerMap.put(8, Register.RSI);
-    this.registerMap.put(9, Register.RDI);
+    this.registerOrder.add(Register.RBX);
+    this.registerOrder.add(Register.R13);
+    this.registerOrder.add(Register.R14);
+    this.registerOrder.add(Register.R15);
+    this.registerOrder.add(Register.R9);
+    this.registerOrder.add(Register.R8);
+    this.registerOrder.add(Register.RDX);
+    this.registerOrder.add(Register.RCX);
+    this.registerOrder.add(Register.RSI);
+    this.registerOrder.add(Register.RDI);
+
+    for (int i = 0; i < NUM_REGISTERS; i++) {
+      this.registerMap.put(i, registerOrder.get(i));
+    }
     // These registers should be unallocated, as they are used as temps
     this.registerMap.put(-1, Register.R10);
     this.registerMap.put(-2, Register.R11);
@@ -549,7 +555,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         Web w2 = liveOnExit.get(j);
         ig.linkNodes(w1, w2);
         if (CLI.debug) {
-          System.out.println("Linking " + w1 + " and " + w2);
+          //System.out.println("Linking " + w1 + " and " + w2);
         }
       }
     }
@@ -606,7 +612,7 @@ public class RegisterVisitor extends BasicBlockVisitor
 
             for (Web w2 : currentlyLive.values()) {
               if (CLI.debug) {
-                System.out.println("Linking " + w + " and " + w2);
+                //System.out.println("Linking " + w + " and " + w2);
               }
               ig.linkNodes(newWeb, w2);
             }
@@ -658,12 +664,22 @@ public class RegisterVisitor extends BasicBlockVisitor
       // Tree maps used for determinism
       TreeMap<Integer, List<Web>> colorMap = new TreeMap<Integer, List<Web>>();
       for (Web w : finalWebs) {
-        List<Web> list = colorMap.get(w.getColor());
+        List<Web> list = colorMap.get(w.find().getColor());
         if (list == null) {
           list = new ArrayList<Web>();
         }
-        list.add(w);
-        colorMap.put(w.getColor(), list);
+        list.add(w.find());
+        colorMap.put(w.find().getColor(), list);
+      }
+      
+      if (CLI.debug) {
+        for (Integer i : colorMap.keySet()) {
+          System.out.println("Webs colored with " + ":");
+          for (Web w : colorMap.get(i)) {
+            System.out.println("  " + w + " color: " + w.getColor());
+          }
+          System.out.println();
+        }
       }
       
       ArrayList<List<Web>> webLists = 
@@ -690,13 +706,25 @@ public class RegisterVisitor extends BasicBlockVisitor
         }
       });
       
+
+      if (CLI.debug) {
+        System.out.println("Web lists: ");
+        for (List<Web> lw : webLists) {
+          System.out.println("  Color " + lw.get(0).getColor());
+        }
+      }
+      
       Register reg;
       for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
-        reg = registerMap.get(i);
+        reg = registerOrder.get(i);
         List<Web> list = webLists.get(i);
         
         // Assign a register to this color
         registerMap.put(list.get(0).getColor(), reg);
+        
+        if (CLI.debug) {
+          System.out.println("Assigning " + reg + " to color " + list.get(0).getColor());
+        }
         
         // Mark this register as used in the function
         methodDescriptor.markRegisterUsed(reg);
@@ -757,32 +785,32 @@ public class RegisterVisitor extends BasicBlockVisitor
         setRegisterLivenessInfo(call, newCall);
         continue;
       }
-      else if (stmt.getType() == BasicStatementType.NOP) {
+      else if (stmt instanceof FakeDefStatement) {
         Web web = defUses.get(stmt);
-        if (web == null) {
-          if (!(stmt instanceof FakeDefStatement)) {
-            continue;
-          }
-          // Move the variable OUT of its register into a temporary
-          int tmpOffset = startOfMethod.getNode().getSymbolTable().getNonconflictingOffset();
-          FakeDefStatement fds = (FakeDefStatement) stmt;
-          Register oldReg = fds.getParam().getIndexRegister();
-          VariableLocation loc = new StackLocation(tmpOffset);
-          fds.getParam().setLocation(loc);
-
-          BasicStatement bs = new OpStatement(startOfMethod.getNode(),
-                               AsmOp.MOVE,
-                               Argument.makeArgument(
-                                   new AnonymousDescriptor(
-                                       new RegisterLocation(oldReg),
-                                       null)),
-                               Argument.makeArgument(fds.getParam()),
-                               null);
-          newStmts.add(bs);
-        } else {
+        if (web != null) {
           reg = registerMap.get(web.find().getColor());
           TypedDescriptor desc = web.find().desc();
-          if (reg != null) {
+          if (reg == null) {
+
+            // Move the variable OUT of its register into a temporary
+            int tmpOffset = startOfMethod.getNode().getSymbolTable().getNonconflictingOffset();
+            FakeDefStatement fds = (FakeDefStatement) stmt;
+            Register oldReg = fds.getParam().getIndexRegister();
+            if (oldReg != null) {
+              VariableLocation loc = new StackLocation(tmpOffset);
+              fds.getParam().setLocation(loc);
+
+              BasicStatement bs = new OpStatement(startOfMethod.getNode(),
+                  AsmOp.MOVE,
+                  Argument.makeArgument(
+                      new AnonymousDescriptor(
+                          new RegisterLocation(oldReg),
+                          null)),
+                          Argument.makeArgument(fds.getParam()),
+                          null);
+              newStmts.add(bs);
+            } 
+          } else {
             if (desc.getLocation().getLocationType() == LocationType.REGISTER) {
               if (argReassign == null) {
                 argReassign = new ArgReassignStatement(startOfMethod.getNode());
@@ -793,13 +821,13 @@ public class RegisterVisitor extends BasicBlockVisitor
             else {
               BasicStatement bs;
               bs = new OpStatement(startOfMethod.getNode(),
-                                   AsmOp.MOVE,
-                                   Argument.makeArgument(desc),
-                                   Argument.makeArgument(
-                                       new AnonymousDescriptor(
-                                           new RegisterLocation(reg),
-                                           web.find().desc())),
-                                   null);
+                  AsmOp.MOVE,
+                  Argument.makeArgument(desc),
+                  Argument.makeArgument(
+                      new AnonymousDescriptor(
+                          new RegisterLocation(reg),
+                          web.find().desc())),
+                          null);
               newStmts.add(bs);  
             }
             
@@ -872,6 +900,9 @@ public class RegisterVisitor extends BasicBlockVisitor
 
     Collection<Web> dyingWebs = dyingWebsAtStatement.get(oldStatement);
     Collection<Web> liveWebs = liveWebsAtStatement.get(oldStatement);
+    if (CLI.debug) {
+      System.out.println("Live at " + oldStatement + ": " + liveWebs);
+    }
     if (liveWebs != null) {
       for (Web w : liveWebs) {
         Register r = registerMap.get(w.find().getColor());
