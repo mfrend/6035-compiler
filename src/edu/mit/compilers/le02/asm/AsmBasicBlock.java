@@ -595,8 +595,6 @@ public class AsmBasicBlock implements AsmObject {
             prepareArgument(arg, true, thisMethod.getId(),
               true, sl), argumentRegisters[ii].toString(), sl));
       }
-      addInstruction(new AsmInstruction(AsmOpCode.POPQ,
-          argumentRegisters[ii].toString(), sl));
     }
     
     // XXX: For now, we push all the registers onto the stack and then
