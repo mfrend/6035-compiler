@@ -760,6 +760,9 @@ public class RegisterVisitor extends BasicBlockVisitor
       else if (stmt.getType() == BasicStatementType.NOP) {
         Web web = defUses.get(stmt);
         if (web == null) {
+          if (!(stmt instanceof FakeDefStatement)) {
+            continue;
+          }
           // Move the variable OUT of its register into a temporary
           int tmpOffset = startOfMethod.getNode().getSymbolTable().getNonconflictingOffset();
           FakeDefStatement fds = (FakeDefStatement) stmt;
