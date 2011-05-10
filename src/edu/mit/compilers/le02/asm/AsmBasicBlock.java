@@ -355,6 +355,7 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getArg1() != null && op.getOp() != AsmOp.ENTER) {
       // If the consecutive copy optimization is on, we should:
       // * Check that the last statement exists and had a non-null target.
+      // * Check that the last statement wasn't a modulo (%rdx is clobbered)
       // * Check that we aren't trying to use a register that will be clobbered
       //   by trying to resolve arg2. Specifically, R11D is clobbered by arg2
       //   resolution (which happens for all non-MOVE operations).
@@ -363,6 +364,7 @@ public class AsmBasicBlock implements AsmObject {
       // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
+          lastStatement.getOp() != AsmOp.MODULO &&
           (op.getOp() == AsmOp.MOVE ||
                 getResultRegister(lastStatement.getOp()) != Register.R11D) &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
@@ -381,6 +383,7 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getArg2() != null && op.getOp() != AsmOp.MOVE) {
       // If the consecutive copy optimization is on, we should:
       // * Check that the last statement exists and had a non-null target.
+      // * Check that the last statement wasn't a modulo (%rdx is clobbered)
       // * Check that we aren't trying to use a register that will be clobbered
       //   by trying to resolve arg1. Specifically, R10D is clobbered by arg1
       //   resolution.
@@ -389,6 +392,7 @@ public class AsmBasicBlock implements AsmObject {
       // * Compare the last target to this argument.
       if (opts.contains(Optimization.CONSECUTIVE_COPY) &&
           lastStatement != null && lastStatement.getTarget() != null &&
+          lastStatement.getOp() != AsmOp.MODULO &&
           getResultRegister(lastStatement.getOp()) != Register.R10D &&
           (!(lastStatement.getTarget() instanceof VariableArgument) ||
                 lastStatement.getTarget().getDesc() != null) &&
@@ -422,6 +426,9 @@ public class AsmBasicBlock implements AsmObject {
      case DIVIDE:
      case MODULO:
       // TODO: Get register liveness information here and check before reg spill
+      // Save the existing value in RAX
+      addInstruction(new AsmInstruction(
+        AsmOpCode.PUSHQ, Register.RAX, sl));
       // Division needs to use EAX for the dividend, and overwrites
       // EAX/EDX to store its outputs.
       addInstruction(new AsmInstruction(
@@ -477,6 +484,7 @@ public class AsmBasicBlock implements AsmObject {
     if (op.getOp() == AsmOp.DIVIDE || op.getOp() == AsmOp.MODULO) {
       // Restore the registers we displaced for division/modulo.
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, Register.RDX, sl));
+      addInstruction(new AsmInstruction(AsmOpCode.POPQ, Register.RAX, sl));
     }
   }
 
@@ -565,19 +573,6 @@ public class AsmBasicBlock implements AsmObject {
     // Push arguments.
     // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
-    
-    /*
-    // TODO: check liveness of argument registers before saving
-    for (int ii = Math.min(args.size() - 1, 5); ii >= 0; ii--) {
-      Argument arg = args.get(ii);
-      if (!arg.isRegister() || 
-          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii]) {
-        addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
-            argumentRegisters[ii].toString(), sl));
-        savedRegs[ii] = true;
-      }
-    }
-    */
 
     boolean[] pushedRegs = new boolean[6];
     for (int ii = args.size() - 1; ii >= 0; ii--) {
@@ -600,6 +595,8 @@ public class AsmBasicBlock implements AsmObject {
             prepareArgument(arg, true, thisMethod.getId(),
               true, sl), argumentRegisters[ii].toString(), sl));
       }
+      addInstruction(new AsmInstruction(AsmOpCode.POPQ,
+          argumentRegisters[ii].toString(), sl));
     }
     
     // XXX: For now, we push all the registers onto the stack and then
@@ -724,6 +721,9 @@ public class AsmBasicBlock implements AsmObject {
     switch (arg.getType()) {
      case VARIABLE:
       if (signExtend) {
+        if(CLI.debug) {
+          System.out.println(arg);
+        }
         addInstruction(new AsmInstruction(AsmOpCode.MOVQ, Register.R11,
           convertVariableLocation(
             ((VariableArgument) arg).getDesc().getLocation(), false), sl));

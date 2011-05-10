@@ -18,6 +18,11 @@ public final class ScalarLocationNode extends LocationNode {
   }
 
   @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof ScalarLocationNode)) {
       return false;

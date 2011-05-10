@@ -30,4 +30,8 @@ public final class MockASTRoot extends ASTNode {
     return null;
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
 }

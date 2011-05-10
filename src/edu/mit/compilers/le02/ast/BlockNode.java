@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
@@ -24,6 +25,28 @@ public final class BlockNode extends StatementNode {
     children.addAll(decls);
     children.addAll(statements);
     return children;
+  }
+
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    ListIterator<VarDeclNode> varIter = decls.listIterator();
+    while (varIter.hasNext()) {
+      if ((varIter.next() == prev) && (next instanceof VarDeclNode)) {
+        next.setParent(this);
+        varIter.set((VarDeclNode)next);
+        return true;
+      }
+    }
+
+    ListIterator<StatementNode> stIter = statements.listIterator();
+    while (stIter.hasNext()) {
+      if ((stIter.next() == prev) && (next instanceof StatementNode)) {
+        next.setParent(this);
+        stIter.set((StatementNode)next);
+        return true;
+      }
+    }
+    return false;
   }
 
   public List<VarDeclNode> getDecls() {

@@ -23,6 +23,24 @@ public final class ForNode extends StatementNode {
     return Util.makeList(init, end, body);
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    if ((init == prev) && (next instanceof AssignNode)) {
+      init = (AssignNode)next;
+      init.setParent(this);
+      return true;
+    } else if ((end == prev) && (next instanceof ExpressionNode)) {
+      end = (ExpressionNode)next;
+      end.setParent(this);
+      return true;
+    } else if ((body == prev) && (next instanceof BlockNode)) {
+      body = (BlockNode)next;
+      body.setParent(this);
+      return true;
+    }
+    return false;
+  }
+
   public AssignNode getInit() {
     return init;
   }

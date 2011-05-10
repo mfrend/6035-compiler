@@ -34,6 +34,11 @@ public final class IntNode extends ExpressionNode {
     return Collections.emptyList();
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
   public int getValue() {
     if (invert == true) {
       return -value;

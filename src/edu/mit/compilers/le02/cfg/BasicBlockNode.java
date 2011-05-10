@@ -47,11 +47,22 @@ public final class BasicBlockNode implements CFGNode {
   public void removeFromCFG() {
     assert (statements.isEmpty());
     assert (branchTarget == null);
+
+    if (this.next != null) {
+      this.next.getPredecessors().remove(this);
+    }
+
     for (BasicBlockNode n : predecessors) {
       if (this == n.next) {
         n.next = this.next;
+        if (this.next != null) {
+          this.next.getPredecessors().add(n);
+        }
       } else if (this == n.branchTarget) {
         n.branchTarget = this.next;
+        if (this.next != null) {
+          this.next.getPredecessors().add(n);
+        }
       } else {
         assert(false);
       }

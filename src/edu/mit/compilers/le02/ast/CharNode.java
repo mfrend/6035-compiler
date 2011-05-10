@@ -22,6 +22,11 @@ public final class CharNode extends ExpressionNode {
     return Collections.emptyList();
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
   public char getValue() {
     return value;
   }

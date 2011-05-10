@@ -20,6 +20,11 @@ public final class ArrayDeclNode extends FieldDeclNode {
     return Collections.emptyList();
   }
 
+  @Override
+  public boolean replaceChild(ASTNode prev, ASTNode next) {
+    return false;
+  }
+
   public int getLength() {
     return length;
   }
