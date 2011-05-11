@@ -75,7 +75,7 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
       }
 
       for (TypedDescriptor var : vars) {
-        if (!check(root, var)) {
+        if (!check(root, var, true)) {
           return false;
         }
       }
@@ -84,12 +84,17 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
     }
 
     // Checks if a variable is loop-invariant
-    public boolean check(ForNode root, TypedDescriptor var) {
+    public boolean check(ForNode root, TypedDescriptor var,
+        boolean includeLoopBounds) {
       loopVar = var;
       isField = (var instanceof FieldDescriptor);
       untouched = true;
 
-      root.getBody().accept(this);
+      if (includeLoopBounds) {
+        root.accept(this);
+      } else {
+        root.getBody().accept(this);
+      }
       return untouched;
     }
 
@@ -167,7 +172,7 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
 
     fors.add(node);
     TypedDescriptor loopVar = node.getInit().getLoc().getDesc();
-    if (new UntouchedLoopVariable().check(node, loopVar)) {
+    if (new UntouchedLoopVariable().check(node, loopVar, false)) {
       loopVars.add(loopVar);
     }
 
