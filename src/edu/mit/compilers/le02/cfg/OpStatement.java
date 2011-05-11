@@ -9,25 +9,25 @@ public final class OpStatement extends BasicStatement {
   private Argument arg1, arg2;
 
   public enum AsmOp {
-    MOVE(true, true),
-    ADD(true, true),
-    SUBTRACT(true, true),
-    MULTIPLY(false, true),
-    DIVIDE(false, false),
-    MODULO(false, false),
-    UNARY_MINUS(false, true),
-    EQUAL(true, false),
-    NOT_EQUAL(true, false),
-    LESS_THAN(true, false),
-    LESS_OR_EQUAL(true, false),
-    GREATER_THAN(true, false),
-    GREATER_OR_EQUAL(true, false),
-    NOT(false, true),
-    RETURN(false, false),
-    ENTER(false, false),
-    PUSH(false, false),
-    POP(false, true),
-    ARRAY(false, true),
+    MOVE(true, true, false),
+    ADD(true, true, false),
+    SUBTRACT(true, true, true),
+    MULTIPLY(false, true, false),
+    DIVIDE(false, false, false),
+    MODULO(false, false, false),
+    UNARY_MINUS(false, true, false),
+    EQUAL(true, false, true),
+    NOT_EQUAL(true, false, true),
+    LESS_THAN(true, false, true),
+    LESS_OR_EQUAL(true, false, true),
+    GREATER_THAN(true, false, true),
+    GREATER_OR_EQUAL(true, false, true),
+    NOT(false, true, false),
+    RETURN(false, false, false),
+    ENTER(false, false, false),
+    PUSH(false, false, false),
+    POP(false, true, false),
+    ARRAY(false, true, false),
     ;
     public boolean acceptsImmediateArg() {
       return immedOk;
@@ -35,12 +35,17 @@ public final class OpStatement extends BasicStatement {
     public boolean mutatesArgs() {
       return mutatesArgs;
     }
-    private AsmOp(boolean immedOk, boolean mutatesArgs) {
+    public boolean inverted() {
+      return invert;
+    }
+    private AsmOp(boolean immedOk, boolean mutatesArgs, boolean invert) {
       this.immedOk = immedOk;
       this.mutatesArgs = mutatesArgs;
+      this.invert = invert;
     }
     private boolean immedOk;
     private boolean mutatesArgs;
+    private boolean invert;
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,

@@ -782,10 +782,10 @@ public class RegisterVisitor extends BasicBlockVisitor
         }
        
         CallStatement newCall = new CallStatement(
-            ((ExpressionNode) call.getNode()), 
-            call.getMethodName(), 
-            args, 
-            result, 
+            call.getNode(),
+            call.getMethodName(),
+            args,
+            result,
             call.isCallout());
         
         newStmts.add(newCall);

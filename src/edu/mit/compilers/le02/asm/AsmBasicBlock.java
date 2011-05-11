@@ -124,7 +124,7 @@ public class AsmBasicBlock implements AsmObject {
       // If the node is a branch, write the branch trailer.
       // Otherwise, if there's a next node, write an unconditional
       // jump. Finally, if there's no next node, insert an implicit return.
-      if (node.isBranch()) {
+      if (node.isBranch() && !node.getBranchTarget().equals(node.getNext())) {
         processBranch(node, branch, next, methodName, loc);
       } else if (next != null) {
         addInstruction(new AsmInstruction(
@@ -233,8 +233,15 @@ public class AsmBasicBlock implements AsmObject {
         resultRegister = Register.R10D;
         break;
       case MOVE:
-        // MOV leaves value in R11.
-        resultRegister = Register.R11D;
+        // MOV leaves value in R10 for writes to non-registers,
+        // and in an arbitrary register otherwise.
+        Argument target = condition.getArg2();
+        if (target.isRegister()) {
+          resultRegister =
+            target.getDesc().getLocation().getRegister().thirtyTwo();
+        } else {
+          resultRegister = Register.R10D;
+        }
         break;
       default:
         // Something has gone wrong. This shouldn't happen.
@@ -626,19 +633,15 @@ public class AsmBasicBlock implements AsmObject {
     }
 
     // Move RAX into the correct save location.
-    addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
-      convertVariableLocation(call.getResult().getLocation(), true), sl));
+    if (call.getResult() != null) {
+      addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
+        convertVariableLocation(call.getResult().getLocation(), true), sl));
+    }
 
     // Pop the saved usedCallerRegisters back onto the stack.
     Collections.reverse(usedRegisters);
     for (Register r : usedRegisters) {
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, r, sl));
-    }
-
-    // Move RAX into the correct save location.
-    if (call.getResult() != null) {
-      addInstruction(new AsmInstruction(AsmOpCode.MOVL, Register.EAX,
-        convertVariableLocation(call.getResult().getLocation(), true), sl));
     }
   }
 
@@ -671,7 +674,7 @@ public class AsmBasicBlock implements AsmObject {
     Register tempStorage = first ? Register.R10 : Register.R11;
     int constValue;
     boolean inImmediatePos;
-    if (op == AsmOp.SUBTRACT) {
+    if (op.inverted()) {
       inImmediatePos = !first;
     } else {
       inImmediatePos = first;
@@ -713,6 +716,7 @@ public class AsmBasicBlock implements AsmObject {
       }
 
       if (loc.getLocationType() == LocationType.REGISTER &&
+          !(op == AsmOp.MOVE && !arg2.isRegister()) &&
           (inImmediatePos || loc.getRegister().equals(targetReg) ||
               !op.mutatesArgs() || dyingRegs.contains(loc.getRegister()))) {
         // We can pass raw registers IFF either this is the first unmodified
