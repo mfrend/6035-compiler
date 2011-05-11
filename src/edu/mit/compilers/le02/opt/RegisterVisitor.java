@@ -384,8 +384,8 @@ public class RegisterVisitor extends BasicBlockVisitor
       addDefUse(def, use, loc, argNum);
     }
   }
-  
-  private void addDefUse(BasicStatement def, 
+
+  private void addDefUse(BasicStatement def,
                          BasicStatement use, TypedDescriptor loc, int argNum) {
 
     Register prefReg = null;
@@ -398,7 +398,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     else if (argNum != -1 && argNum < 6) {
       prefReg = ParamDescriptor.arguments[argNum];
     }
-    
+
     // Get the use web for this use's def, and add the use to it.
     Web uses = defUses.get(def);
     if (uses == null) {
@@ -409,7 +409,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     }
     uses.addStmt(use);
     defUses.put(def, uses);
-    
+
 
     // Also, add this def's use web to this use's list of use webs.
     List<Web> webs = useToDefs.get(use);
@@ -417,7 +417,7 @@ public class RegisterVisitor extends BasicBlockVisitor
       webs = new ArrayList<Web>();
     }
     webs.add(uses);
-    useToDefs.put(use, webs);    
+    useToDefs.put(use, webs);
   }
 
 
@@ -675,21 +675,22 @@ public class RegisterVisitor extends BasicBlockVisitor
     if (numColors <= NUM_REGISTERS) {
 
       registerMap.clear();
-      ArrayList<Register> unallocatedRegisters = new ArrayList<Register>(registerOrder);
-      
+      ArrayList<Register> unallocatedRegisters =
+        new ArrayList<Register>(registerOrder);
+
       // Reverse so it is faster to pull it off the end
       Collections.reverse(unallocatedRegisters);
-      
+
       HashSet<Register> allocatedRegisters = new HashSet<Register>();
       for (Web w : finalWebs) {
         Register r = w.getPreferredRegister();
         if (r != null && !allocatedRegisters.contains(r)) {
-          registerMap.put(w.find().getColor(), r); 
+          registerMap.put(w.find().getColor(), r);
           allocatedRegisters.add(r);
           unallocatedRegisters.remove(r);
         }
       }
-      
+
       // Assign registers to everything, since we're ok (also the register
       // map is setup in the initialization).
       for (int i = 0; i < numColors; i++) {
@@ -762,7 +763,8 @@ public class RegisterVisitor extends BasicBlockVisitor
       // Reset the register map
       registerMap.clear();
 
-      ArrayList<Register> unallocatedRegisters = new ArrayList<Register>(registerOrder);
+      ArrayList<Register> unallocatedRegisters =
+        new ArrayList<Register>(registerOrder);
       HashSet<Register> allocatedRegisters = new HashSet<Register>();
       Register reg;
       for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
@@ -776,10 +778,10 @@ public class RegisterVisitor extends BasicBlockVisitor
         }
         if (reg == null) {
           continue;
-        }     
+        }
         allocatedRegisters.add(reg);
         unallocatedRegisters.remove(reg);
-        
+
         // Assign a register to this color
         registerMap.put(list.get(0).getColor(), reg);
       }
@@ -792,7 +794,7 @@ public class RegisterVisitor extends BasicBlockVisitor
           allocatedRegisters.add(reg);
           registerMap.put(list.get(0).getColor(), reg);
         }
-        
+
         if (CLI.debug) {
           System.out.println("Assigning " + reg + " to color " +
               list.get(0).getColor());
@@ -807,7 +809,7 @@ public class RegisterVisitor extends BasicBlockVisitor
           if (w.desc().getLocation().getLocationType() == LocationType.GLOBAL) {
             allocatedGlobals.put(w.desc(), reg);
           }
-        }        
+        }
       }
     }
   }

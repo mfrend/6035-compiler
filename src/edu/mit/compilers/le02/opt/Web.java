@@ -8,22 +8,22 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 /**
- * 
+ *
  * Webs are a representation of all the statements for which a given variable
  * must share the same register.  They are implemented as a tree which is part
  * of a disjoint-set forest of all webs, created using the union-find algorithm
- * 
+ *
  * Webs must satisfy two conditions, which are:
  * 1. A definition and all reachable uses must be in same web
  * 2. All definitions that reach same use must be in same web
  * (taken from 6.035 lecture notes)
- * 
+ *
  * Webs are originally created in the WebVisitor class, where each one
  * corresponds to a single definition of a variable, with all of its reached
  * definitions.  In the combination stage, any two definitions which both reach
  * the same use will be combined (via union), thus satisfying the two
  * conditions for what is contained in a web.
- * 
+ *
  * @author David Koh (dkoh@mit.edu)
  */
 public class Web implements Comparable<Web> {
@@ -173,7 +173,7 @@ public class Web implements Comparable<Web> {
 
     ret = this.stmts.size() - w.stmts.size();
 
-    if (ret != 0) { 
+    if (ret != 0) {
       return ret;
     }
 

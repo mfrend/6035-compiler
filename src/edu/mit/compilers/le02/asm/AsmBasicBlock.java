@@ -184,7 +184,7 @@ public class AsmBasicBlock implements AsmObject {
       ArgReassignStatement ars = (ArgReassignStatement) stmt;
       ArrayList<Register> regs = new ArrayList<Register>();
       Map<Register, Register> regMap = ars.getRegMap();
-      
+
       for (Register reg : regMap.keySet()) {
         // If the register is not reassigned to itself, put it on a list
         // of registers to reassign.
