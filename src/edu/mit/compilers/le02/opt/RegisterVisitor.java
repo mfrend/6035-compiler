@@ -193,10 +193,12 @@ public class RegisterVisitor extends BasicBlockVisitor
       this.registerMap.put(i, registerOrder.get(i));
     }
     // These registers should be unallocated, as they are used as temps
+    /*
     this.registerMap.put(-1, Register.R10);
     this.registerMap.put(-2, Register.R11);
     this.registerMap.put(-3, Register.R12);
     this.registerMap.put(-4, Register.RAX);
+    */
   }
     
   
@@ -717,6 +719,8 @@ public class RegisterVisitor extends BasicBlockVisitor
         }
       }
       
+      // Reset the register map
+      registerMap.clear();
       Register reg;
       for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
         reg = registerOrder.get(i);
@@ -787,8 +791,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         newStmts.add(newCall);
         setRegisterLivenessInfo(call, newCall);
         continue;
-      }
-      else if (stmt instanceof FakeDefStatement) {
+      } else if (stmt instanceof FakeDefStatement) {
         Web web = defUses.get(stmt);
         if (web != null) {
           reg = registerMap.get(web.find().getColor());
