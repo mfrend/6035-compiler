@@ -34,6 +34,7 @@ public enum AsmOpCode {
   SHLL,
   SARL,
   SUBL,
+  XCHGQ,
   XORQ,
   XORL,
   ;
