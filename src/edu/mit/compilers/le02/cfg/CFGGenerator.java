@@ -1,12 +1,16 @@
 package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
+import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
@@ -39,6 +43,8 @@ import edu.mit.compilers.le02.ast.SyscallArgNode;
 import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
+import edu.mit.compilers.le02.opt.ArrayBoundsChecks;
+import edu.mit.compilers.le02.opt.LoopMonotonicCode;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.LocalDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
@@ -48,10 +54,14 @@ import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
+  private static boolean arrayBoundsChecksOpt;
   private static CFGGenerator instance = null;
   private static String curMethod;
+  private static boolean inFlatFor;
+  private static boolean skipBoundsChecks;
   private ControlFlowGraph cfg;
   private SimpleCFGNode increment, loopExit;
+
 
   public static CFGGenerator getInstance() {
     if (instance == null) {
@@ -76,7 +86,16 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return ld;
   }
 
-  public static ControlFlowGraph generateCFG(ASTNode root) {
+  public static ControlFlowGraph generateCFG(ASTNode root,
+      EnumSet<Optimization> opts) {
+    arrayBoundsChecksOpt =
+        opts.contains(Optimization.LOOP_ARRAY_BOUNDS_CHECKS);
+    if (arrayBoundsChecksOpt) {
+      LoopMonotonicCode.findMonotonicCode(root);
+    }
+    inFlatFor = false;
+    skipBoundsChecks = false;
+
     assert(root instanceof ClassNode);
     root.accept(getInstance());
     return getInstance().cfg;
@@ -241,6 +260,146 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(ForNode node) {
+    CFGFragment loopFrag = forNodeHelper(node);
+
+    if (arrayBoundsChecksOpt && !inFlatFor &&
+        (LoopMonotonicCode.getFlatFors().contains(node))) {
+      inFlatFor = true;
+
+      skipBoundsChecks = true;
+      CFGFragment skipFrag = forNodeHelper(node);
+      skipBoundsChecks = false;
+      return precheckArrayBounds(node, loopFrag, skipFrag);
+    }
+
+    return loopFrag;
+  }
+
+  private CFGFragment precheckArrayBounds(
+      ForNode node, CFGFragment loopFrag, CFGFragment skipFrag) {
+    CFGFragment frag = null;
+
+    ArrayBoundsChecks.findArrayAccesses(node);
+    for (ArrayLocationNode array : ArrayBoundsChecks.getAccesses()) {
+      ExpressionNode index = array.getIndex();
+
+      if (LoopMonotonicCode.getMonotonicExprs().contains(index)) {
+
+        // Get the size of the array and make a fragment which prints oob errors
+        int size = ((FieldDescriptor)(array.getDesc())).getLength();
+
+        // Create a branch node where the array lower-bound is evaluated
+        CFGFragment lowerCheck = replaceVars(node, index.accept(this),
+              ArrayBoundsChecks.getLowerBounds(), 0);
+        BasicStatement lowerBoundCheck = new OpStatement(node,
+            AsmOp.LESS_THAN, lowerCheck.getExit().getResult(),
+            new ConstantArgument(0), null);
+        SimpleCFGNode lowerBound = new SimpleCFGNode(lowerBoundCheck);
+        lowerBound.setBranchTarget(loopFrag.getEnter());
+        lowerCheck = lowerCheck.append(lowerBound);
+
+        // Create a branch node where the array upper-bound is evaluated
+        CFGFragment upperCheck = replaceVars(node, index.accept(this),
+              ArrayBoundsChecks.getUpperBounds(), 1);
+        BasicStatement upperBoundCheck = new OpStatement(node,
+            AsmOp.GREATER_OR_EQUAL, upperCheck.getExit().getResult(),
+            new ConstantArgument(size), null);
+        SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
+        upperBound.setBranchTarget(loopFrag.getEnter());
+        upperCheck = upperCheck.append(upperBound);
+
+        if (frag == null) {
+          frag = lowerCheck.link(upperCheck);
+        } else {
+          frag = frag.link(lowerCheck).link(upperCheck);
+        }
+      }
+    }
+
+    if (frag == null) {
+      return skipFrag;
+    }
+
+    SimpleCFGNode exit = new SimpleCFGNode(new NOPStatement(node));
+    loopFrag.append(exit);
+    skipFrag.append(exit);
+    frag = frag.link(skipFrag);
+    return new CFGFragment(frag.getEnter(), exit);
+  }
+
+  private CFGFragment replaceVars(ForNode node, CFGFragment frag,
+        Map<TypedDescriptor, ExpressionNode> replacements, int offset) {
+    Map<Descriptor, Argument> subs = new HashMap<Descriptor, Argument>();
+    Descriptor desc;
+
+    SimpleCFGNode enter = new SimpleCFGNode(new NOPStatement(node));
+    frag = new CFGFragment(enter, enter).link(frag);
+
+    SimpleCFGNode cur = enter;
+    SimpleCFGNode next = cur.getNext();
+
+    while (next != null) {
+      if (next.getStatement() instanceof OpStatement) {
+        OpStatement op = (OpStatement)next.getStatement();
+
+        desc = op.getArg1().getDesc();
+        if (replacements.keySet().contains(desc)) {
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          op.setArg1(subs.get(desc));
+        }
+
+        desc = op.getArg2().getDesc();
+        if (replacements.keySet().contains(desc)) {
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          op.setArg2(subs.get(desc));
+        }
+      } else if (next.getStatement() instanceof ArgumentStatement) {
+        ArgumentStatement arg = (ArgumentStatement)next.getStatement();
+        desc = arg.getArgument().getDesc();
+        if (replacements.keySet().contains(desc)) {
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          arg.setArgument(subs.get(desc));
+          next.setResult(subs.get(desc));
+        }
+      }
+
+      cur = next;
+      next = cur.getNext();
+    }
+
+    return frag;
+  }
+
+  private SimpleCFGNode substitute(ASTNode node, SimpleCFGNode cur,
+      SimpleCFGNode next, CFGFragment frag, int offset) {
+    cur.setNext(frag.getEnter());
+    cur = frag.getExit();
+
+    if (offset != 0) {
+      TypedDescriptor loc = makeTemp(node, DecafType.INT);
+      SimpleCFGNode subtractOffset = new SimpleCFGNode(new OpStatement(node,
+          AsmOp.SUBTRACT, cur.getResult(), new ConstantArgument(offset), loc));
+      cur.setNext(subtractOffset);
+      cur = subtractOffset;
+    }
+
+    cur.setNext(next);
+    return cur;
+  }
+
+  private CFGFragment forNodeHelper(ForNode node) {
     // Save increment and exit nodes of any outer for loop
     SimpleCFGNode oldIncrement = increment;
     SimpleCFGNode oldExit = loopExit;
@@ -510,6 +669,16 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         new OpStatement(node, AsmOp.MOVE, ava, index, null)));
     }
 
+    // Create the final argument statement fragment
+    Argument array = Argument.makeArgument(node.getDesc(), index);
+    ArgumentStatement as = new ArgumentStatement(node, array);
+    SimpleCFGNode cfgNode = new SimpleCFGNode(as);
+
+    if (skipBoundsChecks &&
+        (LoopMonotonicCode.getMonotonicExprs().contains(node.getIndex()))) {
+      return indexFrag.append(cfgNode);
+    }
+
     // Get the size of the array and make a fragment which prints oob errors
     Descriptor arrayDesc =
       node.getSymbolTable().get(node.getName(), SymbolType.VARIABLE);
@@ -527,11 +696,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         AsmOp.GREATER_OR_EQUAL, index, new ConstantArgument(size), null);
     SimpleCFGNode upperBound = new SimpleCFGNode(upperBoundCheck);
     upperBound.setBranchTarget(violation.getEnter());
-
-    // Create the final argument statement fragment
-    Argument array = Argument.makeArgument(node.getDesc(), index);
-    ArgumentStatement as = new ArgumentStatement(node, array);
-    SimpleCFGNode cfgNode = new SimpleCFGNode(as);
 
     // Link all the fragments together and return the result
     return indexFrag.append(lowerBound).append(upperBound).append(cfgNode);
