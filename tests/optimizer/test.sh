@@ -84,6 +84,10 @@ for file in $PWD/input/*.dcf; do
     fi
     echo "$(($unopt / $opt))x speedup"
   fi
+  int_speedup=$(($unopt / $opt)) 
+  dec_speedup=$((($unopt * 1000) / $opt - ($int_speedup * 1000))) 
+  printf "%d.%03dx speedup\n" $int_speedup ${dec_speedup}
+
   cd "$orig_pwd";
   rm -r -f $workingdir;
 done
