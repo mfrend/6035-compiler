@@ -1,14 +1,14 @@
 package edu.mit.compilers.le02.cfg;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 
 public final class ArgReassignStatement extends BasicStatement {
-  private HashMap<Register, Register> regMap =
-    new HashMap<Register, Register>();
+  private Map<Register, Register> regMap =
+    new TreeMap<Register, Register>();
 
   public ArgReassignStatement(ASTNode node) {
     super(node, null);

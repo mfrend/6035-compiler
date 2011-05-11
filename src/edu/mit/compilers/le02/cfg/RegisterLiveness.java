@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.cfg;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 import edu.mit.compilers.le02.RegisterLocation.Register;
 
@@ -110,7 +111,7 @@ public class RegisterLiveness {
   }
 
   public Set<Register> getNonDyingCallerSavedRegisters() {
-    HashSet<Register> set = new HashSet<Register>(liveRegisters);
+    TreeSet<Register> set = new TreeSet<Register>(liveRegisters);
     set.removeAll(dyingRegisters);
     set.removeAll(getCalleeSavedRegisters());
     return Collections.unmodifiableSet(set);

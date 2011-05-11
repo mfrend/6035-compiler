@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 
 import edu.mit.compilers.le02.DecafType;
@@ -254,14 +255,14 @@ public class AsmBasicBlock implements AsmObject {
       // TODO: make this algorithm reassign registers in a smarter way
       ArgReassignStatement ars = (ArgReassignStatement) stmt;
       Map<Register, List<Register>> regMap =
-        new HashMap<Register, List<Register>>();
+        new TreeMap<Register, List<Register>>();
       for (Entry<Register, Register> entry : ars.getRegMap().entrySet()) {
         List<Register> targets = new ArrayList<Register>();
         targets.add(entry.getValue());
         regMap.put(entry.getKey(), targets);
       }
 
-      swapRegisters(regMap, sl);
+      swapRegisters(regMap, -1, sl);
     } else if (stmt instanceof NOPStatement) {
       // This is a nop; ignore it and continue onwards.
       return;
@@ -282,28 +283,40 @@ public class AsmBasicBlock implements AsmObject {
   }
 
   private void swapRegisters(Map<Register, List<Register>> regMap,
-      SourceLocation sl) {
+      int numArgs, SourceLocation sl) {
     Map<Register, Register> subMap = new HashMap<Register, Register>();
 
-    for (Register reg : regMap.keySet()) {
+    for (Entry<Register, List<Register>> entry : regMap.entrySet()) {
+      Register value = entry.getKey();
       // If the register is not reassigned to itself, put it on a list
       // of registers to reassign.
-      Register newReg = subMap.containsKey(reg) ? subMap.get(reg) : reg;
-      Register target = regMap.get(reg).get(0);
-      if (target == newReg) {
+      // rdx's value in rcx, needs to go to rax
+      // when we swap rcx and rax:
+      // rdx's value now lives in rax
+      // the value in rax now lives in rcx.
+      Register location =
+        subMap.containsKey(value) ? subMap.get(value) : value;
+      Register target = entry.getValue().get(0);
+      Register targetValue = target;
+      for (Entry<Register, Register> subEntry : subMap.entrySet()) {
+        if (subEntry.getValue() == target) {
+          targetValue = subEntry.getKey();
+        }
+      }
+      if (target == location) {
         continue;
       }
-      if (isArgumentRegister(newReg)) {
+      if (isArgumentRegister(location, numArgs) || numArgs < 0) {
         addInstruction(new AsmInstruction(
-            AsmOpCode.XCHGQ, newReg, target, sl));
-        subMap.put(target, newReg);
-        subMap.put(newReg, target);
+            AsmOpCode.XCHGQ, location, target, sl));
+        subMap.put(value, target);
+        subMap.put(targetValue, location);
       }
     }
     for (Register reg : regMap.keySet()) {
       List<Register> targets = regMap.get(reg);
       Register firstTarget = targets.get(0);
-      if (!isArgumentRegister(reg)) {
+      if (numArgs >= 0 && !isArgumentRegister(reg, numArgs)) {
         addInstruction(new AsmInstruction(
             AsmOpCode.MOVQ, reg, firstTarget, sl));
       }
@@ -422,6 +435,9 @@ public class AsmBasicBlock implements AsmObject {
     addInstruction(new AsmInstruction(
         AsmOpCode.ENTER,
         new StringAsmArg("$" + numLocals), new StringAsmArg("$0"), sl));
+
+    // R12 is a callee saved register and is modified during array accesses.
+    desc.markRegisterUsed(Register.R12);
 
     for (Register reg : desc.getUsedCalleeRegisters()) {
       // Save registers used in method.
@@ -700,7 +716,7 @@ public class AsmBasicBlock implements AsmObject {
     List<Argument> args = call.getArgs();
 
     Map<Register, List<Register>> regMap =
-      new HashMap<Register, List<Register>>();
+      new TreeMap<Register, List<Register>>();
     for (int ii = args.size() - 1; ii >= 0; ii--) {
       // Arguments after arg 6 go on the stack in reverse order
       if (ii >= 6) {
@@ -726,7 +742,7 @@ public class AsmBasicBlock implements AsmObject {
       }
     }
 
-    swapRegisters(regMap, sl);
+    swapRegisters(regMap, args.size(), sl);
 
     for (int ii = 0; ii < Math.min(args.size(), 6); ii++) {
       Argument arg = args.get(ii);
@@ -769,8 +785,8 @@ public class AsmBasicBlock implements AsmObject {
     }
   }
 
-  protected boolean isArgumentRegister(Register r) {
-    for (int i = 0; i < 6; i++) {
+  protected boolean isArgumentRegister(Register r, int numArgs) {
+    for (int i = 0; i < Math.min(numArgs, 6); i++) {
       if (argumentRegisters[i] == r) {
         return true;
       }
