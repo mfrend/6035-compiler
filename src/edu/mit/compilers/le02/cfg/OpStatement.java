@@ -22,7 +22,7 @@ public final class OpStatement extends BasicStatement {
     LESS_OR_EQUAL(true, false, true),
     GREATER_THAN(true, false, true),
     GREATER_OR_EQUAL(true, false, true),
-    NOT(false, true, false),
+    NOT(false, true, true),
     RETURN(false, false, false),
     ENTER(false, false, false),
     PUSH(false, false, false),

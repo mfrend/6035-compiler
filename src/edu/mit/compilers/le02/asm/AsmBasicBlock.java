@@ -605,7 +605,7 @@ public class AsmBasicBlock implements AsmObject {
             argumentRegisters[ii], sl));
       } else if (arg.isRegister() &&
                  (arg.getDesc().getLocation().getRegister() ==
-                  argumentRegisters[ii]) {
+                  argumentRegisters[ii])) {
         // Arg is already in the right place
         continue;
       } else {
