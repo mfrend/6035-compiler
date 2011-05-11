@@ -82,7 +82,7 @@ implements Lattice<BitSet, BasicBlockNode> {
         }
       }
     }
-    
+
     public boolean isLiveOnExit(TypedDescriptor desc) {
       BitSet liveness = (BitSet) this.getOut();
       Integer index = parent.variableIndices.get(desc);
@@ -91,7 +91,7 @@ implements Lattice<BitSet, BasicBlockNode> {
       }
       return liveness.get(index);
     }
-    
+
     public boolean isLiveOnEntrance(TypedDescriptor desc) {
       BitSet liveness = (BitSet) this.getIn();
 
@@ -434,7 +434,7 @@ implements Lattice<BitSet, BasicBlockNode> {
   public Map<BasicBlockNode, BlockItem> getBlockItems() {
     return blockItems;
   }
-  
+
 
   public BlockItem getBlockItem(BasicBlockNode node) {
     return blockItems.get(node);

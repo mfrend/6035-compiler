@@ -67,7 +67,9 @@ public class Main {
     COPY_PROPAGATION("cp"),
     DEAD_CODE("dc"),
     CONSECUTIVE_COPY("cc"),
-    REGISTER_ALLOCATION("regalloc");
+    LOOP_ARRAY_BOUNDS_CHECKS("abc"),
+    REGISTER_ALLOCATION("regalloc"),
+    ;
     private String flagName;
 
     private Optimization(String flag) {
@@ -366,7 +368,7 @@ public class Main {
         return false;
       }
 
-      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
+      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent, opts);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
 
       if (CLI.graphics) {
@@ -409,7 +411,7 @@ public class Main {
         return false;
       }
 
-      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent);
+      ControlFlowGraph lowCfg = CFGGenerator.generateCFG(parent, opts);
       ControlFlowGraph cfg = BasicBlockGraph.makeBasicBlockGraph(lowCfg, opts);
       for (FieldDescriptor global : st.getFields()) {
         cfg.putGlobal("." + global.getId(), global);

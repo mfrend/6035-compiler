@@ -11,20 +11,20 @@ import java.util.TreeSet;
 public class InterferenceGraph {
   // Trying to keep things deterministic
   private SortedMap<Web, IGNode> nodes = new TreeMap<Web, IGNode>();
-  
+
   public boolean isEmpty() {
     return nodes.isEmpty();
   }
-  
+
   public void addNode(Web web) {
     nodes.put(web, new IGNode(web));
   }
-  
+
   public void linkNodes(Web w1, Web w2) {
     if (w1 == w2) {
       return;
     }
-    
+
     IGNode n1, n2;
     n1 = nodes.get(w1);
     n2 = nodes.get(w2);
@@ -32,7 +32,7 @@ public class InterferenceGraph {
     n1.addNeighbor(n2);
     n2.addNeighbor(n1);
   }
-  
+
   private IGNode removeLowestDegree() {
     int min = Integer.MAX_VALUE;
     IGNode minNode = null;
@@ -45,22 +45,22 @@ public class InterferenceGraph {
         minNode = node;
       }
     }
-    
+
     minNode.simulateRemove();
     return minNode;
   }
-  
+
   private int colorNode(IGNode node) {
     HashSet<Integer> colors = new HashSet<Integer>();
     for (IGNode n : node.getNeighbors()) {
       colors.add(n.getColor());
     }
-    
+
     int color = 0;
     while (colors.contains(color)) {
       color++;
     }
-    
+
     node.setColor(color);
     return color;
   }
@@ -68,11 +68,11 @@ public class InterferenceGraph {
   public int colorGraph() {
     Stack<IGNode> stack = new Stack<IGNode>();
     int numColors = 0;
-    
+
     for (int i = 0; i < nodes.size(); i++) {
       stack.push(removeLowestDegree());
     }
-    
+
     int color;
     while (!stack.empty()) {
       color = colorNode(stack.pop());
@@ -90,24 +90,24 @@ public class InterferenceGraph {
     private boolean removed = false;
     // Trying to keep things deterministic
     private SortedSet<IGNode> neighbors = new TreeSet<IGNode>();
-    
+
     public IGNode(Web web) {
       this.web = web;
     }
-    
+
     public void reset() {
       removed = false;
       degree = neighbors.size();
     }
-    
+
     public boolean wasRemoved() {
       return removed;
     }
-    
+
     public int getDegree() {
       return degree;
     }
-    
+
     public int getColor() {
       return color;
     }
@@ -115,40 +115,40 @@ public class InterferenceGraph {
     public Web getWeb() {
       return web;
     }
- 
+
     public void setColor(int color) {
       this.color = color;
       this.web.setColor(color);
     }
-    
+
     public Set<IGNode> getNeighbors() {
       return neighbors;
     }
-    
+
     public void addNeighbor(IGNode node) {
       if (neighbors.contains(node)) {
         return;
       }
-      
+
       neighbors.add(node);
       degree += 1;
     }
-  
+
     public void simulateRemoveNeighbor(IGNode node) {
       if (!neighbors.contains(node)) {
         return;
       }
-      
+
       degree -= 1;
     }
-    
+
     public void simulateRemove() {
       for (IGNode n : neighbors) {
         n.simulateRemoveNeighbor(this);
       }
       removed = true;
     }
-    
+
     @Override
     public String toString() {
       return "NODE\ndegree: " + getDegree() + "\n"
@@ -156,7 +156,7 @@ public class InterferenceGraph {
            + "removed: " + removed + "\n"
            + "# neighbors: " + neighbors.size() + "\n";
     }
-    
+
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
@@ -164,7 +164,7 @@ public class InterferenceGraph {
       IGNode other = (IGNode) o;
       return this.web.equals(other.web);
     }
-    
+
     @Override
     public int hashCode() {
       return this.web.hashCode();

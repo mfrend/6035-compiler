@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.ast.ASTNode;
@@ -72,9 +71,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
         if (s.getType() == BasicStatementType.NOP) {
           continue;
         }
-        
+
         this.killSet.or(parent.varDefinitions.get(
-            parent.getDefinitionTarget(s)));  
+            parent.getDefinitionTarget(s)));
       }
     }
 
@@ -85,7 +84,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       if (varDefs == null) {
         return Collections.emptyList();
       }
-      
+
       ret.and(varDefs);
       return getBitsetDefinitions(ret);
     }
@@ -168,8 +167,8 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.blockDefinitions = new HashMap<BasicBlockNode, BlockItem>();
     this.varDefinitions = new HashMap<VariableLocation, BitSet>();
     this.globalDefinitions = new BitSet();
-    this.methodRoot = methodRoot; 
-    
+    this.methodRoot = methodRoot;
+
     setupMethod();
     this.visit(this.methodRoot);
 
@@ -189,18 +188,18 @@ public class ReachingDefinitions extends BasicBlockVisitor
   protected void processNode(BasicBlockNode node) {
     this.blockDefinitions.put(node, calcDefinitions(node));
   }
-  
+
   // Adds first statement in method as definition for arguments
   private void setupMethod() {
 
     ArrayList<BasicStatement> fakeDefs = new ArrayList<BasicStatement>();
-    
+
     BasicStatement methodStart = methodRoot.getStatements().get(0);
-    
+
     if (methodStart.getNode() == null) {
       return;
     }
-    
+
     SymbolTable st = methodStart.getNode().getSymbolTable();
     MethodDescriptor md = st.getMethod(methodRoot.getMethod());
     List<ParamDescriptor> args = md.getParams();
@@ -217,7 +216,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
       bs.set(index);
       varDefinitions.put(arg.getLocation(), bs);
     }
-    
+
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
     newStmts.addAll(fakeDefs);
     newStmts.addAll(methodRoot.getStatements());
@@ -292,7 +291,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     if (s.getType() == BasicStatementType.CALL && s.getResult() != null) {
       return s.getResult().getLocation();
     }
-    
+
     OpStatement def = (OpStatement) s;
     switch (def.getOp()) {
       case MOVE:
@@ -342,7 +341,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     ret.or(v2);
     return ret;
   }
-  
+
   public static class FakeDefStatement extends NOPStatement {
     private ParamDescriptor param;
     public FakeDefStatement(ASTNode node, ParamDescriptor param) {

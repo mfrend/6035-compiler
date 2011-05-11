@@ -29,11 +29,11 @@ public class ParamDescriptor extends TypedDescriptor {
       this.location = new StackLocation((i - 6) * 8 + 16);
     }
   }
-  
+
   public void setLocation(VariableLocation loc) {
     this.location = loc;
   }
-  
+
   public Register getIndexRegister() {
     if (index >= 6 || index == -1) {
       return null;

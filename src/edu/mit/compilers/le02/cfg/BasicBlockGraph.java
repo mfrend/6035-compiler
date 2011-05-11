@@ -75,7 +75,7 @@ public class BasicBlockGraph {
         Liveness live = new Liveness(methodEnter);
         new DeadCodeElimination(methodEnter, live.getBlockItems());
       }
-      
+
       ASTNode enterNode = methodEnter.getStatements().get(0).getNode();
       SymbolTable st = enterNode.getSymbolTable();
       MethodDescriptor md = st.getMethod(methodEnter.getMethod());
@@ -100,12 +100,11 @@ public class BasicBlockGraph {
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();
 
-      // Run register allocation.
+      // Adjust local offset count.
       if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
         localOffset -= rv.getArgTempOffset();
       }
-      
-      
+
       // TODO: Find a suitable source location to put in here
       OpStatement enterStmt = new OpStatement(enterNode, AsmOp.ENTER,
                                 Argument.makeArgument(localOffset),
@@ -149,6 +148,7 @@ public class BasicBlockGraph {
      case OP:
      case CALL:
      case NOP:
+     case HALT:
       node.addStatement(st);
       break;
      default:

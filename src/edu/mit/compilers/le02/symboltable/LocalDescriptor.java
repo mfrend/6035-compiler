@@ -2,7 +2,6 @@ package edu.mit.compilers.le02.symboltable;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.StackLocation;
-import edu.mit.compilers.le02.VariableLocation;
 
 public class LocalDescriptor extends TypedDescriptor
     implements Comparable<LocalDescriptor> {

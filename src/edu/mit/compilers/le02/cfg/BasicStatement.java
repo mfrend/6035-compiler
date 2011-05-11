@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
@@ -13,7 +14,7 @@ public abstract class BasicStatement {
   protected TypedDescriptor result;
   protected BasicStatementType type;
   protected RegisterLiveness registerLiveness;
-  
+
   private static int nextUid = 0;
 
   public enum BasicStatementType {
@@ -21,7 +22,8 @@ public abstract class BasicStatement {
     OP,
     CALL,
     NOP,
-    JUMP
+    JUMP,
+    HALT,
   }
 
   public BasicStatement(ASTNode node, TypedDescriptor result) {
@@ -46,30 +48,33 @@ public abstract class BasicStatement {
   public BasicStatementType getType() {
     return type;
   }
-  
+
   public RegisterLiveness getRegisterLiveness() {
     return registerLiveness;
   }
-  
+
   public List<Register> getLiveRegisters() {
     return new ArrayList<Register>(registerLiveness.getLiveRegisters());
   }
-  
+
   public List<Register> getNonDyingRegisters() {
     return new ArrayList<Register>(registerLiveness.getNonDyingRegisters());
   }
-  
+
   public List<Register> getNonDyingCallerSavedRegisters() {
     return new ArrayList<Register>(
         registerLiveness.getNonDyingCallerSavedRegisters());
   }
-  
+
   public void setRegisterLiveness(Register r, boolean live) {
     registerLiveness.setRegisterLiveness(r, live);
   }
-  
+
   public void setRegisterDying(Register r, boolean live) {
     registerLiveness.setRegisterDying(r, live);
+  }
+  public Set<Register> getDyingRegisters() {
+    return registerLiveness.getDyingRegisters();
   }
 
   @Override

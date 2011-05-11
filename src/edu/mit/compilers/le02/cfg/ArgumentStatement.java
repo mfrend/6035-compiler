@@ -15,6 +15,10 @@ public final class ArgumentStatement extends BasicStatement {
     return arg;
   }
 
+  public void setArgument(Argument newArg) {
+    arg = newArg;
+  }
+
   @Override
   public String toString() {
     return "ArgumentStatement(" + arg + ")";
