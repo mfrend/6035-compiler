@@ -58,6 +58,7 @@ public class RegisterVisitor extends BasicBlockVisitor
   private BasicStatement startOfMethod;
   private MethodDescriptor methodDescriptor;
   private ArgReassignStatement argReassign = null;
+  private int argTempOffset = 0;
   
   public static final int NUM_REGISTERS = 10;
   
@@ -75,7 +76,7 @@ public class RegisterVisitor extends BasicBlockVisitor
   }
 
 
-  public static void runRegisterAllocation(BasicBlockNode methodHead, 
+  public static RegisterVisitor runRegisterAllocation(BasicBlockNode methodHead, 
                                            MethodDescriptor md) {
     ReachingDefinitions rd = new ReachingDefinitions(methodHead);
     RegisterVisitor visitor = new RegisterVisitor(rd);
@@ -157,6 +158,8 @@ public class RegisterVisitor extends BasicBlockVisitor
     // == STAGE 6 ==
     visitor.pass = Pass.INSERT_REGISTERS;
     visitor.visit(methodHead); // insertRegisters(node)
+    
+    return visitor;
   }
   
   public RegisterVisitor(ReachingDefinitions rd) {
@@ -747,7 +750,6 @@ public class RegisterVisitor extends BasicBlockVisitor
    */
   private void insertRegisters(BasicBlockNode node) {
     ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
-    int argTmpOffset = 0;
     
     for (BasicStatement stmt : node.getStatements()) {
       Register reg;
@@ -798,8 +800,8 @@ public class RegisterVisitor extends BasicBlockVisitor
             
             // Update the argument temp offset, so if we do this for more
             // than one variable, they don't overlap
-            tmpOffset += argTmpOffset;
-            argTmpOffset -= 8;
+            tmpOffset += argTempOffset;
+            argTempOffset -= 8;
             
             FakeDefStatement fds = (FakeDefStatement) stmt;
             Register oldReg = fds.getParam().getIndexRegister();
@@ -958,6 +960,9 @@ public class RegisterVisitor extends BasicBlockVisitor
     }
   }
   
+  public int getArgTempOffset() {
+    return argTempOffset;
+  }
   
   private static class WebLiveness extends GenKillItem {
     public Collection<Web> theGen;

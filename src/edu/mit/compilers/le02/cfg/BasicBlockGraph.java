@@ -87,9 +87,10 @@ public class BasicBlockGraph {
         }
       }
 
+      RegisterVisitor rv = null;
       // Run register allocation.
       if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
-        RegisterVisitor.runRegisterAllocation(methodEnter, md);
+        rv = RegisterVisitor.runRegisterAllocation(methodEnter, md);
       }
 
       // All of these optimizations change the number of local variables.
@@ -98,6 +99,13 @@ public class BasicBlockGraph {
 
       // Places an enter statement with the desired offset
       int localOffset = -getLargestLocalOffset();
+
+      // Run register allocation.
+      if (opts.contains(Optimization.REGISTER_ALLOCATION)) {
+        localOffset -= rv.getArgTempOffset();
+      }
+      
+      
       // TODO: Find a suitable source location to put in here
       OpStatement enterStmt = new OpStatement(enterNode, AsmOp.ENTER,
                                 Argument.makeArgument(localOffset),
