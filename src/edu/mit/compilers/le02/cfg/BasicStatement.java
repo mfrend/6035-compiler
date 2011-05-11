@@ -79,6 +79,6 @@ public abstract class BasicStatement {
 
   @Override
   public int hashCode() {
-    return toString().hashCode();
+    return uid;
   }
 }

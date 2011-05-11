@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.ast.ASTNode;
@@ -170,7 +169,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.globalDefinitions = new BitSet();
     this.methodRoot = methodRoot; 
     
-    //setupMethod();
+    setupMethod();
     this.visit(this.methodRoot);
 
     for (BlockItem bi : blockDefinitions.values()) {

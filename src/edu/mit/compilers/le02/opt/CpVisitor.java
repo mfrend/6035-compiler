@@ -233,7 +233,7 @@ public class CpVisitor extends BasicBlockVisitor {
     CseVariable result = tmpToVar.get(key);
     if (result != null) {
       if (CLI.debug) {
-        System.out.println("Substituted " + result + " for " + key);
+        //System.out.println("Substituted " + result + " for " + key);
       }
       return Argument.makeArgument(result);
     } else {
