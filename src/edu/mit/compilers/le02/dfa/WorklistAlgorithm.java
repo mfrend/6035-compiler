@@ -50,6 +50,9 @@ public class WorklistAlgorithm {
     }
   }
 
+  // Before calling runBackwards, you need to ensure that every
+  // WorklistItem with no successors has an out set
+  // These out sets are the initial conditions for the algorithm
   public static <T> void runBackwards(
       Collection<? extends WorklistItem<T>> items,
       Lattice<T, ?> lattice) {
@@ -58,7 +61,7 @@ public class WorklistAlgorithm {
 
     // Initialize edge maps
     for (WorklistItem<T> item : items) {
-      if (item.getOut() == null) {
+      if (!item.successors().isEmpty()) {
         item.setOut(lattice.bottom());
       } else {
         worklist.remove(item);

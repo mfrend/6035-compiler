@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.cfg;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
@@ -38,7 +39,7 @@ public class CallStatement extends BasicStatement {
 
   @Override
   public String toString() {
-    String s = "CallStatement(" + name;
+    String s = "CallStatement" + uid + "(" + name;
     for (Argument a : args) {
       s += ", " + a;
     }
@@ -46,6 +47,11 @@ public class CallStatement extends BasicStatement {
 
     if (result != null) {
       s += ": " + result;
+    }
+
+    s += " LIVE: ";
+    for (Register r : registerLiveness.getLiveRegisters()) {
+      s += r + " ";
     }
     return s;
   }

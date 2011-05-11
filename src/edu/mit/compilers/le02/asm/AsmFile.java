@@ -151,13 +151,16 @@ public class AsmFile {
     errors.add(new AsmInstruction(
         AsmOpCode.MOVSXD, Register.R12D, Register.RSI, sl));
     errors.add(new AsmInstruction(
-        AsmOpCode.MOVQ, "$." + errmsgLabel, Register.RDI, sl));
-    errors.add(new AsmInstruction(AsmOpCode.CALL, "printf", sl));
+        AsmOpCode.MOVQ, new StringAsmArg("$." + errmsgLabel),
+        Register.RDI, sl));
+    errors.add(new AsmInstruction(
+        AsmOpCode.CALL,new StringAsmArg("printf"), sl));
     errors.add(new AsmInstruction(
         AsmOpCode.XORQ, Register.RAX, Register.RAX, sl));
     errors.add(new AsmInstruction(
         AsmOpCode.XORQ, Register.RDI, Register.RDI, sl));
-    errors.add(new AsmInstruction(AsmOpCode.CALL, "exit", sl));
+    errors.add(new AsmInstruction(
+        AsmOpCode.CALL, new StringAsmArg("exit"), sl));
   }
 
   /**

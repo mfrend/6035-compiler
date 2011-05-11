@@ -11,12 +11,17 @@ import java.util.Map;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.VariableLocation;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
+import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.cfg.BasicStatement.BasicStatementType;
+import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
 import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.opt.BasicBlockVisitor;
+import edu.mit.compilers.le02.symboltable.MethodDescriptor;
+import edu.mit.compilers.le02.symboltable.ParamDescriptor;
+import edu.mit.compilers.le02.symboltable.SymbolTable;
 
 /**
  *
@@ -30,7 +35,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
   private Map<VariableLocation, BitSet> varDefinitions;
   private BitSet globalDefinitions;
   private List<BasicStatement> definitions;
-
+  private BasicBlockNode methodRoot;
 
   public class BlockItem extends GenKillItem {
     private ReachingDefinitions parent;
@@ -55,22 +60,32 @@ public class ReachingDefinitions extends BasicBlockVisitor
         if (s.getType() == BasicStatementType.CALL) {
           this.genSet.andNot(parent.globalDefinitions);
           this.killSet.or(parent.globalDefinitions);
-          continue;
+          if (!isDefinition(s)) {
+            continue;
+          }
         }
 
-        OpStatement def = (OpStatement) s;
         index = parent.definitionIndices.get(s);
         this.genSet.set(index);
 
+        if (s.getType() == BasicStatementType.NOP) {
+          continue;
+        }
+
         this.killSet.or(parent.varDefinitions.get(
-            parent.getDefinitionTarget(def)));
+            parent.getDefinitionTarget(s)));
       }
     }
 
     public Collection<BasicStatement>
     getReachingDefinitions(VariableLocation loc) {
       BitSet ret = (BitSet) this.getIn().clone();
-      ret.and(parent.varDefinitions.get(loc));
+      BitSet varDefs = parent.varDefinitions.get(loc);
+      if (varDefs == null) {
+        return Collections.emptyList();
+      }
+
+      ret.and(varDefs);
       return getBitsetDefinitions(ret);
     }
 
@@ -117,7 +132,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
         new ArrayList<WorklistItem<BitSet>>();
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockDefinitions.get(pred);
-        ret.add(item);
+        if (item != null) {
+          ret.add(item);
+        }
       }
       return ret;
     }
@@ -150,7 +167,10 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.blockDefinitions = new HashMap<BasicBlockNode, BlockItem>();
     this.varDefinitions = new HashMap<VariableLocation, BitSet>();
     this.globalDefinitions = new BitSet();
-    this.visit(methodRoot);
+    this.methodRoot = methodRoot;
+
+    setupMethod();
+    this.visit(this.methodRoot);
 
     for (BlockItem bi : blockDefinitions.values()) {
       bi.init();
@@ -169,6 +189,40 @@ public class ReachingDefinitions extends BasicBlockVisitor
     this.blockDefinitions.put(node, calcDefinitions(node));
   }
 
+  // Adds first statement in method as definition for arguments
+  private void setupMethod() {
+
+    ArrayList<BasicStatement> fakeDefs = new ArrayList<BasicStatement>();
+
+    BasicStatement methodStart = methodRoot.getStatements().get(0);
+
+    if (methodStart.getNode() == null) {
+      return;
+    }
+
+    SymbolTable st = methodStart.getNode().getSymbolTable();
+    MethodDescriptor md = st.getMethod(methodRoot.getMethod());
+    List<ParamDescriptor> args = md.getParams();
+    for (ParamDescriptor arg : args) {
+      BasicStatement fakeDef = new FakeDefStatement(methodStart.getNode(), arg);
+      fakeDefs.add(fakeDef);
+      definitions.add(fakeDef);
+      int index = definitions.size() - 1;
+      definitionIndices.put(fakeDef, index);
+      BitSet bs = varDefinitions.get(arg.getLocation());
+      if (bs == null) {
+        bs = new BitSet();
+      }
+      bs.set(index);
+      varDefinitions.put(arg.getLocation(), bs);
+    }
+
+    ArrayList<BasicStatement> newStmts = new ArrayList<BasicStatement>();
+    newStmts.addAll(fakeDefs);
+    newStmts.addAll(methodRoot.getStatements());
+    methodRoot.setStatements(newStmts);
+  }
+
   public BlockItem getDefinitions(BasicBlockNode node) {
     return blockDefinitions.get(node);
   }
@@ -178,8 +232,7 @@ public class ReachingDefinitions extends BasicBlockVisitor
 
     for (BasicStatement s : node.getStatements()) {
       if (isDefinition(s)) {
-        OpStatement def = (OpStatement) s;
-        VariableLocation target = getDefinitionTarget(def);
+        VariableLocation target = getDefinitionTarget(s);
 
         blockDefs.add(s);
         definitions.add(s);
@@ -189,9 +242,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
         BitSet bs = varDefinitions.get(target);
         if (bs == null) {
           bs = new BitSet();
-          varDefinitions.put(target, bs);
         }
         bs.set(index);
+        varDefinitions.put(target, bs);
 
         if (target.getLocationType() == LocationType.GLOBAL) {
           globalDefinitions.set(index);
@@ -201,6 +254,9 @@ public class ReachingDefinitions extends BasicBlockVisitor
       else if (s.getType() == BasicStatementType.CALL) {
         blockDefs.add(s);
       }
+      else if (s instanceof FakeDefStatement) {
+        blockDefs.add(s);
+      }
     }
 
     return new BlockItem(this, node, blockDefs);
@@ -208,7 +264,10 @@ public class ReachingDefinitions extends BasicBlockVisitor
   }
 
   private boolean isDefinition(BasicStatement s) {
-    if (!(s instanceof OpStatement)) {
+    if (s.getType() == BasicStatementType.CALL && s.getResult() != null) {
+      return true;
+    }
+    else if (!(s instanceof OpStatement)) {
       return false;
     }
 
@@ -228,7 +287,12 @@ public class ReachingDefinitions extends BasicBlockVisitor
     }
   }
 
-  private VariableLocation getDefinitionTarget(OpStatement def) {
+  private VariableLocation getDefinitionTarget(BasicStatement s) {
+    if (s.getType() == BasicStatementType.CALL && s.getResult() != null) {
+      return s.getResult().getLocation();
+    }
+
+    OpStatement def = (OpStatement) s;
     switch (def.getOp()) {
       case MOVE:
         return ((VariableArgument) def.getArg2()).getDesc().getLocation();
@@ -276,6 +340,23 @@ public class ReachingDefinitions extends BasicBlockVisitor
     BitSet ret = (BitSet) v1.clone();
     ret.or(v2);
     return ret;
+  }
+
+  public static class FakeDefStatement extends NOPStatement {
+    private ParamDescriptor param;
+    public FakeDefStatement(ASTNode node, ParamDescriptor param) {
+      super(node);
+      this.param = param;
+    }
+
+    public ParamDescriptor getParam() {
+      return param;
+    }
+
+    @Override
+    public String toString() {
+      return "FakeDefStatement " + param;
+    }
   }
 
 }

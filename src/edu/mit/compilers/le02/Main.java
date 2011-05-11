@@ -66,7 +66,8 @@ public class Main {
     COMMON_SUBEXPR("cse"),
     COPY_PROPAGATION("cp"),
     DEAD_CODE("dc"),
-    CONSECUTIVE_COPY("cc");
+    CONSECUTIVE_COPY("cc"),
+    REGISTER_ALLOCATION("regalloc");
     private String flagName;
 
     private Optimization(String flag) {
