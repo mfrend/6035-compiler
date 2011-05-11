@@ -769,7 +769,7 @@ public class RegisterVisitor extends BasicBlockVisitor
         List<Web> list = webLists.get(i);
         reg = registerMap.get(list.get(0).getColor());
         if (reg == null) {
-          reg = unallocatedRegisters.remove(i);
+          reg = unallocatedRegisters.remove(0);
           allocatedRegisters.add(reg);
           registerMap.put(list.get(0).getColor(), reg);
         }
