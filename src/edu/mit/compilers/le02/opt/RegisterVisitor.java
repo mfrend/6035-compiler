@@ -756,11 +756,23 @@ public class RegisterVisitor extends BasicBlockVisitor
           }
         }
         if (reg == null) {
-          reg = unallocatedRegisters.remove(i);
+          continue;
         }     
+        allocatedRegisters.add(reg);
+        unallocatedRegisters.remove(reg);
         
         // Assign a register to this color
         registerMap.put(list.get(0).getColor(), reg);
+      }
+
+      for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
+        List<Web> list = webLists.get(i);
+        reg = registerMap.get(list.get(0).getColor());
+        if (reg == null) {
+          reg = unallocatedRegisters.remove(i);
+          allocatedRegisters.add(reg);
+          registerMap.put(list.get(0).getColor(), reg);
+        }
         
         if (CLI.debug) {
           System.out.println("Assigning " + reg + " to color " + list.get(0).getColor());
