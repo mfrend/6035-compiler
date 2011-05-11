@@ -15,7 +15,7 @@ import edu.mit.compilers.le02.VariableLocation;
 public class ParamDescriptor extends TypedDescriptor {
   private int index = -1;
 
-  private static Register[] arguments = {RDI, RSI, RDX, RCX, R8, R9};
+  public static final Register[] arguments = {RDI, RSI, RDX, RCX, R8, R9};
 
   public ParamDescriptor(SymbolTable parent, String id, DecafType type) {
     super(parent, id, type);

@@ -1,34 +1,36 @@
+
 package edu.mit.compilers.le02.opt;
 
 import java.util.HashSet;
 import java.util.Set;
 
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
-
 /**
- *
+ * 
  * Webs are a representation of all the statements for which a given variable
  * must share the same register.  They are implemented as a tree which is part
  * of a disjoint-set forest of all webs, created using the union-find algorithm
- *
+ * 
  * Webs must satisfy two conditions, which are:
  * 1. A definition and all reachable uses must be in same web
  * 2. All definitions that reach same use must be in same web
  * (taken from 6.035 lecture notes)
- *
+ * 
  * Webs are originally created in the WebVisitor class, where each one
  * corresponds to a single definition of a variable, with all of its reached
  * definitions.  In the combination stage, any two definitions which both reach
  * the same use will be combined (via union), thus satisfying the two
  * conditions for what is contained in a web.
- *
+ * 
  * @author David Koh (dkoh@mit.edu)
  */
 public class Web implements Comparable<Web> {
   private int color;
   private Web rep;
   private int _rank;
+  private Register preferredReg = null;
   private TypedDescriptor desc;
   private HashSet<BasicStatement> stmts;
   private int id;
@@ -65,19 +67,26 @@ public class Web implements Comparable<Web> {
     Web otherRoot = other.find();
 
 
-    if (this.rank() > other.rank()) {
+    if (this.rank() >= other.rank()) {
       otherRoot.rep = thisRoot;
       thisRoot.stmts.addAll(otherRoot.stmts);
-    }
-    else if (other.rank() > this.rank()) {
-      thisRoot.rep = otherRoot;
-      otherRoot.stmts.addAll(thisRoot.stmts);
+
+      if (thisRoot.preferredReg == null) {
+        thisRoot.preferredReg = otherRoot.preferredReg;
+      }
+
+      if (this.rank() == other.rank()) {
+        thisRoot._rank++;
+      }
     }
     else {
-      // other.rank() == this.rank()
-      otherRoot.rep = thisRoot;
-      thisRoot.stmts.addAll(otherRoot.stmts);
-      thisRoot._rank++;
+      // other.rank() > this.rank()
+      thisRoot.rep = otherRoot;
+      otherRoot.stmts.addAll(thisRoot.stmts);
+
+      if (otherRoot.preferredReg == null) {
+        otherRoot.preferredReg = thisRoot.preferredReg;
+      }
     }
   }
 
@@ -87,6 +96,14 @@ public class Web implements Comparable<Web> {
 
   public TypedDescriptor desc() {
     return this.desc;
+  }
+
+  public Register getPreferredRegister() {
+    return this.preferredReg ;
+  }
+
+  public void setPreferredRegister(Register reg) {
+    this.preferredReg = reg;
   }
 
   public void addStmt(BasicStatement stmt) {
@@ -117,11 +134,11 @@ public class Web implements Comparable<Web> {
 
   public String longDesc() {
     String str =  "WEB" + id + "\n"
-                + "  is rep: " + (this.find() == this.rep) + "\n"
-                + "  rank: " + _rank + "\n"
-                + "  desc: " + desc + "\n"
-                + "  color: " + color + "\n"
-                + "  statments: \n";
+    + "  is rep: " + (this.find() == this.rep) + "\n"
+    + "  rank: " + _rank + "\n"
+    + "  desc: " + desc + "\n"
+    + "  color: " + color + "\n"
+    + "  statments: \n";
 
 
     for (BasicStatement s : stmts) {
@@ -138,7 +155,7 @@ public class Web implements Comparable<Web> {
 
     Web other = (Web) o;
     return this.desc.equals(other.desc) &&
-           this.stmts.equals(other.stmts);
+    this.stmts.equals(other.stmts);
   }
 
   @Override
@@ -156,7 +173,7 @@ public class Web implements Comparable<Web> {
 
     ret = this.stmts.size() - w.stmts.size();
 
-    if (ret != 0) {
+    if (ret != 0) { 
       return ret;
     }
 

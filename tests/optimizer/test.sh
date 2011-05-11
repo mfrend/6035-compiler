@@ -82,7 +82,7 @@ for file in $PWD/input/*.dcf; do
       opt=`cat $timing_opt|awk '{print($2)}'`
       echo "${opt} usec"
     fi
-    echo "$((($unopt - $opt) * 100 / $unopt))%"
+    echo "$(($unopt / $opt))x speedup"
   fi
   cd "$orig_pwd";
   rm -r -f $workingdir;

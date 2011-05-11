@@ -7,15 +7,16 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.RegisterLocation;
-import edu.mit.compilers.le02.Main.Optimization;
-import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
 import edu.mit.compilers.le02.VariableLocation;
+import edu.mit.compilers.le02.Main.Optimization;
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.VariableLocation.LocationType;
 import edu.mit.compilers.le02.cfg.ArgReassignStatement;
 import edu.mit.compilers.le02.cfg.Argument;
@@ -27,9 +28,9 @@ import edu.mit.compilers.le02.cfg.ConstantArgument;
 import edu.mit.compilers.le02.cfg.HaltStatement;
 import edu.mit.compilers.le02.cfg.NOPStatement;
 import edu.mit.compilers.le02.cfg.OpStatement;
+import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.cfg.Argument.ArgType;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
-import edu.mit.compilers.le02.cfg.VariableArgument;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
 import edu.mit.compilers.le02.symboltable.SymbolTable;
@@ -182,9 +183,14 @@ public class AsmBasicBlock implements AsmObject {
       // TODO: make this algorithm reassign registers in a smarter way
       ArgReassignStatement ars = (ArgReassignStatement) stmt;
       ArrayList<Register> regs = new ArrayList<Register>();
-
-      for (Register reg : ars.getRegMap().keySet()) {
-        regs.add(reg);
+      Map<Register, Register> regMap = ars.getRegMap();
+      
+      for (Register reg : regMap.keySet()) {
+        // If the register is not reassigned to itself, put it on a list
+        // of registers to reassign.
+        if (regMap.get(reg) != reg) {
+          regs.add(reg);
+        }
       }
 
       for (Register reg : regs) {
@@ -194,7 +200,7 @@ public class AsmBasicBlock implements AsmObject {
       Collections.reverse(regs);
 
       for (Register from : regs) {
-        Register to = ars.getRegMap().get(from);
+        Register to = regMap.get(from);
         addInstruction(new AsmInstruction(AsmOpCode.POPQ, to, sl));
       }
 
