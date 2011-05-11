@@ -570,12 +570,11 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(AsmOpCode.PUSHQ, r, sl));
     }
     
-    // Push arguments.
-    // First six go into registers, rest go on stack in right to left order
     List<Argument> args = call.getArgs();
 
     boolean[] pushedRegs = new boolean[6];
     for (int ii = args.size() - 1; ii >= 0; ii--) {
+      // Arguments after arg 6 go on the stack in reverse order
       if (ii >= 6) {
         addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
             prepareArgument(args.get(ii), true, thisMethod.getId(), 
@@ -583,17 +582,16 @@ public class AsmBasicBlock implements AsmObject {
         continue;
       } 
 
+      // If the arguments before arg 6 are currently in an argument register,
+      // and is not in the right one, push it onto the stack (to be popped later)
       Argument arg = args.get(ii);
       if (arg.isRegister() &&
-          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii]) {
+          arg.getDesc().getLocation().getRegister() != argumentRegisters[ii] &&
+          isArgumentRegister(arg.getDesc().getLocation().getRegister())) {
 
         addInstruction(new AsmInstruction(AsmOpCode.PUSHQ,
             prepareArgument(arg, true, thisMethod.getId(), true, sl), sl));
         pushedRegs[ii] = true;
-      } else {
-        addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
-            prepareArgument(arg, true, thisMethod.getId(),
-              true, sl), argumentRegisters[ii].toString(), sl));
       }
     }
     
@@ -602,9 +600,20 @@ public class AsmBasicBlock implements AsmObject {
     //      value be in %rsi, and the %rsi value be in %rdi.  We should
     //      do this more efficiently in general, though.
     for (int ii = 0; ii < Math.min(args.size(), 6); ii++) {
+      Argument arg = args.get(ii);
       if (pushedRegs[ii]) {
+        // Arg has been pushed onto the stack
         addInstruction(new AsmInstruction(AsmOpCode.POPQ,
             argumentRegisters[ii].toString(), sl));
+      } else if (arg.isRegister() &&
+            arg.getDesc().getLocation().getRegister() == argumentRegisters[ii]) {
+        // Arg is already in the right place
+        continue;
+      } else {
+        // Arg needs to be moved into its register
+        addInstruction(new AsmInstruction(AsmOpCode.MOVQ,
+            prepareArgument(args.get(ii), true, thisMethod.getId(),
+              true, sl), argumentRegisters[ii].toString(), sl));
       }
     }
 
@@ -633,6 +642,15 @@ public class AsmBasicBlock implements AsmObject {
       addInstruction(new AsmInstruction(AsmOpCode.POPQ, r, sl));
     }
 
+  }
+  
+  protected boolean isArgumentRegister(Register r) {
+    for (int i = 0; i < 6; i++) {
+      if (argumentRegisters[i] == r) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
