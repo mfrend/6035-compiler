@@ -37,6 +37,7 @@ import edu.mit.compilers.le02.dfa.ReachingDefinitions.BlockItem;
 import edu.mit.compilers.le02.dfa.ReachingDefinitions.FakeDefStatement;
 import edu.mit.compilers.le02.symboltable.AnonymousDescriptor;
 import edu.mit.compilers.le02.symboltable.MethodDescriptor;
+import edu.mit.compilers.le02.symboltable.ParamDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 import edu.mit.compilers.tools.CLI;
 
@@ -309,13 +310,23 @@ public class RegisterVisitor extends BasicBlockVisitor
     }
   }
 
-
   /** This function determins if the argument is a variable, and if so adds it
    * to the def-use webs.  It also handles the index if the argument is an
    * array variable.
    */
   private void handleArg(BlockItem bi, Argument arg, BasicStatement stmt,
                          HashMap<TypedDescriptor, BasicStatement> localDefs) {
+
+    handleArg(bi, arg, stmt, localDefs, -1);
+  }
+
+  /** This function determins if the argument is a variable, and if so adds it
+   * to the def-use webs.  It also handles the index if the argument is an
+   * array variable.
+   */
+  private void handleArg(BlockItem bi, Argument arg, BasicStatement stmt,
+                         HashMap<TypedDescriptor, BasicStatement> localDefs,
+                         int argNum) {
 
     TypedDescriptor desc;
     Collection<BasicStatement> defs;
@@ -331,7 +342,7 @@ public class RegisterVisitor extends BasicBlockVisitor
           desc.getLocation().getLocationType() != LocationType.GLOBAL) {
 
         defs = bi.getReachingDefinitions(desc.getLocation());
-        addToDefs(stmt, desc, defs, localDefs);
+        addToDefs(stmt, desc, defs, localDefs, argNum);
       }
 
     }
@@ -356,12 +367,13 @@ public class RegisterVisitor extends BasicBlockVisitor
   private void addToDefs(BasicStatement use,
                          TypedDescriptor loc,
                          Collection<BasicStatement> defs,
-                         HashMap<TypedDescriptor, BasicStatement> localDefs) {
+                         HashMap<TypedDescriptor, BasicStatement> localDefs,
+                         int argNum) {
 
     // If we have a local definition, that overrides the global definitions
     BasicStatement d = localDefs.get(loc);
     if (d != null) {
-      addDefUse(d, use, loc);
+      addDefUse(d, use, loc, argNum);
       return;
     }
 
@@ -369,17 +381,22 @@ public class RegisterVisitor extends BasicBlockVisitor
     // for this basic block which defines loc should have this as a possible
     // use.
     for (BasicStatement def : defs) {
-      addDefUse(def, use, loc);
+      addDefUse(def, use, loc, argNum);
     }
   }
   
   private void addDefUse(BasicStatement def, 
-                         BasicStatement use, TypedDescriptor loc) {
+                         BasicStatement use, TypedDescriptor loc, int argNum) {
 
     Register prefReg = null;
+    boolean clobberPref = false;
     if (def instanceof FakeDefStatement) {
       FakeDefStatement fds = (FakeDefStatement) def;
       prefReg = fds.getParam().getIndexRegister();
+      clobberPref = true;
+    }
+    else if (argNum != -1 && argNum < 6) {
+      prefReg = ParamDescriptor.arguments[argNum];
     }
     
     // Get the use web for this use's def, and add the use to it.
@@ -387,7 +404,9 @@ public class RegisterVisitor extends BasicBlockVisitor
     if (uses == null) {
       uses = new Web(loc, def);
     }
-    uses.setPreferredRegister(prefReg);
+    if (clobberPref || uses.getPreferredRegister() == null) {
+      uses.setPreferredRegister(prefReg);
+    }
     uses.addStmt(use);
     defUses.put(def, uses);
     
