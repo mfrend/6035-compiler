@@ -162,6 +162,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(MethodDeclNode node) {
+    curMethod = node.getName();
     cfg.putMethod(node.getName(), node.getBody().accept(this).getEnter());
     return null;
   }
