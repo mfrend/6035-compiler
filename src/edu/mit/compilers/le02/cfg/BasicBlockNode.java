@@ -232,4 +232,9 @@ public final class BasicBlockNode implements CFGNode {
     return method;
   }
 
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
+
 }

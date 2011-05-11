@@ -1,12 +1,12 @@
 package edu.mit.compilers.le02;
 
-
+import edu.mit.compilers.le02.asm.AsmArg;
 
 
 public class RegisterLocation extends VariableLocation{
   private Register reg;
 
-  public enum Register {
+  public enum Register implements AsmArg {
     RAX,
     EAX,
     RBX,

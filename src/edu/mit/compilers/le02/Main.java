@@ -67,7 +67,9 @@ public class Main {
     COPY_PROPAGATION("cp"),
     DEAD_CODE("dc"),
     CONSECUTIVE_COPY("cc"),
-    LOOP_ARRAY_BOUNDS_CHECKS("abc");
+    LOOP_ARRAY_BOUNDS_CHECKS("abc"),
+    REGISTER_ALLOCATION("regalloc"),
+    ;
     private String flagName;
 
     private Optimization(String flag) {

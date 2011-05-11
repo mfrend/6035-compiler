@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.cfg.Argument;
 import edu.mit.compilers.le02.cfg.ArrayVariableArgument;
 import edu.mit.compilers.le02.cfg.BasicBlockNode;
@@ -234,7 +233,7 @@ public class CpVisitor extends BasicBlockVisitor {
     CseVariable result = tmpToVar.get(key);
     if (result != null) {
       if (CLI.debug) {
-        System.out.println("Substituted " + result + " for " + key);
+        //System.out.println("Substituted " + result + " for " + key);
       }
       return Argument.makeArgument(result);
     } else {

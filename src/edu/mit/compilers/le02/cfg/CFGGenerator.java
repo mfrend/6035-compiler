@@ -20,6 +20,7 @@ import edu.mit.compilers.le02.ast.ArrayLocationNode;
 import edu.mit.compilers.le02.ast.AssignNode;
 import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.ast.BoolOpNode;
+import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.ast.BooleanNode;
 import edu.mit.compilers.le02.ast.BreakNode;
 import edu.mit.compilers.le02.ast.CallStatementNode;
@@ -41,7 +42,6 @@ import edu.mit.compilers.le02.ast.StringNode;
 import edu.mit.compilers.le02.ast.SyscallArgNode;
 import edu.mit.compilers.le02.ast.SystemCallNode;
 import edu.mit.compilers.le02.ast.VariableNode;
-import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
 import edu.mit.compilers.le02.cfg.OpStatement.AsmOp;
 import edu.mit.compilers.le02.opt.ArrayBoundsChecks;
 import edu.mit.compilers.le02.opt.LoopMonotonicCode;
@@ -88,7 +88,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   public static ControlFlowGraph generateCFG(ASTNode root,
       EnumSet<Optimization> opts) {
-    arrayBoundsChecksOpt = 
+    arrayBoundsChecksOpt =
         opts.contains(Optimization.LOOP_ARRAY_BOUNDS_CHECKS);
     if (arrayBoundsChecksOpt) {
       LoopMonotonicCode.findMonotonicCode(root);
@@ -345,7 +345,8 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         desc = op.getArg1().getDesc();
         if (replacements.keySet().contains(desc)) {
           if (!subs.keySet().contains(desc)) {
-            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
             subs.put(desc, cur.getResult());
           }
           op.setArg1(subs.get(desc));
@@ -354,17 +355,19 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
         desc = op.getArg2().getDesc();
         if (replacements.keySet().contains(desc)) {
           if (!subs.keySet().contains(desc)) {
-            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
             subs.put(desc, cur.getResult());
           }
-          op.setArg2(subs.get(desc)); 
+          op.setArg2(subs.get(desc));
         }
       } else if (next.getStatement() instanceof ArgumentStatement) {
         ArgumentStatement arg = (ArgumentStatement)next.getStatement();
         desc = arg.getArgument().getDesc();
         if (replacements.keySet().contains(desc)) {
           if (!subs.keySet().contains(desc)) {
-            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            cur = substitute(node, cur, next,
+                replacements.get(desc).accept(this), offset);
             subs.put(desc, cur.getResult());
           }
           arg.setArgument(subs.get(desc));
@@ -375,7 +378,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       cur = next;
       next = cur.getNext();
     }
-    
+
     return frag;
   }
 

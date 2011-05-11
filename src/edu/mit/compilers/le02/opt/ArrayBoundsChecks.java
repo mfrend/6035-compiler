@@ -2,34 +2,14 @@ package edu.mit.compilers.le02.opt;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import edu.mit.compilers.le02.DecafType;
-import edu.mit.compilers.le02.ErrorReporting;
-import edu.mit.compilers.le02.ast.ArrayLocationNode;
-import edu.mit.compilers.le02.ast.AssignNode;
-import edu.mit.compilers.le02.ast.AstPrettyPrinter;
 import edu.mit.compilers.le02.ast.ASTNode;
 import edu.mit.compilers.le02.ast.ASTNodeVisitor;
-import edu.mit.compilers.le02.ast.BoolOpNode;
-import edu.mit.compilers.le02.ast.BoolOpNode.BoolOp;
-import edu.mit.compilers.le02.ast.ClassNode;
+import edu.mit.compilers.le02.ast.ArrayLocationNode;
 import edu.mit.compilers.le02.ast.ExpressionNode;
 import edu.mit.compilers.le02.ast.ForNode;
-import edu.mit.compilers.le02.ast.IfNode;
-import edu.mit.compilers.le02.ast.IntNode;
-import edu.mit.compilers.le02.ast.LocationNode;
-import edu.mit.compilers.le02.ast.MathOpNode;
-import edu.mit.compilers.le02.ast.MathOpNode.MathOp;
-import edu.mit.compilers.le02.ast.MethodCallNode;
-import edu.mit.compilers.le02.ast.MinusNode;
-import edu.mit.compilers.le02.ast.NotNode;
-import edu.mit.compilers.le02.ast.VariableNode;
-import edu.mit.compilers.le02.semanticchecks.SemanticException;
-import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class ArrayBoundsChecks extends ASTNodeVisitor<Boolean> {

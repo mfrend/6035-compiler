@@ -83,6 +83,25 @@ implements Lattice<BitSet, BasicBlockNode> {
       }
     }
 
+    public boolean isLiveOnExit(TypedDescriptor desc) {
+      BitSet liveness = (BitSet) this.getOut();
+      Integer index = parent.variableIndices.get(desc);
+      if (index == null) {
+        return false;
+      }
+      return liveness.get(index);
+    }
+
+    public boolean isLiveOnEntrance(TypedDescriptor desc) {
+      BitSet liveness = (BitSet) this.getIn();
+
+      Integer index = parent.variableIndices.get(desc);
+      if (index == null) {
+        return false;
+      }
+      return liveness.get(index);
+    }
+
     public Set<BasicStatement> getEliminationSet() {
       BitSet liveness = (BitSet) this.getOut().clone();
       Set<BasicStatement> ret = new HashSet<BasicStatement>();
@@ -126,10 +145,6 @@ implements Lattice<BitSet, BasicBlockNode> {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
 
-      if (returns) {
-        return ret;
-      }
-
       for (BasicBlockNode pred : this.node.getPredecessors()) {
         WorklistItem<BitSet> item = parent.blockItems.get(pred);
         if (item != null) {
@@ -143,6 +158,10 @@ implements Lattice<BitSet, BasicBlockNode> {
     public Collection<WorklistItem<BitSet>> successors() {
       ArrayList<WorklistItem<BitSet>> ret =
         new ArrayList<WorklistItem<BitSet>>();
+
+      if (returns) {
+        return ret;
+      }
 
       WorklistItem<BitSet> item;
       if (node.getNext() != null) {
@@ -238,7 +257,7 @@ implements Lattice<BitSet, BasicBlockNode> {
     }
 
     BlockItem ret = new BlockItem(this, node, statements);
-    if ((node.getNext() == null) && (node.getBranchTarget() == null)) {
+    if (ret.successors().isEmpty()) {
       ret.setOut(globalSet);
     }
     return ret;
@@ -414,5 +433,10 @@ implements Lattice<BitSet, BasicBlockNode> {
 
   public Map<BasicBlockNode, BlockItem> getBlockItems() {
     return blockItems;
+  }
+
+
+  public BlockItem getBlockItem(BasicBlockNode node) {
+    return blockItems.get(node);
   }
 }
