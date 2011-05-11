@@ -82,7 +82,6 @@ for file in $PWD/input/*.dcf; do
       opt=`cat $timing_opt|awk '{print($2)}'`
       echo "${opt} usec"
     fi
-    echo "$(($unopt / $opt))x speedup"
   fi
   int_speedup=$(($unopt / $opt)) 
   dec_speedup=$((($unopt * 1000) / $opt - ($int_speedup * 1000))) 
