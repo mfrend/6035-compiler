@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.asm;
 public enum AsmOpCode {
   ADDQ,
   ADDL,
+  ANDL,
   CDQ,
   CMOVEL,
   CMOVGEL,
@@ -30,9 +31,12 @@ public enum AsmOpCode {
   POPQ,
   PUSHQ,
   RET,
+  SHLL,
+  SARL,
   SUBL,
   XORQ,
-  XORL;
+  XORL,
+  ;
 
   public String toString() {
     return name().toLowerCase();

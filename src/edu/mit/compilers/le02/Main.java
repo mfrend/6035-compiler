@@ -69,6 +69,7 @@ public class Main {
     CONSECUTIVE_COPY("cc"),
     LOOP_ARRAY_BOUNDS_CHECKS("abc"),
     REGISTER_ALLOCATION("regalloc"),
+    ASM_PEEPHOLE("asm_peephole"),
     ;
     private String flagName;
 
