@@ -33,12 +33,13 @@ import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
-  private static final boolean verbose = true;
+  private static final boolean verbose = false;
   private static LoopMonotonicCode instance;
   private static List<ForNode> fors;
   private static Set<TypedDescriptor> loopVars;
-  private static Map<ForNode, ForNode> pullup;
+  private static Set<ExpressionNode> monotonicExprs;
 
+  private static Map<ForNode, ForNode> pullup;
   private static Set<ForNode> flatFors;
   private static ForNode highestFlatFor;
 
@@ -106,7 +107,6 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
     public Boolean visit(AssignNode node) {
       if (node.getLoc().getDesc() == loopVar) {
         untouched = false;
-        System.out.println(node.getLoc().getDesc());
       }
       return true;
     }
@@ -134,8 +134,9 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
   public static void findMonotonicCode(ASTNode root) {
     fors = new ArrayList<ForNode>();
     loopVars = new HashSet<TypedDescriptor>();
-    pullup = new HashMap<ForNode, ForNode>();
+    monotonicExprs = new HashSet<ExpressionNode>();
 
+    pullup = new HashMap<ForNode, ForNode>();
     flatFors = new HashSet<ForNode>();
     highestFlatFor = null;
 
@@ -155,6 +156,14 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
             " is flat");
       }
     }
+  }
+
+  public static Set<ExpressionNode> getMonotonicExprs() {
+    return monotonicExprs;
+  }
+
+  public static Set<ForNode> getFlatFors() {
+    return flatFors;
   }
 
   @Override
@@ -260,10 +269,13 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
           (((IntNode)node.getRight()).getValue() > 0);
     }
 
-    if (monotonic && verbose) {
-      System.out.println("Found monotonic math op:");
-      node.accept(new AstPrettyPrinter());
-      System.out.println("");
+    if (monotonic) {
+      monotonicExprs.add(node);
+      if (verbose) {
+        System.out.println("Found monotonic math op:");
+        node.accept(new AstPrettyPrinter());
+        System.out.println("");
+      }
     }
     return monotonic;
   }
@@ -275,12 +287,17 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
       defaultBehavior(node);
       return false;
     } else {
-      return loopVars.contains(loc.getDesc());
+      if (loopVars.contains(loc.getDesc())) {
+        monotonicExprs.add(node);
+        return true;
+      }
+      return false;
     }
   }
 
   @Override
   public Boolean visit(IntNode node) {
+    monotonicExprs.add(node);
     return true;
   }
 }
