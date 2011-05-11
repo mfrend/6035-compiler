@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -80,7 +81,8 @@ public class AsmBasicBlock implements AsmObject {
   }
 
   private void processBlock() {
-    List<BasicBlockNode> nodesToProcess = new ArrayList<BasicBlockNode>();
+    LinkedList<BasicBlockNode> nodesToProcess =
+      new LinkedList<BasicBlockNode>();
     Set<BasicBlockNode> processed = new HashSet<BasicBlockNode>();
     nodesToProcess.add(methodNode);
 
@@ -97,11 +99,11 @@ public class AsmBasicBlock implements AsmObject {
       // If this node has successors, queue them for processing.
       BasicBlockNode branch = node.getBranchTarget();
       if (node.isBranch()) {
-        nodesToProcess.add(branch);
+        nodesToProcess.addFirst(branch);
       }
       BasicBlockNode next = node.getNext();
       if (next != null) {
-        nodesToProcess.add(next);
+        nodesToProcess.addFirst(next);
       }
 
       // Start the output.

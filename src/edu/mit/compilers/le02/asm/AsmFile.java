@@ -202,11 +202,25 @@ public class AsmFile {
 
   private void printMethods() {
     for (AsmObject s : methods) {
-      if(s instanceof AsmBasicBlock){
-        for(AsmObject i: ((AsmBasicBlock) s).getBlock()){
-          ps.println(i.toString());
+      if (s instanceof AsmBasicBlock){
+        AsmBasicBlock method = (AsmBasicBlock)s;
+        for (int ii = 0; ii < method.getBlock().size(); ii++) {
+          AsmObject obj = method.getBlock().get(ii);
+          if (obj instanceof AsmInstruction) {
+            AsmInstruction inst = (AsmInstruction)obj;
+            if (inst.opcode == AsmOpCode.JMP &&
+                (ii + 1) < method.getBlock().size()) {
+              AsmObject next = method.getBlock().get(ii + 1);
+              String label = next.toString();
+              if (label.equals(inst.first_operand + ":")) {
+                ps.println("  # Falling to " + inst.first_operand + ":");
+                continue;
+              }
+            }
+          }
+          ps.println(obj.toString());
         }
-      }else{
+      } else {
         ps.println(s.toString());
       }
     }
