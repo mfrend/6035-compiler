@@ -260,19 +260,20 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
   @Override
   public CFGFragment visit(ForNode node) {
-    CFGFragment loopFrag = forNodeHelper(node);
-
     if (arrayBoundsChecksOpt && !inFlatFor &&
         (LoopMonotonicCode.getFlatFors().contains(node))) {
       inFlatFor = true;
 
+      CFGFragment loopFrag = forNodeHelper(node);
       skipBoundsChecks = true;
       CFGFragment skipFrag = forNodeHelper(node);
       skipBoundsChecks = false;
+
+      inFlatFor = false;
       return precheckArrayBounds(node, loopFrag, skipFrag);
     }
 
-    return loopFrag;
+    return forNodeHelper(node);
   }
 
   private CFGFragment precheckArrayBounds(
