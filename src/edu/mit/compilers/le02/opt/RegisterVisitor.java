@@ -331,7 +331,7 @@ public class RegisterVisitor extends BasicBlockVisitor
           desc.getLocation().getLocationType() != LocationType.GLOBAL) {
         
         defs = bi.getReachingDefinitions(desc.getLocation());
-        addDefUse(stmt, desc, defs, localDefs);
+        addToDefs(stmt, desc, defs, localDefs);
       }
 
     }
@@ -353,7 +353,7 @@ public class RegisterVisitor extends BasicBlockVisitor
    * @param loc
    * @param defs
    */
-  private void addDefUse(BasicStatement use,
+  private void addToDefs(BasicStatement use,
                          TypedDescriptor loc, 
                          Collection<BasicStatement> defs,
                          HashMap<TypedDescriptor, BasicStatement> localDefs) {
@@ -361,21 +361,7 @@ public class RegisterVisitor extends BasicBlockVisitor
     // If we have a local definition, that overrides the global definitions
     BasicStatement d = localDefs.get(loc);
     if (d != null) {
-      // Get the use web for this use's def, and add the use to it.
-      Web uses = defUses.get(d);
-      if (uses == null) {
-        uses = new Web(loc, d);
-      }
-      uses.addStmt(use);
-      defUses.put(d, uses);
-
-      // Also, add this def's use web to this use's list of use webs.
-      List<Web> webs = useToDefs.get(use);
-      if (webs == null) {
-        webs = new ArrayList<Web>();
-      }
-      webs.add(uses);
-      useToDefs.put(use, webs);
+      addDefUse(d, use, loc);
       return;
     }    
     
@@ -383,22 +369,36 @@ public class RegisterVisitor extends BasicBlockVisitor
     // for this basic block which defines loc should have this as a possible
     // use.
     for (BasicStatement def : defs) {
-      // Get the use web for this use's def, and add the use to it.
-      Web uses = defUses.get(def);
-      if (uses == null) {
-        uses = new Web(loc, def);
-      }
-      uses.addStmt(use);
-      defUses.put(def, uses);
-
-      // Also, add this def's use web to this use's list of use webs.
-      List<Web> webs = useToDefs.get(use);
-      if (webs == null) {
-        webs = new ArrayList<Web>();
-      }
-      webs.add(uses);
-      useToDefs.put(use, webs);
+      addDefUse(def, use, loc);
     }
+  }
+  
+  private void addDefUse(BasicStatement def, 
+                         BasicStatement use, TypedDescriptor loc) {
+
+    Register prefReg = null;
+    if (def instanceof FakeDefStatement) {
+      FakeDefStatement fds = (FakeDefStatement) def;
+      prefReg = fds.getParam().getIndexRegister();
+    }
+    
+    // Get the use web for this use's def, and add the use to it.
+    Web uses = defUses.get(def);
+    if (uses == null) {
+      uses = new Web(loc, def);
+    }
+    uses.setPreferredRegister(prefReg);
+    uses.addStmt(use);
+    defUses.put(def, uses);
+    
+
+    // Also, add this def's use web to this use's list of use webs.
+    List<Web> webs = useToDefs.get(use);
+    if (webs == null) {
+      webs = new ArrayList<Web>();
+    }
+    webs.add(uses);
+    useToDefs.put(use, webs);    
   }
  
   
@@ -655,10 +655,31 @@ public class RegisterVisitor extends BasicBlockVisitor
     //       arguments and return values, or idiv arguments
     if (numColors <= NUM_REGISTERS) {
 
+      registerMap.clear();
+      ArrayList<Register> unallocatedRegisters = new ArrayList<Register>(registerOrder);
+      
+      // Reverse so it is faster to pull it off the end
+      Collections.reverse(unallocatedRegisters);
+      
+      HashSet<Register> allocatedRegisters = new HashSet<Register>();
+      for (Web w : finalWebs) {
+        Register r = w.getPreferredRegister();
+        if (r != null && !allocatedRegisters.contains(r)) {
+          registerMap.put(w.find().getColor(), r); 
+          allocatedRegisters.add(r);
+          unallocatedRegisters.remove(r);
+        }
+      }
+      
       // Assign registers to everything, since we're ok (also the register
       // map is setup in the initialization).
       for (int i = 0; i < numColors; i++) {
         Register reg = registerMap.get(i);
+        if (reg == null) {
+          assert !unallocatedRegisters.isEmpty();
+          reg = unallocatedRegisters.remove(unallocatedRegisters.size() - 1);
+          registerMap.put(i, reg);
+        }
         methodDescriptor.markRegisterUsed(reg);
       }
       return;
@@ -721,10 +742,22 @@ public class RegisterVisitor extends BasicBlockVisitor
       
       // Reset the register map
       registerMap.clear();
+
+      ArrayList<Register> unallocatedRegisters = new ArrayList<Register>(registerOrder);
+      HashSet<Register> allocatedRegisters = new HashSet<Register>();
       Register reg;
       for (int i = 0; i < NUM_REGISTERS && i < webLists.size(); i++) {
-        reg = registerOrder.get(i);
         List<Web> list = webLists.get(i);
+        reg = null;
+        for (Web w : list) {
+          reg = w.getPreferredRegister();
+          if (reg != null && !allocatedRegisters.contains(reg)) {
+            break;
+          }
+        }
+        if (reg == null) {
+          reg = unallocatedRegisters.remove(i);
+        }     
         
         // Assign a register to this color
         registerMap.put(list.get(0).getColor(), reg);
@@ -742,7 +775,7 @@ public class RegisterVisitor extends BasicBlockVisitor
           if (w.desc().getLocation().getLocationType() == LocationType.GLOBAL) {
             allocatedGlobals.put(w.desc(), reg);
           }
-        }
+        }        
       }
     }
   }

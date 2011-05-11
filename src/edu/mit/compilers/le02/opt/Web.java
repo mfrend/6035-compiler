@@ -3,6 +3,7 @@ package edu.mit.compilers.le02.opt;
 import java.util.HashSet;
 import java.util.Set;
 
+import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.cfg.BasicStatement;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
@@ -29,6 +30,7 @@ public class Web implements Comparable<Web> {
   private int color;
   private Web rep;
   private int _rank;
+  private Register preferredReg = null;
   private TypedDescriptor desc;
   private HashSet<BasicStatement> stmts;
   private int id;
@@ -65,19 +67,26 @@ public class Web implements Comparable<Web> {
     Web otherRoot = other.find();
     
     
-    if (this.rank() > other.rank()) {
+    if (this.rank() >= other.rank()) {
       otherRoot.rep = thisRoot;
       thisRoot.stmts.addAll(otherRoot.stmts);
-    }
-    else if (other.rank() > this.rank()) {
-      thisRoot.rep = otherRoot;
-      otherRoot.stmts.addAll(thisRoot.stmts);
+      
+      if (thisRoot.preferredReg == null) {
+        thisRoot.preferredReg = otherRoot.preferredReg;
+      }
+      
+      if (this.rank() == other.rank()) {
+        thisRoot._rank++;
+      }
     }
     else {
-      // other.rank() == this.rank()
-      otherRoot.rep = thisRoot;
-      thisRoot.stmts.addAll(otherRoot.stmts);
-      thisRoot._rank++;
+      // other.rank() > this.rank()
+      thisRoot.rep = otherRoot;
+      otherRoot.stmts.addAll(thisRoot.stmts);
+      
+      if (otherRoot.preferredReg == null) {
+        otherRoot.preferredReg = thisRoot.preferredReg;
+      }
     }
   }
   
@@ -87,6 +96,14 @@ public class Web implements Comparable<Web> {
   
   public TypedDescriptor desc() {
     return this.desc;
+  }
+
+  public Register getPreferredRegister() {
+    return this.preferredReg ;
+  }
+  
+  public void setPreferredRegister(Register reg) {
+    this.preferredReg = reg;
   }
   
   public void addStmt(BasicStatement stmt) {
