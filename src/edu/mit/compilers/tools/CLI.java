@@ -180,7 +180,7 @@ public class CLI {
           }
         }
         if (!hit) {
-          extraopts.addElement(args[i]);
+          extras.addElement(args[i]);
         }
         break;
        case 2:
