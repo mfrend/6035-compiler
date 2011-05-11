@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import edu.mit.compilers.le02.SourceLocation;
-import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.tools.CLI;
 
 /**
@@ -25,37 +24,19 @@ public class AsmInstruction implements AsmObject {
     this(opCode, "", "", loc);
   }
 
-  public AsmInstruction(AsmOpCode opCode, String first_operand,
-      SourceLocation loc) {
-
-    this(opCode, first_operand, "", loc);
-  }
-
-  public AsmInstruction(AsmOpCode opCode, Register first_operand,
+  public AsmInstruction(AsmOpCode opCode, AsmArg first_operand,
       SourceLocation loc) {
 
     this(opCode, first_operand.toString(), "", loc);
   }
 
-  public AsmInstruction(AsmOpCode opCode, Register first_operand,
-      Register second_operand, SourceLocation loc) {
-
-    this(opCode, first_operand.toString(), second_operand.toString(), loc);
+  public AsmInstruction(AsmOpCode opCode, AsmArg first_operand,
+      AsmArg second_operand, SourceLocation loc) {
+    this(opCode, first_operand != null ? first_operand.toString() : "",
+         second_operand != null ? second_operand.toString() : "", loc);
   }
 
-  public AsmInstruction(AsmOpCode opCode, Register first_operand,
-      String second_operand, SourceLocation loc) {
-
-    this(opCode, first_operand.toString(), second_operand, loc);
-  }
-
-  public AsmInstruction(AsmOpCode opCode, String first_operand,
-      Register second_operand, SourceLocation loc) {
-
-    this(opCode, first_operand, second_operand.toString(), loc);
-  }
-
-  public AsmInstruction(AsmOpCode opCode, String first_operand,
+  private AsmInstruction(AsmOpCode opCode, String first_operand,
       String second_operand, SourceLocation loc) {
 
     this.opcode = opCode;

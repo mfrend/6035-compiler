@@ -9,22 +9,38 @@ public final class OpStatement extends BasicStatement {
   private Argument arg1, arg2;
 
   public enum AsmOp {
-    MOVE,
-    ADD,
-    SUBTRACT,
-    MULTIPLY,
-    DIVIDE,
-    MODULO,
-    UNARY_MINUS,
-    EQUAL,
-    NOT_EQUAL,
-    LESS_THAN,
-    LESS_OR_EQUAL,
-    GREATER_THAN,
-    GREATER_OR_EQUAL,
-    NOT,
-    RETURN,
-    ENTER,
+    MOVE(true, true),
+    ADD(true, true),
+    SUBTRACT(true, true),
+    MULTIPLY(false, true),
+    DIVIDE(false, false),
+    MODULO(false, false),
+    UNARY_MINUS(false, true),
+    EQUAL(true, false),
+    NOT_EQUAL(true, false),
+    LESS_THAN(true, false),
+    LESS_OR_EQUAL(true, false),
+    GREATER_THAN(true, false),
+    GREATER_OR_EQUAL(true, false),
+    NOT(false, true),
+    RETURN(false, false),
+    ENTER(false, false),
+    PUSH(false, false),
+    POP(false, true),
+    ARRAY(false, true),
+    ;
+    public boolean acceptsImmediateArg() {
+      return immedOk;
+    }
+    public boolean mutatesArgs() {
+      return mutatesArgs;
+    }
+    private AsmOp(boolean immedOk, boolean mutatesArgs) {
+      this.immedOk = immedOk;
+      this.mutatesArgs = mutatesArgs;
+    }
+    private boolean immedOk;
+    private boolean mutatesArgs;
   }
 
   public OpStatement(ASTNode node, AsmOp op, Argument arg1, Argument arg2,

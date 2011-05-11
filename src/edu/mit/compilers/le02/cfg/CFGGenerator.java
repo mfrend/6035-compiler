@@ -68,7 +68,6 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
    */
   public static LocalDescriptor makeTemp(ASTNode node, DecafType type) {
     SymbolTable st = node.getSymbolTable();
-    System.out.println("tmp loc");
     int offset = st.getNonconflictingOffset();
 
     LocalDescriptor ld =

@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
@@ -71,6 +72,9 @@ public abstract class BasicStatement {
   
   public void setRegisterDying(Register r, boolean live) {
     registerLiveness.setRegisterDying(r, live);
+  }
+  public Set<Register> getDyingRegisters() {
+    return registerLiveness.getDyingRegisters();
   }
 
   @Override
