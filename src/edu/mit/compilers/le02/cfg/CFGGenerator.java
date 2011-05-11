@@ -410,7 +410,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     loopExit = exit;
 
     // Evaluate the exit condition
-    TypedDescriptor exitLoc = makeTemp(node.getBody(), DecafType.BOOLEAN);
+    TypedDescriptor exitLoc = makeTemp(node.getBody(), DecafType.INT);
     CFGFragment exitFrag = node.getEnd().accept(this);
     Argument exitVal = exitFrag.getExit().getResult();
     BasicStatement exitStatement = new OpStatement(node, AsmOp.MOVE,
