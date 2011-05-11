@@ -42,12 +42,12 @@ public abstract class Argument {
   public static Argument makeArgument(boolean b) {
     return new ConstantArgument(b);
   }
-  
+
   public boolean isRegister() {
     if (this.getType() != ArgType.VARIABLE) {
       return false;
     }
-    
+
     return (getDesc().getLocation().getLocationType() == LocationType.REGISTER);
   }
 

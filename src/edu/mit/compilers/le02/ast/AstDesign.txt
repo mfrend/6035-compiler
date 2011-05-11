@@ -118,7 +118,7 @@ MathOpNode extends BinaryOpNode - Represents a math operation
 BoolOpNode extends BinaryOpNode - Represents a boolean operation
   Params:
   - op: LT, GT, LE, GE, EQ, NEQ, AND, OR
-  
+
 
 * Other Expressions *
 

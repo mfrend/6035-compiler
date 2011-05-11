@@ -91,7 +91,7 @@ public final class OpStatement extends BasicStatement {
       ")" +
       ((result != null) ? ": " + result : "") +
       ((op == AsmOp.MOVE) ? ": " + arg2 : "");
-    
+
     s += " LIVE: ";
     for (Register r : registerLiveness.getLiveRegisters()) {
       s += r + " ";

@@ -7,8 +7,9 @@ import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.ast.ASTNode;
 
 public final class ArgReassignStatement extends BasicStatement {
-  private HashMap<Register, Register> regMap = new HashMap<Register, Register>();
-  
+  private HashMap<Register, Register> regMap =
+    new HashMap<Register, Register>();
+
   public ArgReassignStatement(ASTNode node) {
     super(node, null);
     this.type = BasicStatementType.NOP;
@@ -17,7 +18,7 @@ public final class ArgReassignStatement extends BasicStatement {
   public void putRegPair(Register from, Register to) {
     regMap.put(from, to);
   }
-  
+
   public Map<Register, Register> getRegMap() {
     return regMap;
   }

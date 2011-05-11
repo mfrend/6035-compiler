@@ -14,7 +14,7 @@ public abstract class BasicStatement {
   protected TypedDescriptor result;
   protected BasicStatementType type;
   protected RegisterLiveness registerLiveness;
-  
+
   private static int nextUid = 0;
 
   public enum BasicStatementType {
@@ -48,28 +48,28 @@ public abstract class BasicStatement {
   public BasicStatementType getType() {
     return type;
   }
-  
+
   public RegisterLiveness getRegisterLiveness() {
     return registerLiveness;
   }
-  
+
   public List<Register> getLiveRegisters() {
     return new ArrayList<Register>(registerLiveness.getLiveRegisters());
   }
-  
+
   public List<Register> getNonDyingRegisters() {
     return new ArrayList<Register>(registerLiveness.getNonDyingRegisters());
   }
-  
+
   public List<Register> getNonDyingCallerSavedRegisters() {
     return new ArrayList<Register>(
         registerLiveness.getNonDyingCallerSavedRegisters());
   }
-  
+
   public void setRegisterLiveness(Register r, boolean live) {
     registerLiveness.setRegisterLiveness(r, live);
   }
-  
+
   public void setRegisterDying(Register r, boolean live) {
     registerLiveness.setRegisterDying(r, live);
   }

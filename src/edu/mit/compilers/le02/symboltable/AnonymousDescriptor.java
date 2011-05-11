@@ -11,7 +11,7 @@ public class AnonymousDescriptor extends TypedDescriptor {
     super(null, null, null);
     location = loc;
   }
-  
+
   public AnonymousDescriptor(VariableLocation loc, TypedDescriptor desc) {
     super(null, null, null);
     location = loc;
@@ -23,7 +23,8 @@ public class AnonymousDescriptor extends TypedDescriptor {
 
     // Note replaced descriptor, for debugging in register allocation
     if (desc != null) {
-      return "" + desc.getType() + "{" + desc.getId() + " / " + location.toString() + "}";
+      return "" + desc.getType() +
+        "{" + desc.getId() + " / " + location.toString() + "}";
     }
     return location.toString();
   }

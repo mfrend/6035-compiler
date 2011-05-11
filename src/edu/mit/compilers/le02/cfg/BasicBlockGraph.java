@@ -75,7 +75,7 @@ public class BasicBlockGraph {
         Liveness live = new Liveness(methodEnter);
         new DeadCodeElimination(methodEnter, live.getBlockItems());
       }
-      
+
       ASTNode enterNode = methodEnter.getStatements().get(0).getNode();
       SymbolTable st = enterNode.getSymbolTable();
       MethodDescriptor md = st.getMethod(methodEnter.getMethod());

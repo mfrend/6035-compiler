@@ -4,7 +4,6 @@ import edu.mit.compilers.le02.ast.BlockNode;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
-import edu.mit.compilers.le02.VariableLocation;
 
 import java.util.ArrayList;
 import java.util.TreeSet;

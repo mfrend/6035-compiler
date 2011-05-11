@@ -48,7 +48,7 @@ public class CallStatement extends BasicStatement {
     if (result != null) {
       s += ": " + result;
     }
-    
+
     s += " LIVE: ";
     for (Register r : registerLiveness.getLiveRegisters()) {
       s += r + " ";
