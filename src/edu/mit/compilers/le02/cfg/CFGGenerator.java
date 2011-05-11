@@ -1,6 +1,7 @@
 package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import edu.mit.compilers.le02.CompilerException;
 import edu.mit.compilers.le02.DecafType;
 import edu.mit.compilers.le02.ErrorReporting;
 import edu.mit.compilers.le02.GlobalLocation;
+import edu.mit.compilers.le02.Main.Optimization;
 import edu.mit.compilers.le02.RegisterLocation;
 import edu.mit.compilers.le02.RegisterLocation.Register;
 import edu.mit.compilers.le02.SourceLocation;
@@ -51,7 +53,7 @@ import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
-  private static boolean arrayBoundsChecksOpt = true;
+  private static boolean arrayBoundsChecksOpt;
   private static CFGGenerator instance = null;
   private static String curMethod;
   private static boolean inFlatFor;
@@ -83,7 +85,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     return ld;
   }
 
-  public static ControlFlowGraph generateCFG(ASTNode root) {
+  public static ControlFlowGraph generateCFG(ASTNode root,
+      EnumSet<Optimization> opts) {
+    arrayBoundsChecksOpt = 
+        opts.contains(Optimization.LOOP_ARRAY_BOUNDS_CHECKS);
     if (arrayBoundsChecksOpt) {
       LoopMonotonicCode.findMonotonicCode(root);
     }

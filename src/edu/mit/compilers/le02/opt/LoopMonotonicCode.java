@@ -33,7 +33,6 @@ import edu.mit.compilers.le02.symboltable.FieldDescriptor;
 import edu.mit.compilers.le02.symboltable.TypedDescriptor;
 
 public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
-  private static final boolean verbose = false;
   private static LoopMonotonicCode instance;
   private static List<ForNode> fors;
   private static Set<TypedDescriptor> loopVars;
@@ -143,19 +142,19 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
     assert(root instanceof ClassNode);
     root.accept(getInstance());
 
-    if (verbose) {
-      for (ForNode node : pullup.keySet()) {
-        System.out.println("Loop " + node.getInit().getLoc().getDesc() +
-            " can be pulled up to " +
-            pullup.get(node).getInit().getLoc().getDesc());
-      }
-
-      System.out.println("");
-      for (ForNode node : flatFors) {
-        System.out.println("Loop " + node.getInit().getLoc().getDesc() +
-            " is flat");
-      }
+    /*
+    for (ForNode node : pullup.keySet()) {
+      System.out.println("Loop " + node.getInit().getLoc().getDesc() +
+          " can be pulled up to " +
+          pullup.get(node).getInit().getLoc().getDesc());
     }
+
+    System.out.println("");
+    for (ForNode node : flatFors) {
+      System.out.println("Loop " + node.getInit().getLoc().getDesc() +
+          " is flat");
+    }
+    */
   }
 
   public static Set<ExpressionNode> getMonotonicExprs() {
@@ -271,11 +270,11 @@ public class LoopMonotonicCode extends ASTNodeVisitor<Boolean> {
 
     if (monotonic) {
       monotonicExprs.add(node);
-      if (verbose) {
-        System.out.println("Found monotonic math op:");
-        node.accept(new AstPrettyPrinter());
-        System.out.println("");
-      }
+      /*
+      System.out.println("Found monotonic math op:");
+      node.accept(new AstPrettyPrinter());
+      System.out.println("");
+      */
     }
     return monotonic;
   }
