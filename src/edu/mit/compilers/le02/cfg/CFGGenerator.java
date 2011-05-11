@@ -2,6 +2,7 @@ package edu.mit.compilers.le02.cfg;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -289,7 +290,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
         // Create a branch node where the array lower-bound is evaluated
         CFGFragment lowerCheck = replaceVars(node, index.accept(this),
-              ArrayBoundsChecks.getLowerBounds());
+              ArrayBoundsChecks.getLowerBounds(), 0);
         BasicStatement lowerBoundCheck = new OpStatement(node,
             AsmOp.LESS_THAN, lowerCheck.getExit().getResult(),
             new ConstantArgument(0), null);
@@ -299,7 +300,7 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
 
         // Create a branch node where the array upper-bound is evaluated
         CFGFragment upperCheck = replaceVars(node, index.accept(this),
-              ArrayBoundsChecks.getUpperBounds());
+              ArrayBoundsChecks.getUpperBounds(), 1);
         BasicStatement upperBoundCheck = new OpStatement(node,
             AsmOp.GREATER_OR_EQUAL, upperCheck.getExit().getResult(),
             new ConstantArgument(size), null);
@@ -327,7 +328,10 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
   }
 
   private CFGFragment replaceVars(ForNode node, CFGFragment frag,
-        Map<TypedDescriptor, ExpressionNode> replacements) {
+        Map<TypedDescriptor, ExpressionNode> replacements, int offset) {
+    Map<Descriptor, Argument> subs = new HashMap<Descriptor, Argument>();
+    Descriptor desc;
+
     SimpleCFGNode enter = new SimpleCFGNode(new NOPStatement(node));
     frag = new CFGFragment(enter, enter).link(frag);
 
@@ -338,24 +342,33 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
       if (next.getStatement() instanceof OpStatement) {
         OpStatement op = (OpStatement)next.getStatement();
 
-        Descriptor desc = op.getArg1().getDesc();
+        desc = op.getArg1().getDesc();
         if (replacements.keySet().contains(desc)) {
-          CFGFragment replacement = replacements.get(desc).accept(this);
-          op.setArg1(replacement.getExit().getResult());
-
-          cur.setNext(replacement.getEnter());
-          cur = replacement.getExit();
-          cur.setNext(next);
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          op.setArg1(subs.get(desc));
         }
 
         desc = op.getArg2().getDesc();
         if (replacements.keySet().contains(desc)) {
-          CFGFragment replacement = replacements.get(desc).accept(this);
-          op.setArg2(replacement.getExit().getResult());
-
-          cur.setNext(replacement.getEnter());
-          cur = replacement.getExit();
-          cur.setNext(next);
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          op.setArg2(subs.get(desc)); 
+        }
+      } else if (next.getStatement() instanceof ArgumentStatement) {
+        ArgumentStatement arg = (ArgumentStatement)next.getStatement();
+        desc = arg.getArgument().getDesc();
+        if (replacements.keySet().contains(desc)) {
+          if (!subs.keySet().contains(desc)) {
+            cur = substitute(node, cur, next, replacements.get(desc).accept(this), offset);
+            subs.put(desc, cur.getResult());
+          }
+          arg.setArgument(subs.get(desc));
+          next.setResult(subs.get(desc));
         }
       }
 
@@ -364,6 +377,23 @@ public final class CFGGenerator extends ASTNodeVisitor<CFGFragment> {
     }
     
     return frag;
+  }
+
+  private SimpleCFGNode substitute(ASTNode node, SimpleCFGNode cur,
+      SimpleCFGNode next, CFGFragment frag, int offset) {
+    cur.setNext(frag.getEnter());
+    cur = frag.getExit();
+
+    if (offset != 0) {
+      TypedDescriptor loc = makeTemp(node, DecafType.INT);
+      SimpleCFGNode subtractOffset = new SimpleCFGNode(new OpStatement(node,
+          AsmOp.SUBTRACT, cur.getResult(), new ConstantArgument(offset), loc));
+      cur.setNext(subtractOffset);
+      cur = subtractOffset;
+    }
+
+    cur.setNext(next);
+    return cur;
   }
 
   private CFGFragment forNodeHelper(ForNode node) {
