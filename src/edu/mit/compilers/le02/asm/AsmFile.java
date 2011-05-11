@@ -126,6 +126,7 @@ public class AsmFile {
 
       current = new AsmBasicBlock(
         methodName, methodNode, thisMethod, st, opts);
+      current.peepholeInstructions();
       current.reorderInstructions();
       methods.add(current);
     }

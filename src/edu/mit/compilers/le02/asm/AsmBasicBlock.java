@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -74,6 +75,28 @@ public class AsmBasicBlock implements AsmObject {
 
   public void reorderInstructions() {
     // TODO @mfrend Finish Method and add optimization check
+  }
+
+  /**
+   * Peepholes away instructions we don't want.
+   * @author Liz Fong (lizfong@mit.edu)
+   */
+  public void peepholeInstructions() {
+    Iterator<AsmObject> it = instructions.iterator();
+    while (it.hasNext()) {
+      AsmObject obj = it.next();
+      if (obj instanceof AsmInstruction) {
+        AsmInstruction inst = (AsmInstruction)obj;
+        switch (inst.opcode) {
+         case MOVL:
+         case MOVQ:
+          if (inst.first_operand.equals(inst.second_operand)) {
+            it.remove();
+          }
+          break;
+        }
+      }
+    }
   }
 
   public List<AsmObject> getBlock() {
