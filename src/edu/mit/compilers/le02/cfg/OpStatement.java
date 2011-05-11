@@ -15,6 +15,9 @@ public final class OpStatement extends BasicStatement {
     MULTIPLY(false, true, false),
     DIVIDE(false, false, false),
     MODULO(false, false, false),
+    BITWISE_AND(true, true, false),
+    SHR (true, true, false),
+    SHL(true, true, false),
     UNARY_MINUS(false, true, false),
     EQUAL(true, false, true),
     NOT_EQUAL(true, false, true),
@@ -25,6 +28,7 @@ public final class OpStatement extends BasicStatement {
     NOT(false, true, true),
     RETURN(false, false, false),
     ENTER(false, false, false),
+    // Fake op types
     PUSH(false, false, false),
     POP(false, true, false),
     ARRAY(false, true, false),
@@ -59,6 +63,10 @@ public final class OpStatement extends BasicStatement {
 
   public AsmOp getOp() {
     return op;
+  }
+
+  public void setOp(AsmOp op) {
+    this.op = op;
   }
 
   public Argument getArg1() {

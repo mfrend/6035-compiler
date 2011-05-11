@@ -100,6 +100,72 @@ public class AsmBasicBlock implements AsmObject {
     }
   }
 
+
+  private void peepholeStatement(OpStatement stmt) {
+    switch (stmt.getOp()) {
+     case MULTIPLY:
+      if (stmt.getArg1() instanceof ConstantArgument) {
+        ConstantArgument c1 = (ConstantArgument)stmt.getArg1();
+        int val1 = c1.getInt();
+        if (val1 > 0 && Integer.bitCount(val1) == 1) {
+          int shiftCount = 0;
+          while (val1 > 1) {
+            shiftCount++;
+            val1 >>= 1;
+          }
+          stmt.setArg1(Argument.makeArgument(shiftCount));
+          stmt.setOp(AsmOp.SHL);
+          return;
+        }
+      }
+      if (stmt.getArg2() instanceof ConstantArgument) {
+        ConstantArgument c2 = (ConstantArgument)stmt.getArg2();
+        int val2 = c2.getInt();
+        if (val2 > 0 && Integer.bitCount(val2) == 1) {
+          int shiftCount = 0;
+          while (val2 > 1) {
+            shiftCount++;
+            val2 >>= 1;
+          }
+          stmt.setArg2(stmt.getArg1());
+          stmt.setArg1(Argument.makeArgument(shiftCount));
+          stmt.setOp(AsmOp.SHL);
+          return;
+        }
+      }
+      break;
+     case DIVIDE:
+      if (stmt.getArg2() instanceof ConstantArgument) {
+        ConstantArgument c2 = (ConstantArgument)stmt.getArg2();
+        int val2 = c2.getInt();
+        if (val2 > 0 && Integer.bitCount(val2) == 1) {
+          int shiftCount = 0;
+          while (val2 > 1) {
+            shiftCount++;
+            val2 >>= 1;
+          }
+          stmt.setArg2(stmt.getArg1());
+          stmt.setArg1(Argument.makeArgument(shiftCount));
+          stmt.setOp(AsmOp.SHR);
+          return;
+        }
+      }
+      break;
+     case MODULO:
+      if (stmt.getArg2() instanceof ConstantArgument) {
+        ConstantArgument c2 = (ConstantArgument)stmt.getArg2();
+        int val2 = c2.getInt();
+        if (val2 > 0 && Integer.bitCount(val2) == 1) {
+          stmt.setArg2(stmt.getArg1());
+          stmt.setArg1(Argument.makeArgument(val2 - 1));
+          stmt.setOp(AsmOp.BITWISE_AND);
+          return;
+        }
+      }
+      break;
+    }
+  }
+
   public List<AsmObject> getBlock() {
     return instructions;
   }
@@ -176,6 +242,9 @@ public class AsmBasicBlock implements AsmObject {
     }
 
     if (stmt instanceof OpStatement) {
+      if (opts.contains(Optimization.ASM_PEEPHOLE)) {
+        peepholeStatement((OpStatement)stmt);
+      }
       processOpStatement((OpStatement)stmt, methodName, thisMethod, sl);
     } else if (stmt instanceof CallStatement) {
       generateCall((CallStatement) stmt, thisMethod);
@@ -427,6 +496,15 @@ public class AsmBasicBlock implements AsmObject {
       break;
      case SUBTRACT:
       addInstruction(new AsmInstruction(AsmOpCode.SUBL, arg2, arg1, sl));
+      break;
+     case SHL:
+      addInstruction(new AsmInstruction(AsmOpCode.SHLL, arg1, arg2, sl));
+      break;
+     case SHR:
+      addInstruction(new AsmInstruction(AsmOpCode.SARL, arg1, arg2, sl));
+      break;
+     case BITWISE_AND:
+      addInstruction(new AsmInstruction(AsmOpCode.ANDL, arg1, arg2, sl));
       break;
      case MULTIPLY:
       addInstruction(new AsmInstruction(AsmOpCode.IMULL, arg1, arg2, sl));

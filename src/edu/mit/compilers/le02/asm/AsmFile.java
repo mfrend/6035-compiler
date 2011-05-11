@@ -126,7 +126,9 @@ public class AsmFile {
 
       current = new AsmBasicBlock(
         methodName, methodNode, thisMethod, st, opts);
-      current.peepholeInstructions();
+      if (opts.contains(Optimization.ASM_PEEPHOLE)) {
+        current.peepholeInstructions();
+      }
       current.reorderInstructions();
       methods.add(current);
     }
