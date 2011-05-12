@@ -12,6 +12,7 @@ public final class OpStatement extends BasicStatement {
     MOVE(true, true, false),
     ADD(true, true, false),
     SUBTRACT(true, true, true),
+    LEA(true, true, false),
     MULTIPLY(false, true, false),
     DIVIDE(false, false, false),
     MODULO(false, false, false),
