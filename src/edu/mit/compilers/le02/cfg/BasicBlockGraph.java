@@ -58,9 +58,11 @@ public class BasicBlockGraph {
       }
 
       // Run local and global CSE
-      if (opts.contains(Optimization.COMMON_SUBEXPR)) {
+      if (opts.contains(Optimization.LOCAL_COMMON_SUBEXPR)) {
         BasicBlockVisitor cse = new CseVisitor();
         cse.visit(methodEnter);
+      }
+      if (opts.contains(Optimization.GLOBAL_COMMON_SUBEXPR)) {
         GlobalCseVisitor.performGlobalCse(methodEnter);
       }
 

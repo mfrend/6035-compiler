@@ -63,7 +63,8 @@ public class Main {
   };
 
   public enum Optimization {
-    COMMON_SUBEXPR("cse"),
+    LOCAL_COMMON_SUBEXPR("lcse"),
+    GLOBAL_COMMON_SUBEXPR("gcse"),
     COPY_PROPAGATION("cp"),
     DEAD_CODE("dc"),
     CONSECUTIVE_COPY("cc"),
