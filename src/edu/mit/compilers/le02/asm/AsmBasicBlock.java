@@ -98,6 +98,50 @@ public class AsmBasicBlock implements AsmObject {
             it.remove();
           }
           break;
+         case LEAL:
+          if (inst.first_operand.startsWith("$")) {
+            int factor = Integer.parseInt(inst.first_operand.substring(1));
+            int leaMultiplier = -1;
+            boolean add = false;
+            switch (factor) {
+             case 1:
+              leaMultiplier = 1;
+              add = false;
+              break;
+             case 2:
+              leaMultiplier = 2;
+              add = false;
+              break;
+             case 3:
+              leaMultiplier = 2;
+              add = true;
+              break;
+             case 4:
+              leaMultiplier = 4;
+              add = false;
+              break;
+             case 5:
+              leaMultiplier = 4;
+              add = true;
+              break;
+             case 8:
+              leaMultiplier = 8;
+              add = false;
+              break;
+             case 9:
+              leaMultiplier = 8;
+              add = true;
+              break;
+             default:
+              continue;
+            }
+            inst.first_operand = "(";
+            if (add) {
+              inst.first_operand += inst.second_operand;
+            }
+            inst.first_operand += "," +
+              inst.second_operand + "," + leaMultiplier + ")";
+          }
         }
       }
     }
@@ -106,10 +150,23 @@ public class AsmBasicBlock implements AsmObject {
 
   private void peepholeStatement(OpStatement stmt) {
     switch (stmt.getOp()) {
+     case ADD:
+      // Yay commutivity.
+      if (!(stmt.getArg1() instanceof ConstantArgument) &&
+          stmt.getArg2() instanceof ConstantArgument) {
+        ConstantArgument c2 = (ConstantArgument)stmt.getArg2();
+        stmt.setArg2(stmt.getArg1());
+        stmt.setArg1(c2);
+      }
+      break;
      case MULTIPLY:
       if (stmt.getArg1() instanceof ConstantArgument) {
         ConstantArgument c1 = (ConstantArgument)stmt.getArg1();
         int val1 = c1.getInt();
+        if (val1 > 0 && val1 < 10 && val1 != 6 && val1 != 7) {
+          stmt.setOp(AsmOp.LEA);
+          return;
+        }
         if (val1 > 0 && Integer.bitCount(val1) == 1) {
           int shiftCount = 0;
           while (val1 > 1) {
@@ -124,6 +181,12 @@ public class AsmBasicBlock implements AsmObject {
       if (stmt.getArg2() instanceof ConstantArgument) {
         ConstantArgument c2 = (ConstantArgument)stmt.getArg2();
         int val2 = c2.getInt();
+        if (val2 > 0 && val2 < 10 && val2 != 6 && val2 != 7) {
+          stmt.setOp(AsmOp.LEA);
+          stmt.setArg2(stmt.getArg1());
+          stmt.setArg1(c2);
+          return;
+        }
         if (val2 > 0 && Integer.bitCount(val2) == 1) {
           int shiftCount = 0;
           while (val2 > 1) {
@@ -543,6 +606,9 @@ public class AsmBasicBlock implements AsmObject {
      case BITWISE_AND:
       addInstruction(new AsmInstruction(AsmOpCode.ANDL, arg1, arg2, sl));
       break;
+     case LEA:
+       addInstruction(new AsmInstruction(AsmOpCode.LEAL, arg1, arg2, sl));
+       break;
      case MULTIPLY:
       addInstruction(new AsmInstruction(AsmOpCode.IMULL, arg1, arg2, sl));
       break;
