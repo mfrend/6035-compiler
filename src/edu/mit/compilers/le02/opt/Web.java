@@ -154,30 +154,17 @@ public class Web implements Comparable<Web> {
     else if (!(o instanceof Web)) return false;
 
     Web other = (Web) o;
-    return this.desc.equals(other.desc) &&
-    this.stmts.equals(other.stmts);
+    return this.id == other.id;
   }
 
   @Override
   public int hashCode() {
-    return desc.hashCode() * stmts.hashCode();
+    return this.id;
   }
 
   @Override
   public int compareTo(Web w) {
-    int ret = this.desc.getId().compareTo(w.desc.getId());
-
-    if (ret != 0) {
-      return ret;
-    }
-
-    ret = this.stmts.size() - w.stmts.size();
-
-    if (ret != 0) {
-      return ret;
-    }
-
-    return this.hashCode() - w.hashCode();
+    return (this.id - w.id);
   }
 
 }
