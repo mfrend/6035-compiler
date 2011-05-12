@@ -79,7 +79,7 @@ fi
   echo "CSE only"
   cp $orig_input $input;
   msg=""
-  if runcompiler -o $asm -opt cse $file; then
+  if runcompiler -o $asm -opt lcse -opt gcse $file; then
     if gcc -o $binary -L. $asm -l6035 -lpthread; then
       cd $workingdir
       if $binary > $timing_dcf_cse; then

@@ -170,7 +170,9 @@ public class CLI {
        case 1:
         boolean hit = false;
         for (Optimization opt : Optimization.values()) {
-          if (args[i].equals("all") || (args[i].equals(opt.flagName()))) {
+          if ((args[i].equals("all") &&
+                opt != Optimization.GLOBAL_COMMON_SUBEXPR) ||
+              (args[i].equals(opt.flagName()))) {
             hit = true;
             opts.add(opt);
           }
