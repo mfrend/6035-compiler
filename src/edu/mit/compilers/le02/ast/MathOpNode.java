@@ -25,7 +25,6 @@ public final class MathOpNode extends BinaryOpNode {
 	}
 	
 	public void canonicalize() {
-		//System.out.println(this.left.toString()+this.toString()+this.right.toString());
 		ExtendedMathOpNode node = new ExtendedMathOpNode(this, null);
 		MathOpNode temp = node.simplify();
 		setLeft(temp.getLeft());

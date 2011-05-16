@@ -29,7 +29,6 @@ public class ExtendedMathOpNode {
 		} else if (n != null) {
 			left.add(n);
 		}
-		//System.out.println(this.left.toString()+this.parentOp.toString()+this.right.toString());
 	}
 
 	public void expand() {
@@ -106,7 +105,6 @@ public class ExtendedMathOpNode {
 	public MathOpNode simplify() {
 		Collections.sort(left, new ExpressionNodeComparator());
 		Collections.sort(right, new ExpressionNodeComparator());
-		//System.out.println(left.toString()+parentOp.toString()+right.toString());
 		MathOpNode result = node;
 		if (parentOp != null && parentOp != MathOp.MODULO) {
 			if (left.size() > 0) {
