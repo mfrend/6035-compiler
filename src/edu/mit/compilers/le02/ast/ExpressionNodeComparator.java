@@ -12,7 +12,7 @@ public class ExpressionNodeComparator implements Comparator<ExpressionNode> {
 
 	@Override
 	public int compare(ExpressionNode arg0, ExpressionNode arg1) {
-		if (arg0.getClass() == arg1.getClass()) {
+		if (arg0.getClass().equals(arg1.getClass())) {
 			return arg0.compare(arg1);
 		} else {
 			return classCompare(arg0,arg1);

@@ -129,7 +129,7 @@ public class AsmFile {
       if (opts.contains(Optimization.ASM_PEEPHOLE)) {
         current.peepholeInstructions();
       }
-      current.reorderInstructions();
+      //current.reorderInstructions();
       methods.add(current);
     }
   }

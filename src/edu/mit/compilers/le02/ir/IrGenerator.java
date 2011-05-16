@@ -710,26 +710,31 @@ public class IrGenerator {
    * Transforms ([expr]) ([null] [op] [expr]) into ([expr] [op] [expr]).
    */
   protected ExpressionNode composite(ExpressionNode left, BinaryOpNode right) {
-    if (right == null) {
-      return left;
-    }
-    BinaryOpNode inner = right;
-    while (inner != null && inner.getLeft() != null) {
-      ExpressionNode prospective = inner.getLeft();
-      if (prospective instanceof BinaryOpNode) {
-        inner = (BinaryOpNode)prospective;
-      } else {
-        ErrorReporting.reportError(new IrException(prospective.getSourceLoc(),
-          "Unable to composite expression into a full BinaryOpNode."));
-        return right;
-      }
-    }
-    if (inner == null) {
-      ErrorReporting.reportError(new IrException(right.getSourceLoc(),
-        "Unable to composite expression into a full BinaryOpNode."));
-      return right;
-    }
-    inner.setLeft(left);
-    return right;
-  }
+	    if (right == null) {
+	    	if(left instanceof MathOpNode){
+	    		MathOpNode temp = (MathOpNode) left;
+	    		temp.canonicalize();
+	    		left = temp;
+	    	}
+	      return left;
+	    }
+	    BinaryOpNode inner = right;
+	    while (inner != null && inner.getLeft() != null) {
+	      ExpressionNode prospective = inner.getLeft();
+	      if (prospective instanceof BinaryOpNode) {
+	        inner = (BinaryOpNode)prospective;
+	      } else {
+	        ErrorReporting.reportError(new IrException(prospective.getSourceLoc(),
+	          "Unable to composite expression into a full BinaryOpNode."));
+	        return right;
+	      }
+	    }
+	    if (inner == null) {
+	      ErrorReporting.reportError(new IrException(right.getSourceLoc(),
+	        "Unable to composite expression into a full BinaryOpNode."));
+	      return right;
+	    }
+	    inner.setLeft(left);
+	    return right;
+	  }
 }

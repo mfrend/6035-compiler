@@ -81,8 +81,9 @@ public int compare(ExpressionNode arg) {
 		if(this.isInverted()==temp.isInverted() &&
 				this.getValue() == temp.getValue()){
 			return 0;
-		} else if (((this.isInverted()) ? -1*this.getValue(): this.getValue()) > 
-		((temp.isInverted()) ? -1*temp.getValue(): temp.getValue())){
+		} /*else if (((this.isInverted()) ? -1*this.getValue(): this.getValue()) > 
+		((temp.isInverted()) ? -1*temp.getValue(): temp.getValue())){*/
+		else if (this.getValue() > temp.getValue()){
 			return 1;
 		} else {
 			return -1;

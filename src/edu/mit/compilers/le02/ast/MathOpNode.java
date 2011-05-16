@@ -24,12 +24,13 @@ public final class MathOpNode extends BinaryOpNode {
 		}
 	}
 	
-	private void canonicalize() {
+	public void canonicalize() {
+		//System.out.println(this.left.toString()+this.toString()+this.right.toString());
 		ExtendedMathOpNode node = new ExtendedMathOpNode(this, null);
 		MathOpNode temp = node.simplify();
-		super.setLeft(temp.getLeft());
-		super.setRight(temp.getRight());
-		this.op = temp.getOp();
+		setLeft(temp.getLeft());
+	    setRight(temp.getRight());
+		op = temp.getOp();
 	}
 
 	public MathOp getOp() {
@@ -40,6 +41,7 @@ public final class MathOpNode extends BinaryOpNode {
 	public String toString() {
 		return "" + op;
 	}
+	
 
 	@Override
 	public boolean equals(Object o) {
