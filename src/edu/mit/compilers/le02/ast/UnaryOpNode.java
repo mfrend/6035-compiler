@@ -35,14 +35,14 @@ public abstract class UnaryOpNode extends ExpressionNode {
   public ExpressionNode getExpr() {
     return expr;
   }
-  
+
   @Override
   public int compare(ExpressionNode arg){
-	  if(arg instanceof UnaryOpNode){
-		  return this.getExpr().compare(((UnaryOpNode)arg).getExpr());
-	  } else {
-		  return ExpressionNodeComparator.classCompare(this, arg);
-	  }
+   if(arg instanceof UnaryOpNode){
+    return this.getExpr().compare(((UnaryOpNode)arg).getExpr());
+   } else {
+    return ExpressionNodeComparator.classCompare(this, arg);
+   }
   }
 
 }

@@ -13,9 +13,9 @@ public abstract class ExpressionNode extends ASTNode{
   }
 
   abstract public DecafType getType();
-  
+
   public int compare(ExpressionNode arg){
-	  return 0;
+   return 0;
   }
 
 }

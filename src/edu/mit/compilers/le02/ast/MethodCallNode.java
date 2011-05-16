@@ -93,10 +93,10 @@ public final class MethodCallNode extends CallNode {
 
 @Override
 public int compare(ExpressionNode arg) {
-	if (arg instanceof MethodCallNode){
-		return this.getName().compareTo(((MethodCallNode) arg).getName());
-	} else {
-		return ExpressionNodeComparator.classCompare(this, arg);
-	}
+ if (arg instanceof MethodCallNode){
+  return this.getName().compareTo(((MethodCallNode) arg).getName());
+ } else {
+  return ExpressionNodeComparator.classCompare(this, arg);
+ }
 }
 }

@@ -21,22 +21,22 @@ public class AsmInstruction implements AsmObject {
   AsmOpCode opcode;
   SourceLocation loc;
   String first_operand, second_operand;
-  
+
   private int id;
   private List<Integer> parents;
   private List<Integer> children;
   private int heuristic;
 
   public int getHeuristic() {
-	return heuristic;
+ return heuristic;
 }
 
 public void setHeuristic(int heuristic) {
-	this.heuristic = heuristic;
+ this.heuristic = heuristic;
 }
 
 public List<Integer> getChildren() {
-	return children;
+ return children;
 }
 
 public AsmInstruction(AsmOpCode opCode, SourceLocation loc) {
@@ -66,104 +66,104 @@ public AsmInstruction(AsmOpCode opCode, SourceLocation loc) {
   }
 
   public List<String> getReads(){
-	  ArrayList<String> reads = new ArrayList<String>();
-	  switch(opcode){
-	  case ADDQ:
-	  case ADDL:
-	  case CMPL:
-	  case IDIVL:
-	  case IMULL:
-	  case SUBL:
-		  reads.add(second_operand);
-		  reads.add(first_operand);
-		  break;
-	  case MOVQ:
-	  case MOVL:
-	  case MOVSXD:
-	  case SARL:
-	  case SHLL:
-		  
-		  reads.add(first_operand);
-		  break;
-	  case CMOVEL:
-	  case CMOVGEL:
-	  case CMOVGL:
-	  case CMOVLEL:
-	  case CMOVLL:
-	  case CMOVNEL:
-		  reads.add("compare");
-	  //case read0:
-		  
-	  }
-	  
-	  return reads;
-	  
+   ArrayList<String> reads = new ArrayList<String>();
+   switch(opcode){
+   case ADDQ:
+   case ADDL:
+   case CMPL:
+   case IDIVL:
+   case IMULL:
+   case SUBL:
+    reads.add(second_operand);
+    reads.add(first_operand);
+    break;
+   case MOVQ:
+   case MOVL:
+   case MOVSXD:
+   case SARL:
+   case SHLL:
+
+    reads.add(first_operand);
+    break;
+   case CMOVEL:
+   case CMOVGEL:
+   case CMOVGL:
+   case CMOVLEL:
+   case CMOVLL:
+   case CMOVNEL:
+    reads.add("compare");
+   //case read0:
+
+   }
+
+   return reads;
+
   }
-  
+
   public List<String> getWrites(){
-	  ArrayList<String> writes = new ArrayList<String>();
-	  switch(opcode){
-	  case ADDQ:
-	  case ADDL:
-	  case CMOVEL:
-	  case CMOVGEL:
-	  case CMOVGL:
-	  case CMOVLEL:
-	  case CMOVLL:
-	  case CMOVNEL:
-	  case IDIVL:
-	  case IMULL:
-	  case SUBL:
-		  writes.add(second_operand);
-		  break;
-	  case SARL:
-	  case SHLL:
-		  writes.add(first_operand);
-		  break;
-	  case CMPL:
-		  writes.add("compare");
-		  break;
-		  
-	  }
-	  
-	  return writes;
+   ArrayList<String> writes = new ArrayList<String>();
+   switch(opcode){
+   case ADDQ:
+   case ADDL:
+   case CMOVEL:
+   case CMOVGEL:
+   case CMOVGL:
+   case CMOVLEL:
+   case CMOVLL:
+   case CMOVNEL:
+   case IDIVL:
+   case IMULL:
+   case SUBL:
+    writes.add(second_operand);
+    break;
+   case SARL:
+   case SHLL:
+    writes.add(first_operand);
+    break;
+   case CMPL:
+    writes.add("compare");
+    break;
+
+   }
+
+   return writes;
   }
-  
+
   public boolean moveable(){
-	  switch(opcode){
-	  case JE:
-	  case JG:
-	  case JGE:
-	  case JL:
-	  case JLE:
-	  case JMP:
-	  case JNE:
-		  return false;
-	  default:
-		  return true;
-	  }
+   switch(opcode){
+   case JE:
+   case JG:
+   case JGE:
+   case JL:
+   case JLE:
+   case JMP:
+   case JNE:
+    return false;
+   default:
+    return true;
+   }
   }
-  
+
   public void addParent(int id){
-	  parents.add(id);
+   parents.add(id);
   }
-  
+
   public List<Integer> getParents() {
-	return parents;
+ return parents;
 }
 
 public void addChild(int id){
-	  children.add(id);
+   children.add(id);
   }
-  
+
   public void setID(int it){
-	  this.id = id;
+   this.id = id;
   }
-  
+
   public int getID(){
-	  return id;
+   return id;
   }
-  
+
   public String toString() {
     String result = "  " + opcode.toString();
     if (first_operand != "") {

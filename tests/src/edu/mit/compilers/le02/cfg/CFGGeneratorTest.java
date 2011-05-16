@@ -78,7 +78,7 @@ public class CFGGeneratorTest extends TestCase {
     opSt = (OpStatement) bs;
 
     checkOpStatement(opSt, AsmOp.MULTIPLY,
-                     Argument.makeArgument(loc), Argument.makeArgument(4));
+                     Argument.makeArgument(4), Argument.makeArgument(loc));
 
     assertEquals(2, symbolTable.size());
 

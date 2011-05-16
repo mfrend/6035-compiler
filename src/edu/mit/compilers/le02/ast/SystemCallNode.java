@@ -75,11 +75,12 @@ public final class SystemCallNode extends CallNode {
 
 @Override
 public int compare(ExpressionNode arg) {
-	if (arg instanceof SystemCallNode){
-		return this.getFuncName().getValue().compareTo(((SystemCallNode) arg).getFuncName().getValue());
-	} else {
-		return ExpressionNodeComparator.classCompare(this, arg);
-	}
+ if (arg instanceof SystemCallNode){
+  return this.getFuncName().getValue().compareTo(
+		  ((SystemCallNode) arg).getFuncName().getValue());
+ } else {
+  return ExpressionNodeComparator.classCompare(this, arg);
+ }
 }
 
 }
