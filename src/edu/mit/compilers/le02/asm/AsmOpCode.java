@@ -23,6 +23,7 @@ public enum AsmOpCode {
   JLE,
   JMP,
   JNE,
+  LEAL,
   LEAVE,
   MOVQ,
   MOVL,
